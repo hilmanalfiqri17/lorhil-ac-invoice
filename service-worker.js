@@ -1,7 +1,7 @@
-const CACHE = "lorhil-ac-online-v8";
+const CACHE = "lorhil-ac-online-v10";
 const ASSETS = [
   "./","index.html","style.css","app.js","config.js","manifest.webmanifest",
-  "assets/icon-192.png","assets/icon-512.png","assets/signature.png","assets/stamp.png"
+  "assets/icon-192.png","assets/icon-512.png","assets/logo.png","assets/signature.png","assets/stamp.png"
 ];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));

@@ -649,8 +649,9 @@
           min-height:55mm;
           padding:8mm 11mm 6mm;
           display:grid;
-          grid-template-columns:1.4fr .8fr;
-          gap:8mm;
+          /* Beri ruang lebih besar untuk panel informasi invoice. */
+          grid-template-columns:minmax(0,1.18fr) minmax(76mm,.82fr);
+          gap:6mm;
           background:#fff;
         }
 
@@ -708,8 +709,9 @@
 
         .invoice-box{
           position:relative;
+          min-width:0;
           min-height:48mm;
-          padding:7mm 8mm 5mm 10mm;
+          padding:7mm 6mm 5mm 9mm;
           background:var(--navy);
           color:#fff;
           clip-path:polygon(13% 0,100% 0,100% 100%,0 100%);
@@ -738,11 +740,12 @@
 
         .invoice-meta{
           display:grid;
-          grid-template-columns:18mm 1fr;
+          grid-template-columns:17mm minmax(0,1fr);
           gap:1.8mm 2mm;
           justify-content:end;
-          margin-left:15mm;
-          font-size:7.8pt;
+          /* Jarak lama 15 mm membuat kolom nilai terlalu sempit. */
+          margin-left:7mm;
+          font-size:7.4pt;
         }
 
         .invoice-meta span{
@@ -751,8 +754,13 @@
         }
 
         .invoice-meta strong{
+          min-width:0;
           color:#fff;
           text-align:right;
+          white-space:nowrap;
+          word-break:keep-all;
+          overflow-wrap:normal;
+          hyphens:none;
         }
 
         .status-pill{

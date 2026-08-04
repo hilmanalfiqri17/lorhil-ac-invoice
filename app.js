@@ -325,18 +325,48 @@
     };
   }
 
-  $("invoiceForm").addEventListener("submit",async e=>{e.preventDefault();await saveInvoice(false);});
-  $("savePrintBtn").addEventListener("click",()=>saveInvoice(true));
-  async function saveInvoice(printAfter){
+  $("invoiceForm").addEventListener("submit",async e=>{e.preventDefault();await saveInvoice({});});
+  $("savePrintBtn").addEventListener("click",()=>saveInvoice({printAfter:true}));
+  $("saveDownloadBtn").addEventListener("click",()=>saveInvoice({downloadAfter:true}));
+  $("saveWhatsappBtn").addEventListener("click",()=>saveInvoice({whatsappAfter:true}));
+
+  async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
+    let pendingWindow=null;
+
+    if(printAfter || downloadAfter || whatsappAfter){
+      pendingWindow=window.open("","_blank");
+      if(pendingWindow){
+        pendingWindow.document.write(
+          '<!doctype html><html><head><meta charset="utf-8"><title>Memproses Nota</title></head>' +
+          '<body style="font-family:Arial,sans-serif;padding:30px;text-align:center">' +
+          '<h2>Memproses nota...</h2><p>Mohon tunggu sebentar.</p></body></html>'
+        );
+        pendingWindow.document.close();
+      }
+    }
+
     try{
       const params=formData();loading(true);
       const {data,error}=await db.rpc("save_invoice",params);
       if(error) throw error;
       await refreshAll();
       const saved=state.invoices.find(x=>x.id===data.id)||data;
-      if(printAfter) printInvoice(saved);
-      resetInvoice();showPage("dashboard");toast("Nota berhasil disimpan.");
-    }catch(error){alert(errorMessage(error));}finally{loading(false);}
+
+      if(printAfter) printInvoice(saved,pendingWindow);
+      if(downloadAfter) downloadInvoice(saved,pendingWindow);
+      if(whatsappAfter) sendInvoiceToWhatsApp(saved,pendingWindow);
+
+      resetInvoice();showPage("dashboard");
+
+      if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
+      else if(whatsappAfter) toast("Nota disimpan dan WhatsApp dibuka.");
+      else toast("Nota berhasil disimpan.");
+    }catch(error){
+      if(pendingWindow && !pendingWindow.closed) pendingWindow.close();
+      alert(errorMessage(error));
+    }finally{
+      loading(false);
+    }
   }
 
   function editInvoice(id){
@@ -384,13 +414,17 @@
         <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
         <div class="actions"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button><button id="savePaymentPrintBtn" class="btn success">Simpan & Cetak Ulang</button></div>
       </div>
-      <div class="actions"><button id="editBtn" class="btn secondary">Edit</button><button id="printBtn" class="btn primary">Cetak Nota</button><button id="deleteBtn" class="btn danger">Hapus</button><button id="closeBtn" class="btn secondary">Tutup</button></div>`;
+      <div class="actions"><button id="editBtn" class="btn secondary">Edit</button><button id="printBtn" class="btn primary">Cetak Nota</button><button id="downloadBtn" class="btn outline">Download PDF</button><button id="whatsappBtn" class="btn success">Kirim WhatsApp</button><button id="deleteBtn" class="btn danger">Hapus</button><button id="closeBtn" class="btn secondary">Tutup</button></div>`;
     const paidInput=$("detailPaid");
     paidInput.addEventListener("input",()=>{$("detailStatus").textContent=statusFrom(inv.total,Math.min(inv.total,Math.max(0,Number(paidInput.value)||0)));});
     $("savePaymentBtn").addEventListener("click",()=>updatePayment(inv.id,false));
     $("savePaymentPrintBtn").addEventListener("click",()=>updatePayment(inv.id,true));
-    $("editBtn").addEventListener("click",()=>editInvoice(inv.id));$("printBtn").addEventListener("click",()=>printInvoice(inv));
-    $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));$("closeBtn").addEventListener("click",closeModal);
+    $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
+    $("printBtn").addEventListener("click",()=>printInvoice(inv));
+    $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
+    $("whatsappBtn").addEventListener("click",()=>sendInvoiceToWhatsApp(inv));
+    $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
+    $("closeBtn").addEventListener("click",closeModal);
     show("detailModal");
   }
 
@@ -422,7 +456,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:5,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:7,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -434,16 +468,119 @@
       .subscribe();
   }
 
-  function printInvoice(inv){
-    const s=state.settings||{};const popup=window.open("","_blank","width=1000,height=800");
-    if(!popup){alert("Izinkan popup untuk mencetak nota.");return;}
+  function normalizeWhatsAppNumber(value){
+    let number=String(value||"").replace(/\D/g,"");
+
+    if(number.startsWith("00")) number=number.slice(2);
+    if(number.startsWith("0")) number="62"+number.slice(1);
+    else if(number.startsWith("8")) number="62"+number;
+    else if(number.startsWith("620")) number="62"+number.slice(3);
+
+    return number;
+  }
+
+  function buildWhatsAppMessage(inv){
+    const s=state.settings||{};
+    const items=(inv.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order);
+
+    const lines=[
+      `*${s.store_name||"LORHIL AC"}*`,
+      `*NOTA / INVOICE*`,
+      "",
+      `No. Nota: *${inv.invoice_number}*`,
+      `Tanggal: ${formatDate(inv.work_date)} ${(inv.work_time||"").slice(0,5)}`,
+      `Pelanggan: ${inv.customer_name}`,
+      ""
+    ];
+
+    if(inv.customer_address) lines.push(`Alamat: ${inv.customer_address}`,"");
+
+    lines.push("*Rincian Pekerjaan:*");
+    items.forEach((item,index)=>{
+      const lineTotal=Number(item.line_total ?? (Number(item.quantity)*Number(item.unit_price)))||0;
+      lines.push(
+        `${index+1}. ${item.description}`,
+        `   ${item.quantity} × ${money(item.unit_price)} = *${money(lineTotal)}*`
+      );
+    });
+
+    lines.push(
+      "",
+      `Subtotal: ${money(inv.subtotal)}`,
+      `Diskon: ${money(inv.discount)}`,
+      `*Total: ${money(inv.total)}*`,
+      `Sudah Dibayar: ${money(inv.paid)}`,
+      `*Sisa Tagihan: ${money(inv.balance)}*`,
+      `Status: *${inv.status}*`
+    );
+
+    if(inv.notes) lines.push("","Catatan:",inv.notes);
+    if(s.payment_info) lines.push("","Metode Pembayaran:",s.payment_info);
+
+    lines.push("","Terima kasih telah menggunakan layanan LORHIL AC.");
+
+    return lines.join("\n");
+  }
+
+  function sendInvoiceToWhatsApp(inv,targetWindow=null){
+    let phone=normalizeWhatsAppNumber(inv.customer_phone);
+
+    if(!phone){
+      const manual=prompt(
+        "Nomor WhatsApp pelanggan belum diisi. Masukkan nomor WhatsApp:",
+        ""
+      );
+      if(!manual){
+        if(targetWindow && !targetWindow.closed) targetWindow.close();
+        return;
+      }
+      phone=normalizeWhatsAppNumber(manual);
+    }
+
+    if(phone.length<10){
+      if(targetWindow && !targetWindow.closed) targetWindow.close();
+      alert("Nomor WhatsApp tidak valid. Gunakan contoh 081234567890.");
+      return;
+    }
+
+    const message=buildWhatsAppMessage(inv);
+    const url=`https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    if(targetWindow && !targetWindow.closed){
+      targetWindow.location.href=url;
+      return;
+    }
+
+    const opened=window.open(url,"_blank","noopener,noreferrer");
+    if(!opened) location.href=url;
+  }
+
+  function invoicePdfFilename(inv){
+    const number=String(inv.invoice_number||"nota").replace(/[^a-zA-Z0-9_-]+/g,"-");
+    const customer=String(inv.customer_name||"pelanggan")
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g,"-")
+      .replace(/-+/g,"-")
+      .replace(/^-|-$/g,"");
+    return `${number}-${customer||"pelanggan"}.pdf`;
+  }
+
+  function buildInvoiceDocument(inv,mode="print"){
+    const s=state.settings||{};
     const items=(inv.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order);
     const sig=new URL("assets/signature.png",location.href).href;
     const stamp=new URL("assets/stamp.png",location.href).href;
-    const due=Number(inv.balance)||0, amountTitle=due>0?"SISA YANG HARUS DIBAYAR":"TOTAL NOTA", amount=due>0?due:inv.total;
-    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(inv.invoice_number)}</title><style>
+    const pdfLibrary="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js";
+    const due=Number(inv.balance)||0;
+    const amountTitle=due>0?"SISA YANG HARUS DIBAYAR":"TOTAL NOTA";
+    const amount=due>0?due:inv.total;
+    const filename=invoicePdfFilename(inv);
+
+    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${esc(inv.invoice_number)}</title>
+    <style>
       @page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#e8edf2;font-family:Arial,sans-serif;color:#292e3a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      body{display:flex;justify-content:center}.sheet{width:210mm;height:297mm;background:#fff;overflow:hidden;position:relative}.fit{width:100%;min-height:297mm;transform-origin:top left}
+      body{display:flex;justify-content:center}.sheet{width:210mm;height:296mm;background:#fff;overflow:hidden;position:relative}.fit{width:100%;min-height:296mm;transform-origin:top left}
       .accent{height:4mm;background:#acd8e2}.head{min-height:64mm;padding:9mm 12mm 7mm;background:#465f88;color:#fff;border-bottom:4mm solid #acd8e2;display:grid;grid-template-columns:1.15fr .85fr;gap:10mm}
       .brandline{display:flex;gap:4mm;align-items:center}.logo{width:20mm;height:20mm;object-fit:contain;background:#fff;border-radius:50%}.head h1{margin:0;font-size:20pt}.tag{font-size:8pt;font-weight:bold}
       .contact{margin-top:7mm;font-size:7.3pt;line-height:1.45}.title{text-align:right}.title h2{margin:0;font-size:37pt}.title strong{font-size:10pt}.meta{margin-top:8mm;font-size:8pt;line-height:1.8}
@@ -455,9 +592,17 @@
       .totals{background:#465f88;color:#fff}.row{display:flex;justify-content:space-between;padding:2.4mm 3.5mm;border-bottom:1px solid rgba(255,255,255,.45)}.row.grand{font-size:10pt;font-weight:bold}
       .sign{height:45mm;padding:2mm 12mm 7mm;display:grid;grid-template-columns:1fr 1fr;align-items:end}.signbox{position:relative;height:37mm}.sig{position:absolute;left:0;bottom:9mm;width:48mm;max-height:23mm;object-fit:contain}.stamp{position:absolute;left:37mm;bottom:2mm;width:31mm;height:31mm;object-fit:contain;opacity:.82;transform:rotate(-7deg)}
       .line{position:absolute;left:0;bottom:0;width:52mm;border-top:1px solid #333;padding-top:1.5mm;font-size:8pt}.thanks{text-align:right;font-weight:bold;font-size:12pt}.footer{position:absolute;bottom:0;left:0;right:0;height:7mm;background:#465f88}
-      .buttons{position:fixed;right:15px;top:15px;z-index:5}.buttons button{border:0;border-radius:8px;background:#354c72;color:#fff;padding:10px;font-weight:bold;margin-left:5px}
-      @media print{html,body{background:#fff}.buttons{display:none}.sheet{box-shadow:none}}
-    </style></head><body><div class="buttons"><button onclick="window.print()">Cetak / PDF</button><button onclick="window.close()">Tutup</button></div>
+      .buttons{position:fixed;right:15px;top:15px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.buttons button{border:0;border-radius:8px;background:#354c72;color:#fff;padding:10px;font-weight:bold;cursor:pointer}
+      .buttons .download{background:#0b78a5}.download-status{position:fixed;left:15px;top:15px;z-index:5;background:#fff;border-radius:8px;padding:10px 13px;font-size:13px;box-shadow:0 4px 15px rgba(0,0,0,.15)}
+      @media print{html,body{background:#fff}.buttons,.download-status{display:none}.sheet{box-shadow:none}}
+    </style>
+    <script src="${pdfLibrary}"><\/script></head><body>
+    <div id="downloadStatus" class="download-status" style="display:none">Membuat file PDF...</div>
+    <div class="buttons">
+      <button onclick="window.print()">Cetak / PDF</button>
+      <button class="download" onclick="downloadPdf()">Download PDF</button>
+      <button onclick="window.close()">Tutup</button>
+    </div>
     <article class="sheet"><div class="fit"><div class="accent"></div><header class="head"><div><div class="brandline"><img class="logo" src="${stamp}"><div><h1>${esc(s.store_name||"LORHIL AC")}</h1><div class="tag">SPECIALIST AIR CONDITIONER</div></div></div>
     <div class="contact"><strong>RINCIAN KONTAK</strong><br>WhatsApp: ${esc(s.phone||"-")}<br>Alamat: ${esc(s.address||"-")}<br>Layanan: AC Baru, AC Second & Jasa Servis</div></div>
     <div class="title"><h2>INVOICE</h2><strong>NO: ${esc(inv.invoice_number)}</strong><div class="meta">Tanggal: ${formatDate(inv.work_date)} • ${esc((inv.work_time||"").slice(0,5))}<br>Status: <strong>${esc(inv.status)}</strong></div></div></header>
@@ -470,11 +615,106 @@
     <section class="sign"><div class="signbox"><span style="font-size:8pt">Hormat kami,</span><img class="sig" src="${sig}"><img class="stamp" src="${stamp}"><div class="line"><strong>${esc(s.signer_name||"Hendri")}</strong><br>${esc(s.signer_role||"Pemilik LORHIL AC")}</div></div>
     <div><div class="thanks">TERIMA KASIH</div><div style="text-align:right;font-size:7.5pt;font-style:italic">${esc(s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</div></div></section><div class="footer"></div></div></article>
     <script>
-      function fit(){const p=document.querySelector(".sheet"),c=document.querySelector(".fit");c.style.transform="none";c.style.width="100%";const scale=Math.min(1,p.clientHeight/c.scrollHeight);if(scale<1){c.style.transform="scale("+scale+")";c.style.width=(100/scale)+"%";}}
-      window.onload=async()=>{try{await Promise.all([...document.images].map(i=>i.decode?i.decode().catch(()=>{}):Promise.resolve()));}catch(e){}fit();setTimeout(()=>{fit();window.print()},550)}
-    <\/script></body></html>`);
+      const START_MODE=${JSON.stringify(mode)};
+      const PDF_FILENAME=${JSON.stringify(filename)};
+
+      function fit(){
+        const page=document.querySelector(".sheet");
+        const content=document.querySelector(".fit");
+        content.style.transform="none";
+        content.style.width="100%";
+        const scale=Math.min(1,page.clientHeight/content.scrollHeight);
+        if(scale<1){
+          content.style.transform="scale("+scale+")";
+          content.style.width=(100/scale)+"%";
+        }
+      }
+
+      async function waitForImages(){
+        try{
+          await Promise.all([...document.images].map(img=>
+            img.decode ? img.decode().catch(()=>{}) : Promise.resolve()
+          ));
+        }catch(error){}
+      }
+
+      async function downloadPdf(){
+        const status=document.getElementById("downloadStatus");
+
+        if(typeof html2pdf!=="function"){
+          alert("Komponen download PDF belum selesai dimuat. Pastikan internet aktif lalu coba kembali.");
+          return;
+        }
+
+        status.style.display="block";
+        fit();
+
+        try{
+          await html2pdf().set({
+            margin:0,
+            filename:PDF_FILENAME,
+            image:{type:"jpeg",quality:0.98},
+            html2canvas:{
+              scale:2,
+              useCORS:true,
+              allowTaint:false,
+              backgroundColor:"#ffffff",
+              logging:false
+            },
+            jsPDF:{
+              unit:"mm",
+              format:"a4",
+              orientation:"portrait",
+              compress:true
+            },
+            pagebreak:{mode:[]}
+          }).from(document.querySelector(".sheet")).save();
+        }catch(error){
+          console.error(error);
+          alert("PDF belum berhasil dibuat. Silakan gunakan tombol Cetak / PDF sebagai alternatif.");
+        }finally{
+          status.style.display="none";
+        }
+      }
+
+      window.onload=async()=>{
+        await waitForImages();
+        fit();
+
+        setTimeout(async()=>{
+          fit();
+          if(START_MODE==="download") await downloadPdf();
+          else if(START_MODE==="print") window.print();
+        },750);
+      };
+    <\/script></body></html>`;
+  }
+
+  function openInvoiceDocument(inv,mode="print",targetWindow=null){
+    const popup=(targetWindow && !targetWindow.closed)
+      ? targetWindow
+      : window.open("","_blank","width=1000,height=800");
+
+    if(!popup){
+      alert(mode==="download"
+        ? "Izinkan popup agar nota dapat diunduh."
+        : "Izinkan popup untuk mencetak nota.");
+      return;
+    }
+
+    popup.document.open();
+    popup.document.write(buildInvoiceDocument(inv,mode));
     popup.document.close();
+  }
+
+  function printInvoice(inv,targetWindow=null){
+    openInvoiceDocument(inv,"print",targetWindow);
+  }
+
+  function downloadInvoice(inv,targetWindow=null){
+    openInvoiceDocument(inv,"download",targetWindow);
   }
 
   init();
 })();
+

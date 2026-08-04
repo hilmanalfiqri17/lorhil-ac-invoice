@@ -461,7 +461,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:11,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:12,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -577,214 +577,862 @@
     const stamp=STAMP_DATA_URI;
     const logo=LOGO_DATA_URI;
     const pdfLibrary="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js";
-    const due=Number(inv.balance)||0;
-    const amountTitle=due>0?"SISA YANG HARUS DIBAYAR":"TOTAL NOTA";
-    const amount=due>0?due:inv.total;
     const filename=invoicePdfFilename(inv);
     const shareMessage=buildWhatsAppMessage(inv);
     const shareTitle=`Nota ${inv.invoice_number} - ${s.store_name||"LORHIL AC"}`;
     const customerPhone=normalizeWhatsAppNumber(inv.customer_phone);
 
-    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${esc(inv.invoice_number)}</title>
-    <style>
-      @page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#e8edf2;font-family:Arial,sans-serif;color:#292e3a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      body{display:flex;justify-content:center}.sheet{width:210mm;height:296mm;background:#fff;overflow:hidden;position:relative}.fit{width:100%;min-height:296mm;transform-origin:top left}
-      .accent{height:4mm;background:#acd8e2}.head{min-height:64mm;padding:9mm 12mm 7mm;background:#465f88;color:#fff;border-bottom:4mm solid #acd8e2;display:grid;grid-template-columns:1.15fr .85fr;gap:10mm}
-      .brandline{display:flex;gap:4mm;align-items:center}.logo{width:24mm;height:24mm;object-fit:contain;background:#fff;border-radius:50%;padding:.8mm;box-shadow:0 0 0 .4mm rgba(255,255,255,.28)}.head h1{margin:0;font-size:20pt}.tag{font-size:8pt;font-weight:bold}
-      .contact{margin-top:7mm;font-size:7.3pt;line-height:1.45}.title{text-align:right}.title h2{margin:0;font-size:37pt}.title strong{font-size:10pt}.meta{margin-top:8mm;font-size:8pt;line-height:1.8}
-      .customer{padding:6mm 12mm 5mm;display:grid;grid-template-columns:1.15fr .85fr;gap:10mm}.customer h3{margin:0 0 2mm;font-size:9pt}.name{font-size:13pt;font-weight:bold}.details{font-size:7.5pt;line-height:1.5;margin-top:2mm}
-      .amount{text-align:right}.amount strong{display:block;color:#465f88;font-size:22pt}.amount span{font-size:8pt;font-weight:bold}
-      table{width:100%;border-collapse:collapse}thead{display:table-header-group}th{background:#465f88;color:#fff;padding:3mm;font-size:8pt;text-align:left}th:last-child{background:#acd8e2;color:#292e3a}
-      td{padding:3.2mm;font-size:8pt}tbody tr:nth-child(even){background:#f0f2f6}.right{text-align:right}.center{text-align:center}.desc small{display:block;color:#677080;margin-top:1mm}
-      .lower{padding:4mm 12mm 0;display:grid;grid-template-columns:1fr 57mm;gap:8mm;font-size:7.4pt}.pay{white-space:pre-wrap;line-height:1.45}.notes{margin-top:3mm;border-top:1px solid #ddd;padding-top:2mm;white-space:pre-wrap}
-      .totals{background:#465f88;color:#fff}.row{display:flex;justify-content:space-between;padding:2.4mm 3.5mm;border-bottom:1px solid rgba(255,255,255,.45)}.row.grand{font-size:10pt;font-weight:bold}
-      .sign{height:47mm;padding:2mm 12mm 7mm;display:grid;grid-template-columns:1fr 1fr;align-items:end}.signbox{position:relative;height:39mm}.sig{position:absolute;left:0;bottom:8mm;width:55mm;max-height:27mm;object-fit:contain;object-position:left bottom;opacity:1;filter:contrast(1.2)}.stamp{position:absolute;left:39mm;bottom:1mm;width:36mm;height:36mm;object-fit:contain;opacity:1;filter:contrast(1.25);transform:rotate(-6deg)}
-      .line{position:absolute;left:0;bottom:0;width:56mm;border-top:1px solid #333;padding-top:1.5mm;font-size:8pt;z-index:3}.thanks{text-align:right;font-weight:bold;font-size:12pt}.footer{position:absolute;bottom:0;left:0;right:0;height:7mm;background:#465f88}
-      .buttons{position:fixed;right:15px;top:15px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.buttons button{border:0;border-radius:8px;background:#354c72;color:#fff;padding:10px;font-weight:bold;cursor:pointer}
-      .buttons .download{background:#0b78a5}.buttons .share{background:#198754}.buttons button:disabled{opacity:.55;cursor:not-allowed}
-      .download-status{position:fixed;left:15px;top:15px;z-index:5;background:#fff;border-radius:8px;padding:10px 13px;font-size:13px;box-shadow:0 4px 15px rgba(0,0,0,.15);max-width:310px;line-height:1.4}
-      @media print{html,body{background:#fff}.buttons,.download-status{display:none}.sheet{box-shadow:none}}
-    </style>
-    <script src="${pdfLibrary}"><\/script></head><body>
-    <div id="downloadStatus" class="download-status" style="display:none">Membuat file PDF...</div>
-    <div class="buttons">
-      <button onclick="window.print()">Cetak / PDF</button>
-      <button class="download" onclick="downloadPdf()">Download PDF</button>
-      <button id="sharePdfBtn" class="share" onclick="sharePdf()" disabled>Bagikan PDF + Pesan</button>
-      <button onclick="copyShareMessage()">Salin Pesan</button>
-      <button onclick="window.close()">Tutup</button>
-    </div>
-    <article class="sheet"><div class="fit"><div class="accent"></div><header class="head"><div><div class="brandline"><img class="logo" src="${logo}"><div><h1>${esc(s.store_name||"LORHIL AC")}</h1><div class="tag">SPECIALIST AIR CONDITIONER</div></div></div>
-    <div class="contact"><strong>RINCIAN KONTAK</strong><br>WhatsApp: ${esc(s.phone||"-")}<br>Alamat: ${esc(s.address||"-")}<br>Layanan: AC Baru, AC Second & Jasa Servis</div></div>
-    <div class="title"><h2>INVOICE</h2><strong>NO: ${esc(inv.invoice_number)}</strong><div class="meta">Tanggal: ${formatDate(inv.work_date)} • ${esc((inv.work_time||"").slice(0,5))}<br>Status: <strong>${esc(inv.status)}</strong></div></div></header>
-    <section class="customer"><div><h3>KEPADA:</h3><div class="name">${esc(inv.customer_name)}</div><div class="details">${esc(inv.customer_address||"-")}<br>${esc(inv.customer_phone||"-")}</div></div>
-    <div class="amount"><span>${amountTitle}</span><strong>${money(amount)}</strong><div class="details">Total ${money(inv.total)} • Dibayar ${money(inv.paid)}</div></div></section>
-    <table><thead><tr><th style="width:10mm">No.</th><th>Keterangan</th><th class="right">Harga Unit</th><th class="center">Qty</th><th class="right">Total</th></tr></thead><tbody>
-    ${items.map((x,i)=>`<tr><td class="center">${i+1}</td><td class="desc"><strong>${esc(x.description)}</strong><small>Pekerjaan / produk LORHIL AC</small></td><td class="right">${money(x.unit_price)}</td><td class="center">${x.quantity}</td><td class="right"><strong>${money(x.line_total)}</strong></td></tr>`).join("")}
-    </tbody></table><section class="lower"><div><strong>Metode Pembayaran</strong><div class="pay">${esc(s.payment_info||"Tunai / Transfer")}</div><div class="notes"><strong>Catatan</strong><br>${esc(inv.notes||s.footer_note||"-")}</div></div>
-    <div class="totals"><div class="row"><span>Subtotal</span><strong>${money(inv.subtotal)}</strong></div><div class="row"><span>Diskon</span><strong>${money(inv.discount)}</strong></div><div class="row"><span>Dibayar</span><strong>${money(inv.paid)}</strong></div><div class="row"><span>Sisa</span><strong>${money(inv.balance)}</strong></div><div class="row grand"><span>Total</span><strong>${money(inv.total)}</strong></div></div></section>
-    <section class="sign"><div class="signbox"><span style="font-size:8pt">Hormat kami,</span><img class="sig" src="${sig}"><img class="stamp" src="${stamp}"><div class="line"><strong>${esc(s.signer_name||"Hendri")}</strong><br>${esc(s.signer_role||"Pemilik LORHIL AC")}</div></div>
-    <div><div class="thanks">TERIMA KASIH</div><div style="text-align:right;font-size:7.5pt;font-style:italic">${esc(s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</div></div></section><div class="footer"></div></div></article>
-    <script>
-      const START_MODE=${JSON.stringify(mode)};
-      const PDF_FILENAME=${JSON.stringify(filename)};
-      const SHARE_TITLE=${JSON.stringify(shareTitle)};
-      const SHARE_MESSAGE=${JSON.stringify(shareMessage)};
-      const CUSTOMER_PHONE=${JSON.stringify(customerPhone)};
-      let preparedPdfFile=null;
+    const instagramUrl="https://www.instagram.com/lorhillac/";
+    const whatsappStore="081366752281";
 
-      function fit(){
-        const page=document.querySelector(".sheet");
-        const content=document.querySelector(".fit");
-        content.style.transform="none";
-        content.style.width="100%";
-        const scale=Math.min(1,page.clientHeight/content.scrollHeight);
-        if(scale<1){
-          content.style.transform="scale("+scale+")";
-          content.style.width=(100/scale)+"%";
-        }
-      }
-
-      async function waitForImages(){
-        try{
-          await Promise.all([...document.images].map(img=>
-            img.decode ? img.decode().catch(()=>{}) : Promise.resolve()
-          ));
-        }catch(error){}
-      }
-
-      function pdfOptions(){
-        return {
-          margin:0,
-          filename:PDF_FILENAME,
-          image:{type:"jpeg",quality:0.98},
-          html2canvas:{
-            scale:2,
-            useCORS:true,
-            allowTaint:false,
-            backgroundColor:"#ffffff",
-            logging:false
-          },
-          jsPDF:{
-            unit:"mm",
-            format:"a4",
-            orientation:"portrait",
-            compress:true
-          },
-          pagebreak:{mode:[]}
-        };
-      }
-
-      async function createPdfBlob(){
-        if(typeof html2pdf!=="function"){
-          throw new Error("Komponen PDF belum selesai dimuat.");
+    return `<!doctype html>
+    <html lang="id">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>${esc(inv.invoice_number)}</title>
+      <style>
+        :root{
+          --navy:#0f3442;
+          --navy-2:#123e4e;
+          --blue:#1384b5;
+          --blue-soft:#eaf4f7;
+          --ink:#172f3a;
+          --muted:#687d87;
+          --line:#d8e4e9;
+          --panel:#f8fbfc;
+          --white:#ffffff;
+          --success:#2d995b;
         }
 
-        fit();
-        return html2pdf()
-          .set(pdfOptions())
-          .from(document.querySelector(".sheet"))
-          .toPdf()
-          .outputPdf("blob");
-      }
+        @page{size:A4;margin:0}
 
-      async function prepareShareFile(){
-        const status=document.getElementById("downloadStatus");
-        const shareButton=document.getElementById("sharePdfBtn");
+        *{box-sizing:border-box}
 
-        status.style.display="block";
-        status.textContent="Mempersiapkan PDF. Setelah siap, tekan Bagikan PDF + Pesan.";
-
-        try{
-          const blob=await createPdfBlob();
-          preparedPdfFile=new File([blob],PDF_FILENAME,{type:"application/pdf"});
-          shareButton.disabled=false;
-          status.textContent="PDF siap. Tekan Bagikan PDF + Pesan, pilih WhatsApp, lalu pilih chat pelanggan.";
-        }catch(error){
-          console.error(error);
-          status.textContent="PDF belum berhasil disiapkan. Gunakan Download PDF sebagai alternatif.";
+        html,body{
+          margin:0;
+          padding:0;
+          background:#eef3f5;
+          color:var(--ink);
+          font-family:Inter,Arial,Helvetica,sans-serif;
+          -webkit-print-color-adjust:exact!important;
+          print-color-adjust:exact!important;
         }
-      }
 
-      async function downloadPdf(){
-        const status=document.getElementById("downloadStatus");
-        status.style.display="block";
-        status.textContent="Membuat file PDF...";
+        body{
+          display:flex;
+          justify-content:center;
+          align-items:flex-start;
+        }
 
-        try{
-          await html2pdf()
+        .sheet{
+          position:relative;
+          width:210mm;
+          height:296mm;
+          background:var(--white);
+          overflow:hidden;
+        }
+
+        .fit{
+          width:100%;
+          min-height:296mm;
+          transform-origin:top left;
+        }
+
+        .topbar-accent{
+          height:3mm;
+          background:linear-gradient(90deg,var(--navy) 0 72%,var(--blue) 72% 100%);
+        }
+
+        .header{
+          position:relative;
+          min-height:55mm;
+          padding:8mm 11mm 6mm;
+          display:grid;
+          grid-template-columns:1.4fr .8fr;
+          gap:8mm;
+          background:#fff;
+        }
+
+        .brand-wrap{
+          display:grid;
+          grid-template-columns:30mm 1fr;
+          align-items:center;
+          gap:5mm;
+        }
+
+        .brand-logo{
+          width:29mm;
+          height:29mm;
+          object-fit:contain;
+          background:#fff;
+          border-radius:50%;
+        }
+
+        .brand-name{
+          margin:0;
+          color:var(--navy);
+          font-size:25pt;
+          line-height:1;
+          font-weight:800;
+          letter-spacing:.2pt;
+        }
+
+        .brand-subtitle{
+          margin-top:2mm;
+          color:var(--blue);
+          font-size:10pt;
+          font-weight:800;
+          letter-spacing:.4pt;
+        }
+
+        .brand-contact{
+          margin-top:5mm;
+          display:grid;
+          gap:1.8mm;
+          font-size:7.6pt;
+          color:#324c57;
+        }
+
+        .brand-contact div{
+          display:grid;
+          grid-template-columns:6mm 1fr;
+          gap:1mm;
+          align-items:center;
+        }
+
+        .brand-contact .icon{
+          font-size:9pt;
+          color:var(--navy);
+        }
+
+        .invoice-box{
+          position:relative;
+          min-height:48mm;
+          padding:7mm 8mm 5mm 10mm;
+          background:var(--navy);
+          color:#fff;
+          clip-path:polygon(13% 0,100% 0,100% 100%,0 100%);
+        }
+
+        .invoice-box:before{
+          content:"";
+          position:absolute;
+          left:6mm;
+          top:0;
+          bottom:0;
+          width:1.5mm;
+          background:var(--blue);
+          transform:skewX(-13deg);
+          transform-origin:top;
+        }
+
+        .invoice-title{
+          margin:0 0 4mm;
+          text-align:right;
+          font-size:30pt;
+          line-height:1;
+          font-weight:900;
+          letter-spacing:.5pt;
+        }
+
+        .invoice-meta{
+          display:grid;
+          grid-template-columns:18mm 1fr;
+          gap:1.8mm 2mm;
+          justify-content:end;
+          margin-left:15mm;
+          font-size:7.8pt;
+        }
+
+        .invoice-meta span{
+          color:#cfe0e7;
+          font-weight:700;
+        }
+
+        .invoice-meta strong{
+          color:#fff;
+          text-align:right;
+        }
+
+        .status-pill{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          padding:1.2mm 3mm;
+          border-radius:999px;
+          background:#dff3e6;
+          color:#24784a!important;
+          font-size:7.4pt;
+          font-weight:900;
+        }
+
+        .content{
+          padding:0 9mm 11mm;
+        }
+
+        .info-grid{
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:4mm;
+          margin-bottom:4mm;
+        }
+
+        .info-card{
+          min-height:31mm;
+          padding:4.5mm 5mm;
+          border:1px solid var(--line);
+          border-radius:3mm;
+          background:linear-gradient(180deg,#fff 0%,#f8fbfc 100%);
+        }
+
+        .card-title{
+          display:flex;
+          align-items:center;
+          gap:2mm;
+          margin-bottom:3mm;
+          color:var(--navy);
+          font-size:8.6pt;
+          font-weight:900;
+          text-transform:uppercase;
+          letter-spacing:.2pt;
+        }
+
+        .title-icon{
+          width:8mm;
+          height:8mm;
+          display:grid;
+          place-items:center;
+          border-radius:1.5mm;
+          background:var(--navy);
+          color:#fff;
+          font-size:9pt;
+        }
+
+        .card-line{
+          display:grid;
+          grid-template-columns:20mm 3mm 1fr;
+          gap:1.2mm;
+          margin-bottom:1.8mm;
+          font-size:7.5pt;
+          line-height:1.35;
+        }
+
+        .card-line .label{
+          color:#526a75;
+          font-weight:700;
+        }
+
+        .customer-name{
+          margin:0 0 2mm;
+          font-size:12pt;
+          font-weight:900;
+          color:var(--ink);
+        }
+
+        .table-wrap{
+          border:1px solid var(--line);
+          border-radius:2.5mm;
+          overflow:hidden;
+          margin-bottom:4mm;
+        }
+
+        table{
+          width:100%;
+          border-collapse:collapse;
+        }
+
+        thead{display:table-header-group}
+
+        th{
+          padding:3mm 3.2mm;
+          background:var(--navy);
+          color:#fff;
+          font-size:7.7pt;
+          text-align:left;
+          font-weight:800;
+          text-transform:uppercase;
+          letter-spacing:.15pt;
+        }
+
+        th.no{width:11mm;text-align:center}
+        th.unit{width:31mm;text-align:right}
+        th.qty{width:18mm;text-align:center}
+        th.total{width:35mm;text-align:right}
+
+        td{
+          padding:3.2mm;
+          border-bottom:1px solid #e5edf0;
+          font-size:7.6pt;
+          vertical-align:middle;
+        }
+
+        tbody tr:last-child td{border-bottom:0}
+
+        .no-cell{text-align:center}
+        .unit-cell{text-align:right;white-space:nowrap}
+        .qty-cell{text-align:center}
+        .total-cell{text-align:right;white-space:nowrap;color:var(--blue);font-weight:900}
+
+        .desc strong{
+          display:block;
+          font-size:8.1pt;
+          color:var(--ink);
+        }
+
+        .desc small{
+          display:block;
+          margin-top:.7mm;
+          color:var(--muted);
+          font-size:6.8pt;
+        }
+
+        .bottom-grid{
+          display:grid;
+          grid-template-columns:1fr 1fr 1.12fr;
+          gap:4mm;
+          align-items:start;
+        }
+
+        .small-card{
+          min-height:30mm;
+          padding:4mm;
+          border:1px solid var(--line);
+          border-radius:2.5mm;
+          background:#fff;
+        }
+
+        .small-card h3{
+          margin:0 0 3mm;
+          padding-bottom:2mm;
+          color:var(--navy);
+          border-bottom:.5mm solid var(--blue);
+          font-size:8.3pt;
+          text-transform:uppercase;
+          letter-spacing:.15pt;
+        }
+
+        .small-card .body{
+          color:#314b56;
+          font-size:7.3pt;
+          line-height:1.5;
+          white-space:pre-wrap;
+        }
+
+        .totals{
+          overflow:hidden;
+          border:1px solid var(--navy);
+          border-radius:2.5mm;
+          background:#fff;
+        }
+
+        .totals-title{
+          padding:3mm 4mm;
+          background:var(--navy);
+          color:#fff;
+          font-size:8.5pt;
+          font-weight:900;
+          text-transform:uppercase;
+        }
+
+        .total-row{
+          display:grid;
+          grid-template-columns:1fr auto;
+          gap:4mm;
+          padding:2.6mm 4mm;
+          border-bottom:1px solid var(--line);
+          font-size:7.6pt;
+        }
+
+        .total-row:last-child{border-bottom:0}
+
+        .total-row.grand{
+          padding-top:3.5mm;
+          padding-bottom:3.5mm;
+          background:var(--navy);
+          color:#fff;
+          font-size:10.5pt;
+          font-weight:900;
+        }
+
+        .signature-thanks{
+          display:grid;
+          grid-template-columns:1.2fr .8fr;
+          gap:4mm;
+          margin-top:4mm;
+        }
+
+        .signature-card,
+        .thanks-card{
+          min-height:41mm;
+          padding:4mm 5mm;
+          border:1px solid var(--line);
+          border-radius:2.5mm;
+          background:#fff;
+        }
+
+        .signature-card{
+          position:relative;
+          overflow:hidden;
+        }
+
+        .signature-label{
+          font-size:7.2pt;
+          color:#425965;
+        }
+
+        .signature-area{
+          position:relative;
+          height:29mm;
+          margin-top:1mm;
+        }
+
+        .signature-img{
+          position:absolute;
+          left:1mm;
+          bottom:6mm;
+          width:48mm;
+          max-height:23mm;
+          object-fit:contain;
+          object-position:left bottom;
+          z-index:2;
+        }
+
+        .stamp-img{
+          position:absolute;
+          left:43mm;
+          bottom:1mm;
+          width:34mm;
+          height:34mm;
+          object-fit:contain;
+          transform:rotate(-6deg);
+          z-index:1;
+        }
+
+        .signer{
+          position:absolute;
+          left:0;
+          bottom:0;
+          width:47mm;
+          border-top:1px solid #4d626c;
+          padding-top:1.3mm;
+          z-index:3;
+        }
+
+        .signer strong{
+          display:block;
+          font-size:7.8pt;
+          color:var(--navy);
+        }
+
+        .signer span{
+          display:block;
+          margin-top:.5mm;
+          font-size:6.8pt;
+          color:#536b75;
+        }
+
+        .thanks-card{
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          text-align:center;
+        }
+
+        .thanks-card strong{
+          display:block;
+          color:var(--navy);
+          font-size:11pt;
+          margin-bottom:1.5mm;
+        }
+
+        .thanks-card span{
+          display:block;
+          color:var(--muted);
+          font-size:7pt;
+          line-height:1.45;
+        }
+
+        .footer{
+          position:absolute;
+          left:0;
+          right:0;
+          bottom:0;
+          height:10mm;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          align-items:center;
+          background:var(--navy);
+          color:#fff;
+          border-top:1.3mm solid var(--blue);
+          font-size:7.2pt;
+        }
+
+        .footer div{
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          gap:2mm;
+          padding:0 5mm;
+        }
+
+        .footer div:first-child{
+          border-right:1px solid rgba(255,255,255,.35);
+        }
+
+        .buttons{
+          position:fixed;
+          right:15px;
+          top:15px;
+          z-index:10;
+          display:flex;
+          flex-wrap:wrap;
+          gap:6px;
+          justify-content:flex-end;
+        }
+
+        .buttons button{
+          border:0;
+          border-radius:8px;
+          padding:10px 12px;
+          background:var(--navy);
+          color:#fff;
+          font-weight:800;
+          cursor:pointer;
+        }
+
+        .buttons .download{background:var(--blue)}
+        .buttons .share{background:#1f8f5f}
+        .buttons button:disabled{opacity:.55;cursor:not-allowed}
+
+        .download-status{
+          position:fixed;
+          left:15px;
+          top:15px;
+          z-index:10;
+          max-width:320px;
+          padding:10px 13px;
+          border-radius:8px;
+          background:#fff;
+          box-shadow:0 4px 15px rgba(0,0,0,.15);
+          font-size:13px;
+          line-height:1.4;
+        }
+
+        @media print{
+          html,body{background:#fff}
+          .buttons,.download-status{display:none!important}
+          .sheet{box-shadow:none}
+        }
+      </style>
+      <script src="${pdfLibrary}"><\/script>
+    </head>
+    <body>
+      <div id="downloadStatus" class="download-status" style="display:none">
+        Mempersiapkan PDF...
+      </div>
+
+      <div class="buttons">
+        <button onclick="window.print()">Cetak / PDF</button>
+        <button class="download" onclick="downloadPdf()">Download PDF</button>
+        <button id="sharePdfBtn" class="share" onclick="sharePdf()" disabled>Bagikan PDF + Pesan</button>
+        <button onclick="copyShareMessage()">Salin Pesan</button>
+        <button onclick="window.close()">Tutup</button>
+      </div>
+
+      <article class="sheet">
+        <div class="fit">
+          <div class="topbar-accent"></div>
+
+          <header class="header">
+            <section>
+              <div class="brand-wrap">
+                <img class="brand-logo" src="${logo}" alt="Logo LORHIL AC">
+                <div>
+                  <h1 class="brand-name">${esc(s.store_name||"LORHIL AC")}</h1>
+                  <div class="brand-subtitle">SPESIALIS AIR CONDITIONER</div>
+
+                  <div class="brand-contact">
+                    <div><span class="icon">☎</span><span>WhatsApp: ${esc(s.phone||whatsappStore)}</span></div>
+                    <div><span class="icon">⌖</span><span>Alamat: ${esc(s.address||"Alamat LORHIL AC")}</span></div>
+                    <div><span class="icon">⚙</span><span>Layanan: AC Baru, AC Second & Jasa Servis</span></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="invoice-box">
+              <h2 class="invoice-title">INVOICE</h2>
+              <div class="invoice-meta">
+                <span>NO.</span><strong>${esc(inv.invoice_number)}</strong>
+                <span>TANGGAL</span><strong>${formatDate(inv.work_date)} • ${esc((inv.work_time||"").slice(0,5))}</strong>
+                <span>STATUS</span><strong><span class="status-pill">${esc(inv.status)}</span></strong>
+              </div>
+            </section>
+          </header>
+
+          <main class="content">
+            <section class="info-grid">
+              <div class="info-card">
+                <div class="card-title"><span class="title-icon">☎</span>Rincian Kontak</div>
+                <div class="card-line"><span class="label">WhatsApp</span><span>:</span><span>${esc(s.phone||whatsappStore)}</span></div>
+                <div class="card-line"><span class="label">Alamat</span><span>:</span><span>${esc(s.address||"Alamat LORHIL AC")}</span></div>
+                <div class="card-line"><span class="label">Layanan</span><span>:</span><span>AC Baru, AC Second & Jasa Servis</span></div>
+              </div>
+
+              <div class="info-card">
+                <div class="card-title"><span class="title-icon">●</span>Kepada</div>
+                <div class="customer-name">${esc(inv.customer_name)}</div>
+                <div class="card-line"><span class="label">WhatsApp</span><span>:</span><span>${esc(inv.customer_phone||"-")}</span></div>
+                <div class="card-line"><span class="label">Alamat</span><span>:</span><span>${esc(inv.customer_address||"-")}</span></div>
+              </div>
+            </section>
+
+            <section class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="no">No.</th>
+                    <th>Keterangan</th>
+                    <th class="unit">Harga Unit</th>
+                    <th class="qty">Qty</th>
+                    <th class="total">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map((item,index)=>`
+                    <tr>
+                      <td class="no-cell">${index+1}</td>
+                      <td class="desc">
+                        <strong>${esc(item.description)}</strong>
+                        <small>Pekerjaan / produk LORHIL AC</small>
+                      </td>
+                      <td class="unit-cell">${money(item.unit_price)}</td>
+                      <td class="qty-cell">${item.quantity}</td>
+                      <td class="total-cell">${money(item.line_total)}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </section>
+
+            <section class="bottom-grid">
+              <div class="small-card">
+                <h3>Metode Pembayaran</h3>
+                <div class="body">${esc(s.payment_info||"Tunai / Transfer")}</div>
+              </div>
+
+              <div class="small-card">
+                <h3>Catatan</h3>
+                <div class="body">${esc(inv.notes||s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</div>
+              </div>
+
+              <div class="totals">
+                <div class="totals-title">Ringkasan Total</div>
+                <div class="total-row"><span>Subtotal</span><strong>${money(inv.subtotal)}</strong></div>
+                <div class="total-row"><span>Diskon</span><strong>${money(inv.discount)}</strong></div>
+                <div class="total-row"><span>Dibayar</span><strong>${money(inv.paid)}</strong></div>
+                <div class="total-row"><span>Sisa</span><strong>${money(inv.balance)}</strong></div>
+                <div class="total-row grand"><span>Total</span><strong>${money(inv.total)}</strong></div>
+              </div>
+            </section>
+
+            <section class="signature-thanks">
+              <div class="signature-card">
+                <div class="signature-label">Hormat kami,</div>
+                <div class="signature-area">
+                  <img class="signature-img" src="${sig}" alt="Tanda tangan">
+                  <img class="stamp-img" src="${stamp}" alt="Stempel LORHIL AC">
+                  <div class="signer">
+                    <strong>${esc(s.signer_name||"Hendri Nova Lismana")}</strong>
+                    <span>${esc(s.signer_role||"Pemilik LORHIL AC")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="thanks-card">
+                <div>
+                  <strong>TERIMA KASIH</strong>
+                  <span>${esc(s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</span>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <footer class="footer">
+            <div><span>◎</span><span>Instagram: ${instagramUrl}</span></div>
+            <div><span>◉</span><span>WhatsApp: ${whatsappStore}</span></div>
+          </footer>
+        </div>
+      </article>
+
+      <script>
+        const START_MODE=${JSON.stringify(mode)};
+        const PDF_FILENAME=${JSON.stringify(filename)};
+        const SHARE_TITLE=${JSON.stringify(shareTitle)};
+        const SHARE_MESSAGE=${JSON.stringify(shareMessage)};
+        const CUSTOMER_PHONE=${JSON.stringify(customerPhone)};
+        let preparedPdfFile=null;
+
+        function fit(){
+          const page=document.querySelector(".sheet");
+          const content=document.querySelector(".fit");
+
+          content.style.transform="none";
+          content.style.width="100%";
+
+          const scale=Math.min(1,page.clientHeight/content.scrollHeight);
+
+          if(scale<1){
+            content.style.transform="scale("+scale+")";
+            content.style.width=(100/scale)+"%";
+          }
+        }
+
+        async function waitForImages(){
+          try{
+            await Promise.all(
+              [...document.images].map(img=>
+                img.decode ? img.decode().catch(()=>{}) : Promise.resolve()
+              )
+            );
+          }catch(error){}
+        }
+
+        function pdfOptions(){
+          return {
+            margin:0,
+            filename:PDF_FILENAME,
+            image:{type:"jpeg",quality:0.98},
+            html2canvas:{
+              scale:2,
+              useCORS:true,
+              allowTaint:false,
+              backgroundColor:"#ffffff",
+              logging:false
+            },
+            jsPDF:{
+              unit:"mm",
+              format:"a4",
+              orientation:"portrait",
+              compress:true
+            },
+            pagebreak:{mode:[]}
+          };
+        }
+
+        async function createPdfBlob(){
+          if(typeof html2pdf!=="function"){
+            throw new Error("Komponen PDF belum selesai dimuat.");
+          }
+
+          fit();
+
+          return html2pdf()
             .set(pdfOptions())
             .from(document.querySelector(".sheet"))
-            .save();
-        }catch(error){
-          console.error(error);
-          alert("PDF belum berhasil dibuat. Silakan gunakan tombol Cetak / PDF sebagai alternatif.");
-        }finally{
-          if(START_MODE!=="share") status.style.display="none";
-        }
-      }
-
-      async function copyShareMessage(){
-        try{
-          await navigator.clipboard.writeText(SHARE_MESSAGE);
-          alert("Pesan nota berhasil disalin.");
-        }catch(error){
-          window.prompt("Salin pesan berikut:",SHARE_MESSAGE);
-        }
-      }
-
-      async function sharePdf(){
-        if(!preparedPdfFile){
-          alert("PDF masih dipersiapkan. Tunggu sampai tombol aktif.");
-          return;
+            .toPdf()
+            .outputPdf("blob");
         }
 
-        const shareData={
-          title:SHARE_TITLE,
-          text:SHARE_MESSAGE,
-          files:[preparedPdfFile]
-        };
+        async function prepareShareFile(){
+          const status=document.getElementById("downloadStatus");
+          const shareButton=document.getElementById("sharePdfBtn");
 
-        try{
-          if(!navigator.share || (navigator.canShare && !navigator.canShare({files:[preparedPdfFile]}))){
-            throw new Error("Perangkat tidak mendukung berbagi file dari browser.");
+          status.style.display="block";
+          status.textContent="Mempersiapkan PDF. Setelah siap, tekan Bagikan PDF + Pesan.";
+
+          try{
+            const blob=await createPdfBlob();
+            preparedPdfFile=new File([blob],PDF_FILENAME,{type:"application/pdf"});
+            shareButton.disabled=false;
+            status.textContent="PDF siap. Pilih WhatsApp dari menu berbagi perangkat.";
+          }catch(error){
+            console.error(error);
+            status.textContent="PDF belum berhasil disiapkan. Gunakan Download PDF sebagai alternatif.";
+          }
+        }
+
+        async function downloadPdf(){
+          const status=document.getElementById("downloadStatus");
+          status.style.display="block";
+          status.textContent="Membuat file PDF...";
+
+          try{
+            await html2pdf()
+              .set(pdfOptions())
+              .from(document.querySelector(".sheet"))
+              .save();
+          }catch(error){
+            console.error(error);
+            alert("PDF belum berhasil dibuat. Silakan gunakan tombol Cetak / PDF.");
+          }finally{
+            if(START_MODE!=="share") status.style.display="none";
+          }
+        }
+
+        async function copyShareMessage(){
+          try{
+            await navigator.clipboard.writeText(SHARE_MESSAGE);
+            alert("Pesan nota berhasil disalin.");
+          }catch(error){
+            window.prompt("Salin pesan berikut:",SHARE_MESSAGE);
+          }
+        }
+
+        async function sharePdf(){
+          if(!preparedPdfFile){
+            alert("PDF masih dipersiapkan.");
+            return;
           }
 
-          await navigator.share(shareData);
-        }catch(error){
-          if(error && error.name==="AbortError") return;
+          try{
+            if(!navigator.share || (navigator.canShare && !navigator.canShare({files:[preparedPdfFile]}))){
+              throw new Error("Perangkat tidak mendukung berbagi file.");
+            }
 
-          alert(
-            "Browser ini belum mendukung berbagi PDF langsung. " +
-            "PDF akan diunduh dan pesan akan disalin. Setelah itu buka WhatsApp dan lampirkan PDF."
-          );
+            await navigator.share({
+              title:SHARE_TITLE,
+              text:SHARE_MESSAGE,
+              files:[preparedPdfFile]
+            });
+          }catch(error){
+            if(error && error.name==="AbortError") return;
 
-          await downloadPdf();
-          await copyShareMessage();
-
-          if(CUSTOMER_PHONE){
-            window.open(
-              "https://wa.me/"+CUSTOMER_PHONE+"?text="+encodeURIComponent(SHARE_MESSAGE),
-              "_blank"
+            alert(
+              "Browser belum mendukung berbagi PDF langsung. " +
+              "PDF akan diunduh dan pesan akan disalin."
             );
+
+            await downloadPdf();
+            await copyShareMessage();
+
+            if(CUSTOMER_PHONE){
+              window.open(
+                "https://wa.me/"+CUSTOMER_PHONE+"?text="+encodeURIComponent(SHARE_MESSAGE),
+                "_blank"
+              );
+            }
           }
         }
-      }
 
-      window.onload=async()=>{
-        await waitForImages();
-        fit();
-
-        setTimeout(async()=>{
+        window.onload=async()=>{
+          await waitForImages();
           fit();
-          if(START_MODE==="download") await downloadPdf();
-          else if(START_MODE==="print") window.print();
-          else if(START_MODE==="share") await prepareShareFile();
-        },750);
-      };
-    <\/script></body></html>`;
+
+          setTimeout(async()=>{
+            fit();
+
+            if(START_MODE==="download") await downloadPdf();
+            else if(START_MODE==="print") window.print();
+            else if(START_MODE==="share") await prepareShareFile();
+          },700);
+        };
+      <\/script>
+    </body>
+    </html>`;
   }
+
 
   function openInvoiceDocument(inv,mode="print",targetWindow=null){
     const popup=(targetWindow && !targetWindow.closed)

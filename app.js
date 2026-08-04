@@ -354,12 +354,12 @@
 
       if(printAfter) printInvoice(saved,pendingWindow);
       if(downloadAfter) downloadInvoice(saved,pendingWindow);
-      if(whatsappAfter) sendInvoiceToWhatsApp(saved,pendingWindow);
+      if(whatsappAfter) shareInvoicePdf(saved,pendingWindow);
 
       resetInvoice();showPage("dashboard");
 
       if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
-      else if(whatsappAfter) toast("Nota disimpan dan WhatsApp dibuka.");
+      else if(whatsappAfter) toast("Nota disimpan. PDF sedang disiapkan untuk dibagikan.");
       else toast("Nota berhasil disimpan.");
     }catch(error){
       if(pendingWindow && !pendingWindow.closed) pendingWindow.close();
@@ -414,7 +414,7 @@
         <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
         <div class="actions"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button><button id="savePaymentPrintBtn" class="btn success">Simpan & Cetak Ulang</button></div>
       </div>
-      <div class="actions"><button id="editBtn" class="btn secondary">Edit</button><button id="printBtn" class="btn primary">Cetak Nota</button><button id="downloadBtn" class="btn outline">Download PDF</button><button id="whatsappBtn" class="btn success">Kirim WhatsApp</button><button id="deleteBtn" class="btn danger">Hapus</button><button id="closeBtn" class="btn secondary">Tutup</button></div>`;
+      <div class="actions"><button id="editBtn" class="btn secondary">Edit</button><button id="printBtn" class="btn primary">Cetak Nota</button><button id="downloadBtn" class="btn outline">Download PDF</button><button id="whatsappBtn" class="btn success">Bagikan PDF + Pesan</button><button id="deleteBtn" class="btn danger">Hapus</button><button id="closeBtn" class="btn secondary">Tutup</button></div>`;
     const paidInput=$("detailPaid");
     paidInput.addEventListener("input",()=>{$("detailStatus").textContent=statusFrom(inv.total,Math.min(inv.total,Math.max(0,Number(paidInput.value)||0)));});
     $("savePaymentBtn").addEventListener("click",()=>updatePayment(inv.id,false));
@@ -422,7 +422,7 @@
     $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
     $("printBtn").addEventListener("click",()=>printInvoice(inv));
     $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
-    $("whatsappBtn").addEventListener("click",()=>sendInvoiceToWhatsApp(inv));
+    $("whatsappBtn").addEventListener("click",()=>shareInvoicePdf(inv));
     $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
     $("closeBtn").addEventListener("click",closeModal);
     show("detailModal");
@@ -456,7 +456,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:7,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:8,exported_at:new Date().toISOString(),invoices:state.invoices,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -575,6 +575,9 @@
     const amountTitle=due>0?"SISA YANG HARUS DIBAYAR":"TOTAL NOTA";
     const amount=due>0?due:inv.total;
     const filename=invoicePdfFilename(inv);
+    const shareMessage=buildWhatsAppMessage(inv);
+    const shareTitle=`Nota ${inv.invoice_number} - ${s.store_name||"LORHIL AC"}`;
+    const customerPhone=normalizeWhatsAppNumber(inv.customer_phone);
 
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>${esc(inv.invoice_number)}</title>
@@ -593,7 +596,8 @@
       .sign{height:45mm;padding:2mm 12mm 7mm;display:grid;grid-template-columns:1fr 1fr;align-items:end}.signbox{position:relative;height:37mm}.sig{position:absolute;left:0;bottom:9mm;width:48mm;max-height:23mm;object-fit:contain}.stamp{position:absolute;left:37mm;bottom:2mm;width:31mm;height:31mm;object-fit:contain;opacity:.82;transform:rotate(-7deg)}
       .line{position:absolute;left:0;bottom:0;width:52mm;border-top:1px solid #333;padding-top:1.5mm;font-size:8pt}.thanks{text-align:right;font-weight:bold;font-size:12pt}.footer{position:absolute;bottom:0;left:0;right:0;height:7mm;background:#465f88}
       .buttons{position:fixed;right:15px;top:15px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.buttons button{border:0;border-radius:8px;background:#354c72;color:#fff;padding:10px;font-weight:bold;cursor:pointer}
-      .buttons .download{background:#0b78a5}.download-status{position:fixed;left:15px;top:15px;z-index:5;background:#fff;border-radius:8px;padding:10px 13px;font-size:13px;box-shadow:0 4px 15px rgba(0,0,0,.15)}
+      .buttons .download{background:#0b78a5}.buttons .share{background:#198754}.buttons button:disabled{opacity:.55;cursor:not-allowed}
+      .download-status{position:fixed;left:15px;top:15px;z-index:5;background:#fff;border-radius:8px;padding:10px 13px;font-size:13px;box-shadow:0 4px 15px rgba(0,0,0,.15);max-width:310px;line-height:1.4}
       @media print{html,body{background:#fff}.buttons,.download-status{display:none}.sheet{box-shadow:none}}
     </style>
     <script src="${pdfLibrary}"><\/script></head><body>
@@ -601,6 +605,8 @@
     <div class="buttons">
       <button onclick="window.print()">Cetak / PDF</button>
       <button class="download" onclick="downloadPdf()">Download PDF</button>
+      <button id="sharePdfBtn" class="share" onclick="sharePdf()" disabled>Bagikan PDF + Pesan</button>
+      <button onclick="copyShareMessage()">Salin Pesan</button>
       <button onclick="window.close()">Tutup</button>
     </div>
     <article class="sheet"><div class="fit"><div class="accent"></div><header class="head"><div><div class="brandline"><img class="logo" src="${stamp}"><div><h1>${esc(s.store_name||"LORHIL AC")}</h1><div class="tag">SPECIALIST AIR CONDITIONER</div></div></div>
@@ -617,6 +623,10 @@
     <script>
       const START_MODE=${JSON.stringify(mode)};
       const PDF_FILENAME=${JSON.stringify(filename)};
+      const SHARE_TITLE=${JSON.stringify(shareTitle)};
+      const SHARE_MESSAGE=${JSON.stringify(shareMessage)};
+      const CUSTOMER_PHONE=${JSON.stringify(customerPhone)};
+      let preparedPdfFile=null;
 
       function fit(){
         const page=document.querySelector(".sheet");
@@ -638,42 +648,121 @@
         }catch(error){}
       }
 
-      async function downloadPdf(){
-        const status=document.getElementById("downloadStatus");
+      function pdfOptions(){
+        return {
+          margin:0,
+          filename:PDF_FILENAME,
+          image:{type:"jpeg",quality:0.98},
+          html2canvas:{
+            scale:2,
+            useCORS:true,
+            allowTaint:false,
+            backgroundColor:"#ffffff",
+            logging:false
+          },
+          jsPDF:{
+            unit:"mm",
+            format:"a4",
+            orientation:"portrait",
+            compress:true
+          },
+          pagebreak:{mode:[]}
+        };
+      }
 
+      async function createPdfBlob(){
         if(typeof html2pdf!=="function"){
-          alert("Komponen download PDF belum selesai dimuat. Pastikan internet aktif lalu coba kembali.");
-          return;
+          throw new Error("Komponen PDF belum selesai dimuat.");
         }
 
-        status.style.display="block";
         fit();
+        return html2pdf()
+          .set(pdfOptions())
+          .from(document.querySelector(".sheet"))
+          .toPdf()
+          .outputPdf("blob");
+      }
+
+      async function prepareShareFile(){
+        const status=document.getElementById("downloadStatus");
+        const shareButton=document.getElementById("sharePdfBtn");
+
+        status.style.display="block";
+        status.textContent="Mempersiapkan PDF. Setelah siap, tekan Bagikan PDF + Pesan.";
 
         try{
-          await html2pdf().set({
-            margin:0,
-            filename:PDF_FILENAME,
-            image:{type:"jpeg",quality:0.98},
-            html2canvas:{
-              scale:2,
-              useCORS:true,
-              allowTaint:false,
-              backgroundColor:"#ffffff",
-              logging:false
-            },
-            jsPDF:{
-              unit:"mm",
-              format:"a4",
-              orientation:"portrait",
-              compress:true
-            },
-            pagebreak:{mode:[]}
-          }).from(document.querySelector(".sheet")).save();
+          const blob=await createPdfBlob();
+          preparedPdfFile=new File([blob],PDF_FILENAME,{type:"application/pdf"});
+          shareButton.disabled=false;
+          status.textContent="PDF siap. Tekan Bagikan PDF + Pesan, pilih WhatsApp, lalu pilih chat pelanggan.";
+        }catch(error){
+          console.error(error);
+          status.textContent="PDF belum berhasil disiapkan. Gunakan Download PDF sebagai alternatif.";
+        }
+      }
+
+      async function downloadPdf(){
+        const status=document.getElementById("downloadStatus");
+        status.style.display="block";
+        status.textContent="Membuat file PDF...";
+
+        try{
+          await html2pdf()
+            .set(pdfOptions())
+            .from(document.querySelector(".sheet"))
+            .save();
         }catch(error){
           console.error(error);
           alert("PDF belum berhasil dibuat. Silakan gunakan tombol Cetak / PDF sebagai alternatif.");
         }finally{
-          status.style.display="none";
+          if(START_MODE!=="share") status.style.display="none";
+        }
+      }
+
+      async function copyShareMessage(){
+        try{
+          await navigator.clipboard.writeText(SHARE_MESSAGE);
+          alert("Pesan nota berhasil disalin.");
+        }catch(error){
+          window.prompt("Salin pesan berikut:",SHARE_MESSAGE);
+        }
+      }
+
+      async function sharePdf(){
+        if(!preparedPdfFile){
+          alert("PDF masih dipersiapkan. Tunggu sampai tombol aktif.");
+          return;
+        }
+
+        const shareData={
+          title:SHARE_TITLE,
+          text:SHARE_MESSAGE,
+          files:[preparedPdfFile]
+        };
+
+        try{
+          if(!navigator.share || (navigator.canShare && !navigator.canShare({files:[preparedPdfFile]}))){
+            throw new Error("Perangkat tidak mendukung berbagi file dari browser.");
+          }
+
+          await navigator.share(shareData);
+        }catch(error){
+          if(error && error.name==="AbortError") return;
+
+          alert(
+            "Browser ini belum mendukung berbagi PDF langsung. " +
+            "PDF akan diunduh dan pesan akan disalin. Setelah itu buka WhatsApp dan lampirkan PDF."
+          );
+
+          await downloadPdf();
+          await copyShareMessage();
+
+          if(CUSTOMER_PHONE){
+            window.open(
+              "https://wa.me/"+CUSTOMER_PHONE+"?text="+encodeURIComponent(SHARE_MESSAGE),
+              "_blank"
+            );
+          }
         }
       }
 
@@ -685,6 +774,7 @@
           fit();
           if(START_MODE==="download") await downloadPdf();
           else if(START_MODE==="print") window.print();
+          else if(START_MODE==="share") await prepareShareFile();
         },750);
       };
     <\/script></body></html>`;
@@ -713,6 +803,10 @@
 
   function downloadInvoice(inv,targetWindow=null){
     openInvoiceDocument(inv,"download",targetWindow);
+  }
+
+  function shareInvoicePdf(inv,targetWindow=null){
+    openInvoiceDocument(inv,"share",targetWindow);
   }
 
   init();

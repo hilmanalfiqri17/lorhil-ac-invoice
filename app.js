@@ -78,7 +78,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=18",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=20",{
             updateViaCache:"none"
           });
 
@@ -411,7 +411,7 @@
       resetInvoice();showPage("dashboard");
 
       if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
-      else if(whatsappAfter) toast("Nota disimpan. PDF sedang disiapkan untuk dibagikan.");
+      else if(whatsappAfter) toast("Nota disimpan. PDF siap dibagikan sebagai lampiran.");
       else toast("Nota berhasil disimpan.");
     }catch(error){
       if(pendingWindow && !pendingWindow.closed) pendingWindow.close();
@@ -468,7 +468,7 @@
       </div>
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
         <button id="printBtn" class="btn primary">Cetak Nota</button>
-        <button id="whatsappBtn" class="btn success">Bagikan WhatsApp</button>
+        <button id="whatsappBtn" class="btn success">Bagikan PDF sebagai Lampiran</button>
         <details id="moreActions" style="position:relative">
           <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
           <div style="position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
@@ -1206,7 +1206,7 @@
       <div class="buttons">
         <button onclick="window.print()">Cetak / PDF</button>
         <button class="download" onclick="downloadPdf()">Download PDF</button>
-        <button id="sharePdfBtn" class="share" onclick="sharePdf()" disabled>Bagikan PDF + Pesan</button>
+        <button id="sharePdfBtn" class="share" onclick="sharePdfFile()" ${mode==="share"?"disabled":""}>Bagikan PDF • Pilih WhatsApp</button>
         <button onclick="copyShareMessage()">Salin Pesan</button>
         <button onclick="window.close()">Tutup</button>
       </div>
@@ -1342,8 +1342,8 @@
         const PDF_FILENAME=${JSON.stringify(filename)};
         const SHARE_TITLE=${JSON.stringify(shareTitle)};
         const SHARE_MESSAGE=${JSON.stringify(shareMessage)};
-        const CUSTOMER_PHONE=${JSON.stringify(customerPhone)};
-        let preparedPdfFile=null;
+        let preparedPdfBlob=null;
+        let sharingPdf=false;
 
         function fit(){
           const page=document.querySelector(".sheet");
@@ -1408,19 +1408,21 @@
 
         async function prepareShareFile(){
           const status=document.getElementById("downloadStatus");
-          const shareButton=document.getElementById("sharePdfBtn");
+          const button=document.getElementById("sharePdfBtn");
 
+          if(button) button.disabled=true;
           status.style.display="block";
-          status.textContent="Mempersiapkan PDF. Setelah siap, tekan Bagikan PDF + Pesan.";
+          status.textContent="Mempersiapkan PDF sebagai lampiran...";
 
           try{
-            const blob=await createPdfBlob();
-            preparedPdfFile=new File([blob],PDF_FILENAME,{type:"application/pdf"});
-            shareButton.disabled=false;
-            status.textContent="PDF siap. Pilih WhatsApp dari menu berbagi perangkat.";
+            preparedPdfBlob=await createPdfBlob();
+            status.textContent="PDF siap. Tekan Bagikan PDF, lalu pilih WhatsApp dan pelanggan.";
           }catch(error){
             console.error(error);
-            status.textContent="PDF belum berhasil disiapkan. Gunakan Download PDF sebagai alternatif.";
+            status.textContent="PDF belum berhasil dibuat. Gunakan Download PDF sebagai alternatif.";
+            throw error;
+          }finally{
+            if(button) button.disabled=false;
           }
         }
 
@@ -1451,39 +1453,63 @@
           }
         }
 
-        async function sharePdf(){
-          if(!preparedPdfFile){
-            alert("PDF masih dipersiapkan.");
-            return;
-          }
+        function downloadPreparedPdf(blob){
+          const url=URL.createObjectURL(blob);
+          const link=document.createElement("a");
+          link.href=url;
+          link.download=PDF_FILENAME;
+          link.style.display="none";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(()=>URL.revokeObjectURL(url),30000);
+        }
+
+        async function sharePdfFile(){
+          if(sharingPdf) return;
+
+          sharingPdf=true;
+          const status=document.getElementById("downloadStatus");
+          const button=document.getElementById("sharePdfBtn");
+          status.style.display="block";
+          status.textContent="Menyiapkan lampiran PDF...";
+          if(button) button.disabled=true;
 
           try{
-            if(!navigator.share || (navigator.canShare && !navigator.canShare({files:[preparedPdfFile]}))){
-              throw new Error("Perangkat tidak mendukung berbagi file.");
+            if(!preparedPdfBlob){
+              await prepareShareFile();
+              status.textContent="PDF siap. Tekan Bagikan PDF sekali lagi.";
+              return;
             }
 
-            await navigator.share({
+            const pdfFile=new File([preparedPdfBlob],PDF_FILENAME,{type:"application/pdf"});
+            const shareData={
               title:SHARE_TITLE,
               text:SHARE_MESSAGE,
-              files:[preparedPdfFile]
-            });
-          }catch(error){
-            if(error && error.name==="AbortError") return;
+              files:[pdfFile]
+            };
 
-            alert(
-              "Browser belum mendukung berbagi PDF langsung. " +
-              "PDF akan diunduh dan pesan akan disalin."
-            );
-
-            await downloadPdf();
-            await copyShareMessage();
-
-            if(CUSTOMER_PHONE){
-              window.open(
-                "https://wa.me/"+CUSTOMER_PHONE+"?text="+encodeURIComponent(SHARE_MESSAGE),
-                "_blank"
-              );
+            if(!navigator.share || (navigator.canShare && !navigator.canShare({files:[pdfFile]}))){
+              downloadPreparedPdf(preparedPdfBlob);
+              status.textContent="Perangkat ini belum mendukung berbagi PDF langsung. File telah diunduh.";
+              alert("Browser ini belum mendukung berbagi file PDF langsung. Gunakan Chrome Android terbaru atau bagikan file yang sudah diunduh.");
+              return;
             }
+
+            status.textContent="Pilih WhatsApp, lalu pilih chat pelanggan.";
+            await navigator.share(shareData);
+            status.textContent="PDF selesai dibagikan.";
+          }catch(error){
+            if(error && error.name==="AbortError"){
+              status.textContent="Berbagi dibatalkan. Tekan Bagikan PDF untuk mencoba lagi.";
+            }else{
+              console.error(error);
+              status.textContent="PDF belum berhasil dibagikan. Gunakan Download PDF sebagai alternatif.";
+              alert("PDF belum berhasil dibagikan. Silakan gunakan tombol Download PDF.");
+            }
+          }finally{
+            sharingPdf=false;
+            if(button) button.disabled=false;
           }
         }
 
@@ -1496,7 +1522,13 @@
 
             if(START_MODE==="download") await downloadPdf();
             else if(START_MODE==="print") window.print();
-            else if(START_MODE==="share") await prepareShareFile();
+            else if(START_MODE==="share"){
+              try{
+                await prepareShareFile();
+                const button=document.getElementById("sharePdfBtn");
+                if(button) button.focus();
+              }catch(error){}
+            }
           },700);
         };
       <\/script>

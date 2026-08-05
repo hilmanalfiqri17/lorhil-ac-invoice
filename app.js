@@ -271,7 +271,7 @@
   $("addItemBtn").addEventListener("click",()=>addItem());
   $("discount").addEventListener("input",calculate);
   $("paid").addEventListener("input",calculate);
-  $("resetInvoiceBtn").addEventListener("click",resetInvoice);
+  $("resetInvoiceBtn").addEventListener("click",confirmResetInvoice);
 
   function addItem(item={}){
     const tr=document.createElement("tr");
@@ -305,11 +305,31 @@
     $("formStatus").textContent=statusFrom(total,paid);
     return{subtotal,discount,total,paid,balance,status:statusFrom(total,paid)};
   }
+  function confirmResetInvoice(){
+    const hasInput=
+      $("customerName").value.trim() ||
+      $("customerPhone").value.trim() ||
+      $("customerAddress").value.trim() ||
+      $("notes").value.trim() ||
+      Number($("discount").value) > 0 ||
+      Number($("paid").value) > 0 ||
+      [...$("itemsBody").querySelectorAll(".desc")].some(input=>input.value.trim()) ||
+      [...$("itemsBody").querySelectorAll(".price")].some(input=>Number(input.value) > 0);
+
+    if(hasInput && !window.confirm("Kosongkan seluruh data nota yang sedang diisi?")) return;
+    resetInvoice();
+  }
+
+  function closeInvoiceActionMenu(){
+    const menu=$("invoiceActionMenu");
+    if(menu) menu.open=false;
+  }
+
   function resetInvoice(){
     $("invoiceForm").reset();$("invoiceId").value="";$("invoiceNumber").value="";
     $("numberPreview").textContent="Otomatis setelah disimpan";$("invoiceHeading").textContent="Buat Nota Baru";
     $("workDate").value=localDate();$("workTime").value=localTime();$("discount").value=0;$("paid").value=0;
-    $("itemsBody").innerHTML="";addItem();calculate();
+    $("itemsBody").innerHTML="";addItem();calculate();closeInvoiceActionMenu();
   }
   function formData(){
     const items=[...$("itemsBody").children].map(tr=>({
@@ -331,10 +351,10 @@
     };
   }
 
-  $("invoiceForm").addEventListener("submit",async e=>{e.preventDefault();await saveInvoice({});});
-  $("savePrintBtn").addEventListener("click",()=>saveInvoice({printAfter:true}));
-  $("saveDownloadBtn").addEventListener("click",()=>saveInvoice({downloadAfter:true}));
-  $("saveWhatsappBtn").addEventListener("click",()=>saveInvoice({whatsappAfter:true}));
+  $("invoiceForm").addEventListener("submit",async e=>{e.preventDefault();closeInvoiceActionMenu();await saveInvoice({});});
+  $("savePrintBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({printAfter:true});});
+  $("saveDownloadBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({downloadAfter:true});});
+  $("saveWhatsappBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({whatsappAfter:true});});
 
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
     let pendingWindow=null;

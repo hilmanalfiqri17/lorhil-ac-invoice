@@ -8,8 +8,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=24">
-  <title>LORHIL AC Online V24</title>
+  <link rel="stylesheet" href="style.css?v=25">
+  <title>LORHIL AC Online V25</title>
 
   <style>
     .invoice-actions{
@@ -114,8 +114,16 @@
     .incentive-summary-item{padding:12px;border-radius:10px;background:#fff;border:1px solid #d9e4ea;}
     .incentive-summary-item span{display:block;color:#6b7e88;font-size:12px;margin-bottom:5px;}
     .incentive-summary-item strong{font-size:18px;color:#153746;}
-    .item-table .incentive-basis{min-width:130px;}
-    .item-table .cost,.item-table .rate{min-width:100px;}
+    .item-table .qty{min-width:78px;}
+    .item-table .price{min-width:135px;}
+    .item-table th:nth-child(4),
+    .item-table th:nth-child(5),
+    .item-table th:nth-child(6),
+    .item-table td:nth-child(4),
+    .item-table td:nth-child(5),
+    .item-table td:nth-child(6){text-align:right;}
+    .item-table .line-total,
+    .item-table .line-incentive{white-space:nowrap;}
     .empty.compact{padding:12px;text-align:left;}
     .technician-form-row{
       display:grid;
@@ -197,7 +205,7 @@
     }
   </style>
 </head>
-<body data-app-version="24">
+<body data-app-version="25">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
@@ -337,13 +345,23 @@
 
             <div class="panel">
               <div class="panel-head">
-                <div><h3>Rincian Pekerjaan</h3><p>Harga diisi manual seperti nota sebelumnya. Insentif tetap 10% dari jasa atau keuntungan.</p></div>
+                <div><h3>Rincian Pekerjaan</h3><p>Cukup isi keterangan, jumlah unit, dan harga jasa. Insentif 10% dihitung otomatis.</p></div>
                 <button type="button" id="addItemBtn" class="btn outline">＋ Tambah Baris</button>
               </div>
 
               <div class="table-wrap">
                 <table class="item-table">
-                  <thead><tr><th>No.</th><th>Keterangan</th><th>Qty</th><th>Harga Manual</th><th>Dasar Insentif</th><th>Modal/Unit</th><th>Insentif Tetap</th><th>Total</th><th>Insentif</th><th>Aksi</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Keterangan Pekerjaan</th>
+                      <th>Qty</th>
+                      <th>Harga Jasa</th>
+                      <th>Total Jasa</th>
+                      <th>Insentif 10%</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
                   <tbody id="itemsBody"></tbody>
                 </table>
               </div>
@@ -361,12 +379,12 @@
 
               <div class="incentive-summary">
                 <div class="incentive-summary-grid">
-                  <div class="incentive-summary-item"><span>Dasar Insentif</span><strong id="incentiveBaseText">Rp0</strong></div>
-                  <div class="incentive-summary-item"><span>Pool Insentif</span><strong id="incentiveTotalText">Rp0</strong></div>
-                  <div class="incentive-summary-item"><span>Jumlah Teknisi</span><strong id="technicianCountText">0 orang</strong></div>
-                  <div class="incentive-summary-item"><span>Per Teknisi</span><strong id="incentivePerTechnicianText">Rp0</strong></div>
+                  <div class="incentive-summary-item"><span>Nilai Jasa</span><strong id="incentiveBaseText">Rp0</strong></div>
+                  <div class="incentive-summary-item"><span>Insentif Tim 10%</span><strong id="incentiveTotalText">Rp0</strong></div>
+                  <div class="incentive-summary-item"><span>Teknisi Dipilih</span><strong id="technicianCountText">0 orang</strong></div>
+                  <div class="incentive-summary-item"><span>Bagian per Teknisi</span><strong id="incentivePerTechnicianText">Rp0</strong></div>
                 </div>
-                <div class="incentive-note">Isi harga pekerjaan secara manual. Pilih Jasa untuk perhitungan 10% dari nilai tertagih. Untuk freon atau bahan, pilih Keuntungan lalu isi modal per unit. Insentif dapat dibayar setelah nota lunas.</div>
+                <div class="incentive-note">Insentif tim dihitung 10% dari nilai jasa setelah diskon, lalu dibagi rata kepada teknisi yang dipilih. Contoh: jasa Rp120.000 dikerjakan 2 teknisi, total insentif Rp12.000 dan masing-masing menerima Rp6.000.</div>
               </div>
 
               <div class="actions invoice-actions">
@@ -565,6 +583,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>

@@ -332,8 +332,7 @@
   $("resetInvoiceBtn").addEventListener("click",confirmResetInvoice);
 
   function defaultIncentiveFor(){
-    // Harga pekerjaan selalu diisi manual seperti sistem nota sebelumnya.
-    // Setiap baris baru memakai insentif tetap 10% dengan dasar Jasa.
+    // Form dibuat sederhana: setiap baris baru dihitung 10% dari nilai jasa.
     return {basis:"service",cost:0,rate:10};
   }
 
@@ -348,21 +347,19 @@
     tr.dataset.itemId=item.id||"";
     tr.innerHTML=`
       <td class="index"></td>
-      <td><input class="desc" required placeholder="Contoh: Cuci AC 1 PK" value="${esc(item.description||"")}"></td>
+      <td>
+        <input class="desc" required placeholder="Contoh: Cuci AC 1 PK" value="${esc(item.description||"")}">
+        <input class="incentive-basis" type="hidden" value="${esc(basis)}">
+        <input class="cost" type="hidden" value="${safeNumber(cost)}">
+        <input class="rate" type="hidden" value="${safeNumber(rate)}">
+      </td>
       <td><input class="qty" type="number" min="1" step="1" value="${Number(item.quantity)||1}" required></td>
-      <td><input class="price" type="number" min="0" step="1000" placeholder="Isi nominal" value="${priceValue}" required></td>
-      <td><select class="incentive-basis">
-        <option value="service" ${basis==="service"?"selected":""}>Jasa</option>
-        <option value="profit" ${basis==="profit"?"selected":""}>Keuntungan</option>
-        <option value="none" ${basis==="none"?"selected":""}>Tidak dihitung</option>
-      </select></td>
-      <td><input class="cost" type="number" min="0" step="1000" value="${safeNumber(cost)}" aria-label="Modal per unit"></td>
-      <td><input class="rate" type="number" min="0" max="100" step="0.1" value="${safeNumber(rate)}" readonly aria-label="Persentase insentif tetap 10 persen" title="Insentif ditetapkan 10%"></td>
+      <td><input class="price" type="number" min="0" step="1000" placeholder="Contoh: 120000" value="${priceValue}" required></td>
       <td class="line-total money">Rp0</td>
       <td class="line-incentive money">Rp0</td>
       <td><button type="button" class="btn danger remove">Hapus</button></td>`;
     $("itemsBody").appendChild(tr);
-    tr.querySelectorAll("input,select").forEach(x=>x.addEventListener("input",calculate));
+    tr.querySelectorAll("input").forEach(x=>x.addEventListener("input",calculate));
     tr.querySelector(".remove").addEventListener("click",()=>{
       if($("itemsBody").children.length===1){toast("Minimal satu baris pekerjaan.");return;}
       tr.remove();renumber();calculate();
@@ -396,7 +393,6 @@
       const amount=Math.round(base*rate/100);
       tr.dataset.incentiveBase=String(Math.round(base));
       tr.dataset.incentiveAmount=String(amount);
-      tr.querySelector(".cost").disabled=basis!=="profit";
       tr.querySelector(".line-incentive").textContent=money(amount);
       incentiveBase+=base;
       incentiveTotal+=amount;

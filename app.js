@@ -76,7 +76,33 @@
     if(state.session) await enterApp(); else showLogin();
 
     if("serviceWorker" in navigator){
-      window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));
+      window.addEventListener("load",async()=>{
+        try{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=18",{
+            updateViaCache:"none"
+          });
+
+          await registration.update();
+
+          if("caches" in window){
+            const keys=await caches.keys();
+            await Promise.all(
+              keys
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v18")
+                .map(key=>caches.delete(key))
+            );
+          }
+
+          navigator.serviceWorker.addEventListener("controllerchange",()=>{
+            const reloadKey="lorhil-sw-reloaded-v18";
+            if(sessionStorage.getItem(reloadKey)) return;
+            sessionStorage.setItem(reloadKey,"1");
+            window.location.reload();
+          });
+        }catch(error){
+          console.warn("Service worker gagal diperbarui:",error);
+        }
+      });
     }
   }
 

@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v17";
+const CACHE = "lorhil-ac-online-v18";
 const ASSETS = [
   "./","index.html","style.css","app.js","config.js","manifest.webmanifest",
   "assets/icon-192.png","assets/icon-512.png","assets/logo.png","assets/signature.png","assets/stamp.png"
@@ -24,7 +24,7 @@ self.addEventListener("fetch",event=>{
 
   if(useNetworkFirst){
     event.respondWith(
-      fetch(event.request).then(response=>{
+      fetch(event.request,{cache:"no-store"}).then(response=>{
         const copy=response.clone();
         caches.open(CACHE).then(cache=>cache.put(event.request,copy));
         return response;
@@ -38,4 +38,9 @@ self.addEventListener("fetch",event=>{
     caches.open(CACHE).then(cache=>cache.put(event.request,copy));
     return response;
   })));
+});
+
+
+self.addEventListener("message",event=>{
+  if(event.data?.type==="SKIP_WAITING") self.skipWaiting();
 });

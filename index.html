@@ -8,10 +8,141 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css">
-  <title>LORHIL AC Online V12</title>
+  <link rel="stylesheet" href="style.css?v=18">
+  <title>LORHIL AC Online V18</title>
+
+  <style>
+    .invoice-actions{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-top:20px;
+      padding-top:18px;
+      border-top:1px solid #d9e4ea;
+    }
+
+    .invoice-actions-main{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .invoice-primary-action{
+      min-width:150px;
+    }
+
+    .invoice-reset-action{
+      background:transparent;
+      border:1px solid transparent;
+      color:#5d6f7a;
+      box-shadow:none;
+    }
+
+    .invoice-reset-action:hover{
+      background:#f2f6f8;
+      border-color:#d9e4ea;
+    }
+
+    .invoice-action-menu{
+      position:relative;
+    }
+
+    .invoice-action-menu > summary{
+      list-style:none;
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .invoice-action-menu > summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .invoice-action-menu[open] > summary{
+      background:#e9f2f6;
+    }
+
+    .invoice-action-menu-list{
+      position:absolute;
+      right:0;
+      bottom:calc(100% + 8px);
+      z-index:20;
+      min-width:220px;
+      padding:8px;
+      border:1px solid #d9e4ea;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 12px 30px rgba(16,42,54,.16);
+    }
+
+    .invoice-action-menu-list button{
+      display:block;
+      width:100%;
+      padding:11px 12px;
+      border:0;
+      border-radius:8px;
+      background:transparent;
+      color:#163746;
+      font:inherit;
+      font-weight:700;
+      text-align:left;
+      cursor:pointer;
+    }
+
+    .invoice-action-menu-list button:hover{
+      background:#eef6f9;
+    }
+
+    .invoice-action-menu-list small{
+      display:block;
+      margin-top:3px;
+      color:#6b7e88;
+      font-size:12px;
+      font-weight:400;
+    }
+
+    @media (max-width:720px){
+      .invoice-actions{
+        align-items:stretch;
+        flex-direction:column-reverse;
+      }
+
+      .invoice-actions-main{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+      }
+
+      .invoice-primary-action{
+        grid-column:1 / -1;
+        width:100%;
+      }
+
+      .invoice-action-menu,
+      .invoice-action-menu > summary{
+        width:100%;
+      }
+
+      .invoice-action-menu > summary{
+        box-sizing:border-box;
+        text-align:center;
+      }
+
+      .invoice-action-menu-list{
+        right:0;
+        left:0;
+        min-width:0;
+      }
+
+      .invoice-reset-action{
+        width:100%;
+      }
+    }
+  </style>
 </head>
-<body>
+<body data-app-version="18">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
@@ -163,12 +294,27 @@
                 </div>
               </div>
 
-              <div class="actions">
-                <button type="button" id="resetInvoiceBtn" class="btn secondary">Kosongkan</button>
-                <button type="submit" class="btn primary">Simpan Nota</button>
-                <button type="button" id="savePrintBtn" class="btn success">Simpan & Cetak</button>
-                <button type="button" id="saveDownloadBtn" class="btn outline">Simpan & Download PDF</button>
-                <button type="button" id="saveWhatsappBtn" class="btn success">Simpan & Bagikan PDF</button>
+              <div class="actions invoice-actions">
+                <button type="button" id="resetInvoiceBtn" class="btn invoice-reset-action">Kosongkan Form</button>
+
+                <div class="invoice-actions-main">
+                  <button type="submit" class="btn primary invoice-primary-action">Simpan Nota</button>
+                  <button type="button" id="savePrintBtn" class="btn outline">Simpan & Cetak</button>
+
+                  <details id="invoiceActionMenu" class="invoice-action-menu">
+                    <summary class="btn secondary">Opsi PDF ▾</summary>
+                    <div class="invoice-action-menu-list">
+                      <button type="button" id="saveDownloadBtn">
+                        Download PDF
+                        <small>Simpan nota lalu unduh file PDF.</small>
+                      </button>
+                      <button type="button" id="saveWhatsappBtn">
+                        Bagikan PDF
+                        <small>Simpan nota lalu buka pilihan berbagi.</small>
+                      </button>
+                    </div>
+                  </details>
+                </div>
               </div>
             </div>
           </form>
@@ -253,6 +399,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

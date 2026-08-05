@@ -733,11 +733,26 @@
   function renderTechnicianAdmin(){
     if(!$("technicianAdminBody")) return;
     $("technicianAdminBody").innerHTML=state.technicians.length?state.technicians.map(tech=>`<tr>
-      <td><strong>${esc(tech.name)}</strong></td><td>${esc(tech.phone||"-")}</td>
+      <td><strong>${esc(tech.name)}</strong></td>
+      <td>${esc(tech.phone||"-")}</td>
       <td>${tech.is_active===false?"Nonaktif":"Aktif"}</td>
-      <td><button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${tech.is_active===false?"Aktifkan":"Nonaktifkan"}</button></td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn outline edit-tech-btn" data-id="${tech.id}">Edit</button>
+          <button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${tech.is_active===false?"Aktifkan":"Nonaktifkan"}</button>
+          <button class="btn danger delete-tech-btn" data-id="${tech.id}">Hapus</button>
+        </div>
+      </td>
     </tr>`).join(""):`<tr><td colspan="4" class="empty">Belum ada teknisi.</td></tr>`;
-    $("technicianAdminBody").querySelectorAll(".toggle-tech-btn").forEach(btn=>btn.addEventListener("click",()=>toggleTechnician(btn.dataset.id)));
+
+    $("technicianAdminBody").querySelectorAll(".edit-tech-btn")
+      .forEach(btn=>btn.addEventListener("click",()=>editTechnician(btn.dataset.id)));
+
+    $("technicianAdminBody").querySelectorAll(".toggle-tech-btn")
+      .forEach(btn=>btn.addEventListener("click",()=>toggleTechnician(btn.dataset.id)));
+
+    $("technicianAdminBody").querySelectorAll(".delete-tech-btn")
+      .forEach(btn=>btn.addEventListener("click",()=>deleteTechnician(btn.dataset.id)));
   }
 
   async function payIncentive(id){
@@ -760,6 +775,68 @@
     loading(false);
     if(error){alert(errorMessage(error));return;}
     await refreshAll();
+  }
+
+  async function editTechnician(id){
+    const tech=state.technicians.find(item=>item.id===id);
+    if(!tech) return;
+
+    const newName=prompt("Nama teknisi:",tech.name||"");
+    if(newName===null) return;
+
+    const name=newName.trim();
+    if(!name){
+      alert("Nama teknisi wajib diisi.");
+      return;
+    }
+
+    const newPhone=prompt("Nomor WhatsApp teknisi:",tech.phone||"");
+    if(newPhone===null) return;
+
+    loading(true);
+    const {error}=await db.from("technicians")
+      .update({
+        name,
+        phone:newPhone.trim()||null
+      })
+      .eq("id",id);
+    loading(false);
+
+    if(error){
+      alert(errorMessage(error));
+      return;
+    }
+
+    await refreshAll();
+    toast("Data teknisi berhasil diperbarui.");
+  }
+
+  async function deleteTechnician(id){
+    const tech=state.technicians.find(item=>item.id===id);
+    if(!tech) return;
+
+    const hasHistory=state.invoiceTechnicians.some(row=>row.technician_id===id);
+    if(hasHistory){
+      alert(
+        `Teknisi ${tech.name} sudah tercatat pada riwayat nota atau insentif, sehingga tidak dapat dihapus. `+
+        `Gunakan tombol Nonaktifkan agar riwayat lama tetap tersimpan.`
+      );
+      return;
+    }
+
+    if(!confirm(`Hapus teknisi ${tech.name}? Data yang dihapus tidak dapat dikembalikan.`)) return;
+
+    loading(true);
+    const {error}=await db.from("technicians").delete().eq("id",id);
+    loading(false);
+
+    if(error){
+      alert(errorMessage(error));
+      return;
+    }
+
+    await refreshAll();
+    toast("Teknisi berhasil dihapus.");
   }
 
   $("technicianForm").addEventListener("submit",async event=>{

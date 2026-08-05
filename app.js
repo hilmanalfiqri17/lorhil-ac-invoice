@@ -414,12 +414,31 @@
           <div><span>Sisa</span><strong>${money(inv.balance)}</strong></div>
         </div>
       </div>
-      <div class="actions">
-        <button id="closeBtn" class="btn secondary">Kembali</button>
-        <button id="downloadBtn" class="btn primary">Download PDF</button>
+      <div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
+        <div class="form-grid"><div class="field"><label>Jumlah yang Sudah Dibayar</label><input id="detailPaid" type="number" min="0" max="${inv.total}" value="${inv.paid}"></div>
+        <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
+        <div class="actions"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button></div>
+      </div>
+      <div class="actions" style="align-items:flex-start">
+        <button id="editBtn" class="btn secondary">Edit</button>
+        <button id="printBtn" class="btn primary">Cetak Nota</button>
+        <button id="whatsappBtn" class="btn success">Bagikan WhatsApp</button>
+        <details id="moreActions" style="position:relative">
+          <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
+          <div style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
+            <button id="downloadBtn" class="btn outline" style="width:100%">Download PDF</button>
+            <button id="deleteBtn" class="btn danger" style="width:100%">Hapus Nota</button>
+          </div>
+        </details>
       </div>`;
-    $("closeBtn").addEventListener("click",closeModal);
+    const paidInput=$("detailPaid");
+    paidInput.addEventListener("input",()=>{$("detailStatus").textContent=statusFrom(inv.total,Math.min(inv.total,Math.max(0,Number(paidInput.value)||0)));});
+    $("savePaymentBtn").addEventListener("click",()=>updatePayment(inv.id,false));
+    $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
+    $("printBtn").addEventListener("click",()=>printInvoice(inv));
+    $("whatsappBtn").addEventListener("click",()=>shareInvoicePdf(inv));
     $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
+    $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
     show("detailModal");
   }
 

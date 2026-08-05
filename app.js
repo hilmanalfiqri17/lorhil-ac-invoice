@@ -414,22 +414,12 @@
           <div><span>Sisa</span><strong>${money(inv.balance)}</strong></div>
         </div>
       </div>
-      <div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
-        <div class="form-grid"><div class="field"><label>Jumlah yang Sudah Dibayar</label><input id="detailPaid" type="number" min="0" max="${inv.total}" value="${inv.paid}"></div>
-        <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
-        <div class="actions"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button><button id="savePaymentPrintBtn" class="btn success">Simpan & Cetak Ulang</button></div>
-      </div>
-      <div class="actions"><button id="editBtn" class="btn secondary">Edit</button><button id="printBtn" class="btn primary">Cetak Nota</button><button id="downloadBtn" class="btn outline">Download PDF</button><button id="whatsappBtn" class="btn success">Bagikan PDF + Pesan</button><button id="deleteBtn" class="btn danger">Hapus</button><button id="closeBtn" class="btn secondary">Tutup</button></div>`;
-    const paidInput=$("detailPaid");
-    paidInput.addEventListener("input",()=>{$("detailStatus").textContent=statusFrom(inv.total,Math.min(inv.total,Math.max(0,Number(paidInput.value)||0)));});
-    $("savePaymentBtn").addEventListener("click",()=>updatePayment(inv.id,false));
-    $("savePaymentPrintBtn").addEventListener("click",()=>updatePayment(inv.id,true));
-    $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
-    $("printBtn").addEventListener("click",()=>printInvoice(inv));
-    $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
-    $("whatsappBtn").addEventListener("click",()=>shareInvoicePdf(inv));
-    $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
+      <div class="actions">
+        <button id="closeBtn" class="btn secondary">Kembali</button>
+        <button id="downloadBtn" class="btn primary">Download PDF</button>
+      </div>`;
     $("closeBtn").addEventListener("click",closeModal);
+    $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
     show("detailModal");
   }
 

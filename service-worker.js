@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v13";
+const CACHE = "lorhil-ac-online-v14";
 const ASSETS = [
   "./","index.html","style.css","app.js","config.js","manifest.webmanifest",
   "assets/icon-192.png","assets/icon-512.png","assets/logo.png","assets/signature.png","assets/stamp.png"

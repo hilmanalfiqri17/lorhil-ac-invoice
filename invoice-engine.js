@@ -332,61 +332,23 @@
     return name.toLowerCase().endsWith(".pdf")?name:`${name}.pdf`;
   }
 
-  function pdfDownloadUrl(id,name){
-    const base=new URL("./__lorhil_download__/",window.location.href);
-    return `${base.href}${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
-  }
-
-  function registerPdfWithServiceWorker(bytes,name){
-    if(!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return null;
-
-    const id=`${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
-
-    navigator.serviceWorker.controller.postMessage({
-      type:"REGISTER_PDF_DOWNLOAD",
-      id,
-      filename:name,
-      bytes:buffer
-    },[buffer]);
-
-    return pdfDownloadUrl(id,name);
-  }
-
-  function openBlobFallback(bytes,name){
+  function startPdfDownload(bytes,name,{background=false}={}){
+    const safeName=cleanFilename(name);
     const blob=new Blob([bytes],{type:"application/pdf"});
     const url=URL.createObjectURL(blob);
     const link=document.createElement("a");
+
     link.href=url;
-    link.target="_blank";
+    link.download=safeName;
     link.rel="noopener";
     link.style.display="none";
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),180000);
-    return true;
-  }
 
-  function startPdfDownload(bytes,name,{background=false}={}){
-    const safeName=cleanFilename(name);
-    const url=registerPdfWithServiceWorker(bytes,safeName);
-
-    if(url){
-      const link=document.createElement("a");
-      link.href=url;
-      link.download=safeName;
-      link.rel="noopener";
-      if(background) link.target="_blank";
-      link.style.display="none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      return {started:true,method:"service-worker"};
-    }
-
-    openBlobFallback(bytes,safeName);
-    return {started:true,method:"preview"};
+    // Beri waktu browser menyelesaikan proses unduh sebelum URL sementara dilepas.
+    setTimeout(()=>URL.revokeObjectURL(url),120000);
+    return {started:true,method:"blob"};
   }
 
   function whatsappUrl(payload){
@@ -415,11 +377,7 @@
       const bytes=createPdfBytes(payload);
       const result=startPdfDownload(bytes,filename(payload));
 
-      if(result.method==="service-worker"){
-        showStatus("Download dimulai. Periksa notifikasi unduhan atau folder Download.",5200);
-      }else{
-        showStatus("PDF dibuka di browser. Tekan ikon unduh untuk menyimpannya.",6500);
-      }
+      showStatus("Download dimulai. Periksa notifikasi unduhan atau folder Download.",5200);
       return true;
     }catch(error){
       console.error("Gagal membuat PDF",error);
@@ -441,9 +399,7 @@
       const result=startPdfDownload(bytes,filename(payload),{background:true});
 
       showStatus(
-        result.method==="service-worker"
-          ? "Download dimulai. WhatsApp pelanggan akan dibuka."
-          : "PDF dibuka untuk disimpan. WhatsApp pelanggan akan dibuka.",
+        "Download dimulai. WhatsApp pelanggan akan dibuka.",
         5000
       );
 

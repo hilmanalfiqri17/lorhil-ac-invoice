@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=37",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=36",{
             updateViaCache:"none"
           });
 
@@ -90,13 +90,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v37")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v36")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v37";
+            const reloadKey="lorhil-sw-reloaded-v36";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -461,15 +461,12 @@
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
     if(whatsappAfter){
       const phone=normalizeWhatsAppNumber($("customerPhone").value);
-      if(!/^62\d{8,13}$/.test(phone)){
+      if(phone.length<10){
         alert("Nomor WhatsApp pelanggan wajib diisi dengan benar. Gunakan contoh 081234567890.");
         $("customerPhone").focus();
         return;
       }
     }
-
-    let saved=null;
-    let whatsappError=null;
 
     try{
       const params=formData();
@@ -490,35 +487,18 @@
       await saveInvoiceTechnicians(savedRaw,selectedTechnicians);
       await refreshAll();
 
-      saved=state.invoices.find(invoice=>invoice.id===data.id)||savedRaw;
+      const saved=state.invoices.find(invoice=>invoice.id===data.id)||savedRaw;
 
       if(printAfter) printInvoice(saved);
       if(downloadAfter) downloadInvoice(saved);
-
-      if(whatsappAfter){
-        try{
-          await invokeAutomaticInvoice(saved);
-        }catch(error){
-          whatsappError=error;
-        }
-      }
+      if(whatsappAfter) downloadAndOpenWhatsApp(saved);
 
       resetInvoice();
       showPage("dashboard");
 
-      if(whatsappError){
-        alert(
-          `Nota ${saved.invoice_number} sudah tersimpan, tetapi invoice belum terkirim ke WhatsApp.\n\n`+
-          `${whatsappError.message||whatsappError}\n\n`+
-          "Buka detail nota lalu tekan Kirim Invoice Otomatis untuk mencoba kembali."
-        );
-      }else if(downloadAfter){
-        toast("Nota disimpan dan PDF sedang diunduh.");
-      }else if(whatsappAfter){
-        toast(`Invoice ${saved.invoice_number} berhasil dikirim ke WhatsApp pelanggan.`);
-      }else{
-        toast("Nota berhasil disimpan.");
-      }
+      if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
+      else if(whatsappAfter) toast("Nota disimpan. PDF diunduh dan chat WhatsApp pelanggan dibuka.");
+      else toast("Nota berhasil disimpan.");
     }catch(error){
       alert(errorMessage(error));
     }finally{
@@ -605,7 +585,7 @@
       </div>
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
         <button id="printBtn" class="btn primary">Cetak Nota</button>
-        <button id="whatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
+        <button id="whatsappBtn" class="btn success">Download PDF & Buka WhatsApp</button>
         <details id="moreActions" style="position:relative">
           <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
           <div style="position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
@@ -626,7 +606,7 @@
     savePaymentBtn.disabled=true;
     savePaymentBtn.addEventListener("click",()=>updatePayment(inv.id,false));
     $("printBtn").addEventListener("click",()=>printInvoice(inv));
-    $("whatsappBtn").addEventListener("click",()=>sendInvoiceAutomatically(inv));
+    $("whatsappBtn").addEventListener("click",()=>downloadAndOpenWhatsApp(inv));
     $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
     $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
     $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
@@ -787,7 +767,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:37,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:36,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -952,99 +932,19 @@
     return engine.downloadPdf(invoiceEnginePayload(inv));
   }
 
-  async function edgeFunctionErrorMessage(error){
-    const fallback=error?.message||"Edge Function tidak dapat dipanggil.";
-    const context=error?.context;
-
-    if(context && typeof context.clone==="function"){
-      try{
-        const body=await context.clone().json();
-        if(body?.error) return String(body.error);
-        if(body?.message) return String(body.message);
-      }catch(_jsonError){
-        try{
-          const text=await context.clone().text();
-          if(text) return text;
-        }catch(_textError){}
-      }
-    }
-
-    return fallback;
-  }
-
-  async function invokeAutomaticInvoice(inv){
-    const phone=normalizeWhatsAppNumber(inv.customer_phone);
-    if(!/^62\d{8,13}$/.test(phone)){
-      throw new Error("Nomor WhatsApp pelanggan pada nota belum valid.");
-    }
-
-    const engine=invoiceEngine();
-    if(!engine){
-      throw new Error("Komponen PDF invoice belum termuat. Muat ulang halaman lalu coba kembali.");
-    }
-
-    const payload=invoiceEnginePayload(inv);
-    const pdfBlob=engine.createPdfBlob(payload);
-
-    if(!(pdfBlob instanceof Blob) || pdfBlob.size===0){
-      throw new Error("File PDF invoice gagal dibuat.");
-    }
-
-    const {data:sessionData,error:sessionError}=await db.auth.getSession();
-    if(sessionError) throw sessionError;
-    if(!sessionData?.session){
-      throw new Error("Sesi login sudah berakhir. Silakan masuk kembali.");
-    }
-
-    const form=new FormData();
-    form.append("phone",phone);
-    form.append("customer_name",String(inv.customer_name||"").trim());
-    form.append("invoice_number",String(inv.invoice_number||"").trim());
-    form.append("filename",payload.filename);
-    form.append("pdf",pdfBlob,payload.filename);
-
-    const {data,error}=await db.functions.invoke("send-invoice-whatsapp",{
-      body:form
-    });
-
-    if(error){
-      throw new Error(await edgeFunctionErrorMessage(error));
-    }
-
-    if(!data?.ok){
-      throw new Error(data?.error||"Meta tidak mengonfirmasi pengiriman invoice.");
-    }
-
-    return data;
-  }
-
-  async function sendInvoiceAutomatically(inv){
-    try{
-      loading(true);
-      const result=await invokeAutomaticInvoice(inv);
-      toast(
-        result?.message||
-        `Invoice ${inv.invoice_number} berhasil dikirim ke WhatsApp pelanggan.`
-      );
-      return true;
-    }catch(error){
-      console.error("Pengiriman invoice WhatsApp gagal",error);
-      alert(
-        "Invoice belum berhasil dikirim ke WhatsApp.\n\n"+
-        (error?.message||error)
-      );
-      return false;
-    }finally{
-      loading(false);
-    }
-  }
-
   function downloadAndOpenWhatsApp(inv){
-    return sendInvoiceAutomatically(inv);
+    const phone=normalizeWhatsAppNumber(inv.customer_phone);
+    if(phone.length<10){
+      alert("Nomor WhatsApp pelanggan pada nota belum valid.");
+      return false;
+    }
+    const engine=invoiceEngine();
+    if(!engine) return false;
+    return engine.downloadPdfAndOpenWhatsApp(invoiceEnginePayload(inv));
   }
 
   function shareInvoicePdf(inv){
-    return sendInvoiceAutomatically(inv);
+    return downloadAndOpenWhatsApp(inv);
   }
 
   init();

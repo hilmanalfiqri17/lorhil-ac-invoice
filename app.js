@@ -531,12 +531,12 @@
 
       if(printAfter) printInvoice(saved,pendingWindow);
       if(downloadAfter) downloadInvoice(saved,pendingWindow);
-      if(whatsappAfter) sendInvoiceToWhatsApp(saved,pendingWindow);
+      if(whatsappAfter) downloadAndOpenWhatsApp(saved,pendingWindow);
 
       resetInvoice();showPage("dashboard");
 
       if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
-      else if(whatsappAfter) toast("Nota disimpan. Chat WhatsApp pelanggan dibuka dengan pesan otomatis. Lampirkan PDF secara manual.");
+      else if(whatsappAfter) toast("Nota disimpan. PDF diunduh dan chat WhatsApp pelanggan dibuka.");
       else toast("Nota berhasil disimpan.");
     }catch(error){
       if(pendingWindow && !pendingWindow.closed) pendingWindow.close();
@@ -646,7 +646,7 @@
       </div>
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
         <button id="printBtn" class="btn primary">Cetak Nota</button>
-        <button id="whatsappBtn" class="btn success">Buka WhatsApp Pelanggan</button>
+        <button id="whatsappBtn" class="btn success">Download PDF & Buka WhatsApp</button>
         <details id="moreActions" style="position:relative">
           <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
           <div style="position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
@@ -667,7 +667,7 @@
     savePaymentBtn.disabled=true;
     savePaymentBtn.addEventListener("click",()=>updatePayment(inv.id,false));
     $("printBtn").addEventListener("click",()=>printInvoice(inv));
-    $("whatsappBtn").addEventListener("click",()=>sendInvoiceToWhatsApp(inv));
+    $("whatsappBtn").addEventListener("click",()=>downloadAndOpenWhatsApp(inv));
     $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
     $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
     $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
@@ -864,7 +864,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:27,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,item_incentives:state.itemIncentives,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:29,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,item_incentives:state.itemIncentives,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -1522,6 +1522,21 @@
         .buttons .download{background:var(--blue)}
         .buttons .share{background:#1f8f5f}
         .buttons button:disabled{opacity:.55;cursor:not-allowed}
+        .buttons button.busy{position:relative;padding-right:34px}
+        .buttons button.busy::after{
+          content:"";
+          position:absolute;
+          right:11px;
+          top:50%;
+          width:12px;
+          height:12px;
+          margin-top:-7px;
+          border:2px solid rgba(255,255,255,.45);
+          border-top-color:#fff;
+          border-radius:50%;
+          animation:pdfSpin .8s linear infinite;
+        }
+        @keyframes pdfSpin{to{transform:rotate(360deg)}}
 
         .download-status{
           position:fixed;
@@ -1552,8 +1567,8 @@
 
       <div class="buttons">
         <button onclick="printDocument()">Cetak / PDF</button>
-        <button class="download" onclick="downloadPdf()">Download PDF</button>
-        <button id="sharePdfBtn" class="share" onclick="openCustomerWhatsApp()">Buka WhatsApp Pelanggan</button>
+        <button id="downloadPdfBtn" class="download" onclick="downloadPdf()">Download PDF</button>
+        <button id="sharePdfBtn" class="share" onclick="downloadPdfAndOpenWhatsApp()">Download PDF & Buka WhatsApp</button>
         <button onclick="copyShareMessage()">Salin Pesan</button>
         <button onclick="window.close()">Tutup</button>
       </div>
@@ -1727,11 +1742,48 @@
           }catch(error){}
         }
 
+        function loadPdfScript(url){
+          return new Promise((resolve,reject)=>{
+            const existing=[...document.scripts].find(script=>script.src===url);
+            if(existing){
+              if(typeof html2pdf==="function") resolve();
+              else{
+                existing.addEventListener("load",resolve,{once:true});
+                existing.addEventListener("error",reject,{once:true});
+              }
+              return;
+            }
+
+            const script=document.createElement("script");
+            script.src=url;
+            script.async=true;
+            script.onload=resolve;
+            script.onerror=reject;
+            document.head.appendChild(script);
+          });
+        }
+
         async function waitForPdfLibrary(){
+          if(typeof html2pdf==="function") return;
+
+          const fallbackUrls=[
+            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
+            "https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"
+          ];
+
+          for(const url of fallbackUrls){
+            try{
+              await loadPdfScript(url);
+              if(typeof html2pdf==="function") return;
+            }catch(error){
+              console.warn("Gagal memuat komponen PDF:",url,error);
+            }
+          }
+
           const started=Date.now();
           while(typeof html2pdf!=="function"){
-            if(Date.now()-started>15000){
-              throw new Error("Komponen PDF gagal dimuat. Periksa koneksi internet.");
+            if(Date.now()-started>5000){
+              throw new Error("Komponen PDF gagal dimuat. Pastikan internet aktif, lalu tekan Download PDF kembali.");
             }
             await new Promise(resolve=>setTimeout(resolve,120));
           }
@@ -1761,16 +1813,37 @@
           };
         }
 
-        async function createPdfBlob(){
+        function setPdfButtonsBusy(isBusy,activeId=""){
+          document.querySelectorAll(".buttons button").forEach(button=>{
+            button.disabled=isBusy;
+            button.classList.toggle("busy",isBusy && button.id===activeId);
+          });
+        }
+
+        async function preparePdf(){
           await waitForPdfLibrary();
           await waitForImages();
           fit();
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        }
+
+        async function createPdfBlob(){
+          await preparePdf();
 
           return html2pdf()
             .set(pdfOptions())
             .from(document.querySelector(".sheet"))
             .toPdf()
             .outputPdf("blob");
+        }
+
+        async function savePdfDirect(){
+          await preparePdf();
+
+          return html2pdf()
+            .set(pdfOptions())
+            .from(document.querySelector(".sheet"))
+            .save(PDF_FILENAME);
         }
 
         async function getPdfBlob(){
@@ -1786,8 +1859,16 @@
           const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 
           if(isiOS){
-            const opened=window.open(url,"_blank");
-            if(!opened) window.location.href=url;
+            const link=document.createElement("a");
+            link.href=url;
+            link.target="_blank";
+            link.rel="noopener";
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            statusBox("PDF sudah dibuka. Pada iPhone, gunakan tombol Bagikan lalu pilih Simpan ke File.");
           }else{
             const link=document.createElement("a");
             link.href=url;
@@ -1799,7 +1880,7 @@
             link.remove();
           }
 
-          setTimeout(()=>URL.revokeObjectURL(url),120000);
+          setTimeout(()=>URL.revokeObjectURL(url),180000);
         }
 
         function customerWhatsAppUrl(){
@@ -1809,18 +1890,29 @@
         async function downloadPdf(){
           if(operationRunning) return;
           operationRunning=true;
+          setPdfButtonsBusy(true,"downloadPdfBtn");
 
           try{
-            const blob=await getPdfBlob();
-            saveBlob(blob);
-            statusBox("PDF berhasil dibuat dan disimpan.");
-            setTimeout(()=>statusBox("",false),2500);
-          }catch(error){
-            console.error(error);
-            statusBox("",false);
-            alert(error.message||"PDF belum berhasil dibuat.");
+            statusBox("Membuat file PDF. Mohon tunggu...");
+            await savePdfDirect();
+            statusBox("PDF berhasil dibuat. Periksa folder Download di HP.");
+            setTimeout(()=>statusBox("",false),3500);
+          }catch(primaryError){
+            console.warn("Metode simpan utama gagal, memakai cadangan Blob.",primaryError);
+
+            try{
+              const blob=await getPdfBlob();
+              saveBlob(blob);
+              statusBox("PDF berhasil dibuat dengan metode cadangan.");
+              setTimeout(()=>statusBox("",false),3500);
+            }catch(fallbackError){
+              console.error(fallbackError);
+              statusBox("",false);
+              alert(fallbackError.message||"PDF belum berhasil dibuat. Muat ulang halaman lalu coba kembali.");
+            }
           }finally{
             operationRunning=false;
+            setPdfButtonsBusy(false);
           }
         }
 
@@ -1841,6 +1933,34 @@
           setTimeout(()=>{
             statusBox("Chat pelanggan dibuka. Lampirkan PDF nota secara manual sebelum mengirim.");
           },500);
+        }
+
+        async function downloadPdfAndOpenWhatsApp(){
+          if(operationRunning) return;
+
+          if(!CUSTOMER_PHONE || CUSTOMER_PHONE.length<10){
+            alert("Nomor WhatsApp pelanggan pada nota belum valid.");
+            return;
+          }
+
+          operationRunning=true;
+          setPdfButtonsBusy(true,"sharePdfBtn");
+
+          try{
+            statusBox("Membuat dan mengunduh PDF...");
+            const blob=await getPdfBlob();
+            saveBlob(blob);
+
+            statusBox("PDF selesai dibuat. Membuka chat WhatsApp pelanggan...");
+            await new Promise(resolve=>setTimeout(resolve,1500));
+            window.location.href=customerWhatsAppUrl();
+          }catch(error){
+            console.error(error);
+            statusBox("",false);
+            alert(error.message||"PDF atau WhatsApp belum berhasil dibuka.");
+            operationRunning=false;
+            setPdfButtonsBusy(false);
+          }
         }
 
         async function copyShareMessage(){
@@ -1882,15 +2002,17 @@
           setTimeout(async()=>{
             fit();
 
-            if(START_MODE==="download"){
+            if(START_MODE==="download-whatsapp"){
+              await downloadPdfAndOpenWhatsApp();
+            }else if(START_MODE==="download"){
               await downloadPdf();
             }else if(START_MODE==="print"){
               await printDocument();
             }else if(START_MODE==="share"){
-              openCustomerWhatsApp();
+              await downloadPdfAndOpenWhatsApp();
             }else{
               statusBox(
-                "Pilih Cetak / PDF, Download PDF, atau Buka WhatsApp Pelanggan.",
+                "Pilih Cetak / PDF, Download PDF, atau Download PDF & Buka WhatsApp.",
                 true
               );
             }
@@ -1911,7 +2033,11 @@
     // Browser HP sering memblokir print, download, atau share yang berjalan
     // otomatis setelah halaman baru terbuka. Karena itu HP membuka preview
     // terlebih dahulu, lalu pengguna menekan tombol aksi pada halaman tersebut.
-    const documentMode=isMobileInvoiceDevice()?"preview":mode;
+    const directModes=["download","download-whatsapp"];
+    const documentMode=
+      directModes.includes(mode)
+        ? mode
+        : (isMobileInvoiceDevice()?"preview":mode);
     const html=buildInvoiceDocument(inv,documentMode);
 
     const popup=(targetWindow && !targetWindow.closed)
@@ -1949,8 +2075,12 @@
     openInvoiceDocument(inv,"download",targetWindow);
   }
 
+  function downloadAndOpenWhatsApp(inv,targetWindow=null){
+    openInvoiceDocument(inv,"download-whatsapp",targetWindow);
+  }
+
   function shareInvoicePdf(inv,targetWindow=null){
-    sendInvoiceToWhatsApp(inv,targetWindow);
+    downloadAndOpenWhatsApp(inv,targetWindow);
   }
 
   init();

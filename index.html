@@ -8,8 +8,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=34">
-  <title>LORHIL AC Online V34</title>
+  <link rel="stylesheet" href="style.css?v=35">
+  <title>LORHIL AC Online V35</title>
 
   <style>
     .invoice-actions{
@@ -250,7 +250,7 @@
         <button class="nav-btn" data-page="invoice">＋ Buat Nota</button>
         <button class="nav-btn" data-page="history">▤ Riwayat Nota</button>
         <button class="nav-btn" data-page="customers">♙ Pelanggan</button>
-        <button class="nav-btn" data-page="incentives">◉ Teknisi & Insentif</button>
+        <button class="nav-btn" data-page="incentives">◉ Teknisi</button>
         <button class="nav-btn" data-page="settings">⚙ Pengaturan</button>
         <button class="nav-btn" data-page="backup">⇩ Backup</button>
       </nav>
@@ -283,8 +283,6 @@
             <article><span>Pekerjaan Kemarin</span><strong id="statYesterday">0</strong></article>
             <article><span>Pembayaran Hari Ini</span><strong id="statRevenue">Rp0</strong></article>
             <article><span>Belum Lunas / DP</span><strong id="statUnpaid">0</strong></article>
-            <article><span>Insentif Hari Ini</span><strong id="statIncentiveToday">Rp0</strong></article>
-            <article><span>Insentif Belum Dibayar</span><strong id="statIncentivePending">Rp0</strong></article>
           </div>
 
           <div class="panel">
@@ -303,7 +301,7 @@
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Tanggal</th><th>No. Nota</th><th>Pelanggan</th><th>Keterangan</th><th>Teknisi</th><th>Total</th><th>Insentif</th><th>Status</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>No. Nota</th><th>Pelanggan</th><th>Keterangan</th><th>Teknisi</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
                 <tbody id="dashboardBody"></tbody>
               </table>
             </div>
@@ -338,14 +336,14 @@
 
             <div class="panel">
               <div class="panel-head">
-                <div><h3>Tim Lapangan</h3><p>Pilih teknisi yang mengerjakan nota ini. Insentif dibagi rata.</p></div>
+                <div><h3>Tim Lapangan</h3><p>Pilih nama teknisi yang mengerjakan pekerjaan ini.</p></div>
               </div>
               <div id="technicianChoices" class="technician-choice-grid"></div>
             </div>
 
             <div class="panel">
               <div class="panel-head">
-                <div><h3>Rincian Pekerjaan</h3><p>Cukup isi keterangan, jumlah unit, dan harga jasa. Insentif 10% dihitung otomatis.</p></div>
+                <div><h3>Rincian Pekerjaan</h3><p>Isi keterangan pekerjaan, jumlah unit, dan harga jasa.</p></div>
                 <button type="button" id="addItemBtn" class="btn outline">＋ Tambah Baris</button>
               </div>
 
@@ -358,7 +356,6 @@
                       <th>Qty</th>
                       <th>Harga Jasa</th>
                       <th>Total Jasa</th>
-                      <th>Insentif 10%</th>
                       <th>Aksi</th>
                     </tr>
                   </thead>
@@ -375,16 +372,6 @@
                   <div><label>Jumlah Dibayar / DP</label><input id="paid" type="number" min="0" value="0"></div>
                   <div><span>Sisa Tagihan</span><strong id="balanceText">Rp0</strong></div>
                 </div>
-              </div>
-
-              <div class="incentive-summary">
-                <div class="incentive-summary-grid">
-                  <div class="incentive-summary-item"><span>Nilai Jasa</span><strong id="incentiveBaseText">Rp0</strong></div>
-                  <div class="incentive-summary-item"><span>Insentif Tim 10%</span><strong id="incentiveTotalText">Rp0</strong></div>
-                  <div class="incentive-summary-item"><span>Teknisi Dipilih</span><strong id="technicianCountText">0 orang</strong></div>
-                  <div class="incentive-summary-item"><span>Bagian per Teknisi</span><strong id="incentivePerTechnicianText">Rp0</strong></div>
-                </div>
-                <div class="incentive-note">Insentif tim dihitung 10% dari nilai jasa setelah diskon, lalu dibagi rata kepada teknisi yang dipilih. Contoh: jasa Rp120.000 dikerjakan 2 teknisi, total insentif Rp12.000 dan masing-masing menerima Rp6.000.</div>
               </div>
 
               <div class="actions invoice-actions">
@@ -433,7 +420,7 @@
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Tanggal</th><th>Jam</th><th>No. Nota</th><th>Pelanggan</th><th>Keterangan</th><th>Teknisi</th><th>Total</th><th>Insentif</th><th>Status</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>Jam</th><th>No. Nota</th><th>Pelanggan</th><th>Keterangan</th><th>Teknisi</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
                 <tbody id="historyBody"></tbody>
               </table>
             </div>
@@ -454,20 +441,18 @@
         </section>
 
         <section id="page-incentives" class="page">
-          <div class="page-head"><div><h2>Teknisi & Insentif</h2><p>Pembagian insentif berdasarkan jasa atau keuntungan pada setiap nota.</p></div></div>
-
-          <div class="stats incentive-stats">
-            <article><span>Insentif Hari Ini</span><strong id="statTechnicianToday">Rp0</strong></article>
-            <article><span>Siap Dibayar</span><strong id="statTechnicianReady">Rp0</strong></article>
-            <article><span>Dibayar Bulan Ini</span><strong id="statTechnicianPaidMonth">Rp0</strong></article>
-            <article><span>Pekerjaan Hari Ini</span><strong id="statTechnicianJobs">0</strong></article>
+          <div class="page-head">
+            <div>
+              <h2>Teknisi</h2>
+              <p>Kelola nama teknisi yang bekerja di lapangan.</p>
+            </div>
           </div>
 
           <div class="panel">
             <div class="panel-head">
               <div>
                 <h3>Daftar Teknisi</h3>
-                <p>Tambahkan karyawan yang bekerja di lapangan.</p>
+                <p>Nama teknisi dapat dipilih saat membuat atau mengedit nota.</p>
               </div>
             </div>
 
@@ -496,50 +481,6 @@
                   </tr>
                 </thead>
                 <tbody id="technicianAdminBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>Riwayat Insentif</h3>
-                <p>Insentif dapat dibayar setelah nota berstatus lunas.</p>
-              </div>
-            </div>
-
-            <div class="filters">
-              <select id="incentivePeriod">
-                <option value="today">Hari Ini</option>
-                <option value="yesterday">Kemarin</option>
-                <option value="7days">7 Hari</option>
-                <option value="all">Semua</option>
-              </select>
-
-              <select id="incentiveStatus">
-                <option value="all">Semua Status</option>
-                <option value="pending">Tertunda</option>
-                <option value="ready">Siap Dibayar</option>
-                <option value="paid">Sudah Dibayar</option>
-              </select>
-
-              <input id="incentiveSearch" class="search" placeholder="Cari teknisi, nota, atau pelanggan">
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tanggal</th>
-                    <th>Teknisi</th>
-                    <th>No. Nota</th>
-                    <th>Pelanggan</th>
-                    <th>Bagian</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="incentiveBody"></tbody>
               </table>
             </div>
           </div>
@@ -583,7 +524,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="invoice-engine.js?v=34"></script>
-  <script src="app.js?v=34"></script>
+  <script src="invoice-engine.js?v=35"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

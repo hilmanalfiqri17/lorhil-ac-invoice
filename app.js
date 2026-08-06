@@ -43,15 +43,13 @@
     return "Belum Lunas";
   };
   const badge = status => `<span class="badge ${status==="Lunas"?"paid":status==="DP"?"partial":"unpaid"}">${esc(status)}</span>`;
-  const incentiveStatusLabel = status => status==="paid"?"Sudah Dibayar":status==="ready"?"Siap Dibayar":"Tertunda";
-  const incentiveBadge = status => `<span class="badge ${status==="paid"?"paid":status==="ready"?"partial":"unpaid"}">${incentiveStatusLabel(status)}</span>`;
   const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 
   let db = null;
   const state = {
     session:null, invoices:[], settings:null, technicians:[],
-    itemIncentives:[], invoiceTechnicians:[], page:"dashboard",
-    dashboardPeriod:"today", incentivePeriod:"today", realtime:null
+    invoiceTechnicians:[], page:"dashboard",
+    dashboardPeriod:"today", realtime:null
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -82,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=34",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=35",{
             updateViaCache:"none"
           });
 
@@ -92,13 +90,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v34")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v35")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v34";
+            const reloadKey="lorhil-sw-reloaded-v35";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -142,7 +140,7 @@
   $("menuBtn").addEventListener("click",()=> $("sidebar").classList.toggle("open"));
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
-  const titles={dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",incentives:"Teknisi & Insentif",settings:"Pengaturan",backup:"Backup"};
+  const titles={dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",incentives:"Teknisi",settings:"Pengaturan",backup:"Backup"};
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
   document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{resetInvoice();showPage("invoice");}));
 
@@ -165,39 +163,44 @@
     if(!uid()) return;
     loading(true);
     try{
-      const [invoiceResult,settingsResult,technicianResult,itemIncentiveResult,invoiceTechnicianResult]=await Promise.all([
+      const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult]=await Promise.all([
         db.from("invoices").select("*, invoice_items(*)").order("work_date",{ascending:false}).order("work_time",{ascending:false}),
         db.from("store_settings").select("*").maybeSingle(),
         db.from("technicians").select("*").order("name",{ascending:true}),
-        db.from("invoice_item_incentives").select("*"),
         db.from("invoice_technicians").select("*")
       ]);
+
       if(invoiceResult.error) throw invoiceResult.error;
       if(settingsResult.error) throw settingsResult.error;
-      if(technicianResult.error) throw new Error("Tabel insentif belum tersedia. Jalankan file supabase-migration-v20-to-v24.sql terlebih dahulu. " + technicianResult.error.message);
-      if(itemIncentiveResult.error) throw itemIncentiveResult.error;
+      if(technicianResult.error) throw new Error("Data teknisi belum tersedia. " + technicianResult.error.message);
       if(invoiceTechnicianResult.error) throw invoiceTechnicianResult.error;
+
       state.technicians=technicianResult.data||[];
-      state.itemIncentives=itemIncentiveResult.data||[];
       state.invoiceTechnicians=invoiceTechnicianResult.data||[];
+
       state.invoices=(invoiceResult.data||[]).map(inv=>{
-        const metas=state.itemIncentives.filter(meta=>meta.invoice_id===inv.id);
-        (inv.invoice_items||[]).forEach(item=>{
-          item.incentive_meta=metas.find(meta=>meta.invoice_item_id===item.id)||null;
-        });
-        inv.invoice_technicians=state.invoiceTechnicians.filter(row=>row.invoice_id===inv.id).map(row=>({
-          ...row,
-          technician:state.technicians.find(tech=>tech.id===row.technician_id)||null
-        }));
-        inv.incentive_total=metas.reduce((sum,meta)=>sum+safeNumber(meta.incentive_amount),0);
+        inv.invoice_technicians=state.invoiceTechnicians
+          .filter(row=>row.invoice_id===inv.id)
+          .map(row=>({
+            ...row,
+            technician:state.technicians.find(tech=>tech.id===row.technician_id)||null
+          }));
         return inv;
       });
+
       state.settings=settingsResult.data || await createDefaultSettings();
       applyBrand();
-      renderDashboard(); renderHistory(); renderCustomers(); renderIncentives(); refreshCustomerList(); renderTechnicianChoices();
+      renderDashboard();
+      renderHistory();
+      renderCustomers();
+      renderIncentives();
+      refreshCustomerList();
+      renderTechnicianChoices();
     }catch(error){
       alert(errorMessage(error));
-    }finally{ loading(false); }
+    }finally{
+      loading(false);
+    }
   }
 
   async function createDefaultSettings(){
@@ -253,9 +256,6 @@
   ["historyPeriod","historyDate","historyStatus"].forEach(id=>$(id).addEventListener("change",renderHistory));
   $("historySearch").addEventListener("input",renderHistory);
   $("customerSearch").addEventListener("input",renderCustomers);
-  $("incentivePeriod").addEventListener("change",renderIncentives);
-  $("incentiveStatus").addEventListener("change",renderIncentives);
-  $("incentiveSearch").addEventListener("input",renderIncentives);
 
   function renderDashboard(){
     const todayData=state.invoices.filter(x=>x.work_date===localDate());
@@ -263,9 +263,6 @@
     $("statYesterday").textContent=state.invoices.filter(x=>x.work_date===yesterday()).length;
     $("statRevenue").textContent=money(todayData.reduce((s,x)=>s+Number(x.paid||0),0));
     $("statUnpaid").textContent=state.invoices.filter(x=>x.status!=="Lunas").length;
-    $("statIncentiveToday").textContent=money(todayData.reduce((sum,inv)=>sum+safeNumber(inv.incentive_total),0));
-    $("statIncentivePending").textContent=money(state.invoiceTechnicians.filter(row=>row.status!=="paid").reduce((sum,row)=>sum+safeNumber(row.share_amount),0));
-
     let data=filterPeriod(state.invoices,state.dashboardPeriod);
     data=filterStatus(data,$("dashboardStatus").value);
     data=filterSearch(data,$("dashboardSearch").value);
@@ -281,8 +278,10 @@
 
   function renderInvoiceRows(body,data,showTime){
     if(!data.length){
-      body.innerHTML=`<tr><td colspan="${showTime?10:9}" class="empty">Belum ada data pada filter ini.</td></tr>`;return;
+      body.innerHTML=`<tr><td colspan="${showTime?9:8}" class="empty">Belum ada data pada filter ini.</td></tr>`;
+      return;
     }
+
     body.innerHTML=data.map(inv=>`
       <tr>
         <td>${formatDate(inv.work_date)}</td>
@@ -292,11 +291,12 @@
         <td class="truncate" title="${esc(invoiceText(inv))}">${esc(invoiceText(inv)||"-")}</td>
         <td>${esc((inv.invoice_technicians||[]).map(row=>row.technician?.name||"-").join(", ")||"-")}</td>
         <td><strong>${money(inv.total)}</strong></td>
-        <td><strong>${money(inv.incentive_total||0)}</strong></td>
         <td>${badge(inv.status)}</td>
         <td><button class="btn primary detail-btn" data-id="${inv.id}">Lihat Detail</button></td>
       </tr>`).join("");
-    body.querySelectorAll(".detail-btn").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.id)));
+
+    body.querySelectorAll(".detail-btn")
+      .forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.id)));
   }
 
   function customerGroups(){
@@ -331,81 +331,63 @@
   $("paid").addEventListener("input",calculate);
   $("resetInvoiceBtn").addEventListener("click",confirmResetInvoice);
 
-  function defaultIncentiveFor(){
-    // Form dibuat sederhana: setiap baris baru dihitung 10% dari nilai jasa.
-    return {basis:"service",cost:0,rate:10};
-  }
-
   function addItem(item={}){
-    const meta=item.incentive_meta||{};
-    const defaults=defaultIncentiveFor(item.description||"");
-    const basis=meta.incentive_basis||defaults.basis;
-    const cost=meta.cost_price??defaults.cost;
-    const rate=item.incentive_meta?(meta.incentive_rate??10):10;
-    const priceValue=Object.prototype.hasOwnProperty.call(item,"unit_price")?safeNumber(item.unit_price):"";
+    const priceValue=Object.prototype.hasOwnProperty.call(item,"unit_price")
+      ? safeNumber(item.unit_price)
+      : "";
+
     const tr=document.createElement("tr");
     tr.dataset.itemId=item.id||"";
     tr.innerHTML=`
       <td class="index"></td>
-      <td>
-        <input class="desc" required placeholder="Contoh: Cuci AC 1 PK" value="${esc(item.description||"")}">
-        <input class="incentive-basis" type="hidden" value="${esc(basis)}">
-        <input class="cost" type="hidden" value="${safeNumber(cost)}">
-        <input class="rate" type="hidden" value="${safeNumber(rate)}">
-      </td>
+      <td><input class="desc" required placeholder="Contoh: Cuci AC 1 PK" value="${esc(item.description||"")}"></td>
       <td><input class="qty" type="number" min="1" step="1" value="${Number(item.quantity)||1}" required></td>
       <td><input class="price" type="number" min="0" step="1000" placeholder="Contoh: 120000" value="${priceValue}" required></td>
       <td class="line-total money">Rp0</td>
-      <td class="line-incentive money">Rp0</td>
       <td><button type="button" class="btn danger remove">Hapus</button></td>`;
+
     $("itemsBody").appendChild(tr);
-    tr.querySelectorAll("input").forEach(x=>x.addEventListener("input",calculate));
+    tr.querySelectorAll("input").forEach(input=>input.addEventListener("input",calculate));
     tr.querySelector(".remove").addEventListener("click",()=>{
-      if($("itemsBody").children.length===1){toast("Minimal satu baris pekerjaan.");return;}
-      tr.remove();renumber();calculate();
+      if($("itemsBody").children.length===1){
+        toast("Minimal satu baris pekerjaan.");
+        return;
+      }
+      tr.remove();
+      renumber();
+      calculate();
     });
-    renumber();calculate();
+
+    renumber();
+    calculate();
   }
+
   function renumber(){[...$("itemsBody").children].forEach((tr,i)=>tr.querySelector(".index").textContent=i+1);}
   function calculate(){
     const rows=[...$("itemsBody").children];
     let subtotal=0;
+
     rows.forEach(tr=>{
-      const line=safeNumber(tr.querySelector(".qty").value)*safeNumber(tr.querySelector(".price").value);
-      subtotal+=line;tr.querySelector(".line-total").textContent=money(line);
+      const line=safeNumber(tr.querySelector(".qty").value)*
+        safeNumber(tr.querySelector(".price").value);
+      subtotal+=line;
+      tr.querySelector(".line-total").textContent=money(line);
     });
+
     const discount=Math.min(subtotal,Math.max(0,safeNumber($("discount").value)));
     const total=Math.max(0,subtotal-discount);
     const paid=Math.min(total,Math.max(0,safeNumber($("paid").value)));
     const balance=Math.max(0,total-paid);
-    let incentiveBase=0;
-    let incentiveTotal=0;
-    rows.forEach(tr=>{
-      const qty=safeNumber(tr.querySelector(".qty").value);
-      const price=safeNumber(tr.querySelector(".price").value);
-      const gross=qty*price;
-      const discountShare=subtotal>0 ? discount*(gross/subtotal) : 0;
-      const netRevenue=Math.max(0,gross-discountShare);
-      const basis=tr.querySelector(".incentive-basis").value;
-      const costPerUnit=Math.max(0,safeNumber(tr.querySelector(".cost").value));
-      const rate=Math.max(0,safeNumber(tr.querySelector(".rate").value));
-      const base=basis==="service"?netRevenue:basis==="profit"?Math.max(0,netRevenue-(qty*costPerUnit)):0;
-      const amount=Math.round(base*rate/100);
-      tr.dataset.incentiveBase=String(Math.round(base));
-      tr.dataset.incentiveAmount=String(amount);
-      tr.querySelector(".line-incentive").textContent=money(amount);
-      incentiveBase+=base;
-      incentiveTotal+=amount;
-    });
-    $("subtotalText").textContent=money(subtotal);$("totalText").textContent=money(total);$("balanceText").textContent=money(balance);
-    $("formStatus").textContent=statusFrom(total,paid);
-    $("incentiveBaseText").textContent=money(Math.round(incentiveBase));
-    $("incentiveTotalText").textContent=money(incentiveTotal);
-    const techCount=getSelectedTechnicianIds().length;
-    $("technicianCountText").textContent=`${techCount} orang`;
-    $("incentivePerTechnicianText").textContent=techCount?money(Math.floor(incentiveTotal/techCount)):money(0);
-    return{subtotal,discount,total,paid,balance,status:statusFrom(total,paid),incentiveBase:Math.round(incentiveBase),incentiveTotal};
+    const status=statusFrom(total,paid);
+
+    $("subtotalText").textContent=money(subtotal);
+    $("totalText").textContent=money(total);
+    $("balanceText").textContent=money(balance);
+    $("formStatus").textContent=status;
+
+    return {subtotal,discount,total,paid,balance,status};
   }
+
   function getSelectedTechnicianIds(){
     return [...document.querySelectorAll("#technicianChoices input[type=checkbox]:checked")].map(input=>input.value);
   }
@@ -413,24 +395,14 @@
   function renderTechnicianChoices(selectedIds=null){
     const selected=new Set(selectedIds||getSelectedTechnicianIds());
     const active=state.technicians.filter(tech=>tech.is_active!==false);
-    $("technicianChoices").innerHTML=active.length?active.map(tech=>`
-      <label class="technician-choice">
-        <input type="checkbox" value="${tech.id}" ${selected.has(tech.id)?"checked":""}>
-        <span>${esc(tech.name)}</span>
-      </label>`).join(""):`<div class="empty compact">Belum ada teknisi. Tambahkan melalui menu Teknisi & Insentif.</div>`;
-    $("technicianChoices").querySelectorAll("input").forEach(input=>input.addEventListener("change",calculate));
-    calculate();
-  }
 
-  function collectIncentiveRows(){
-    return [...$("itemsBody").children].map((tr,index)=>({
-      sort_order:index+1,
-      incentive_basis:tr.querySelector(".incentive-basis").value,
-      cost_price:Math.max(0,safeNumber(tr.querySelector(".cost").value)),
-      incentive_rate:Math.max(0,safeNumber(tr.querySelector(".rate").value)),
-      incentive_base:Math.max(0,safeNumber(tr.dataset.incentiveBase)),
-      incentive_amount:Math.max(0,safeNumber(tr.dataset.incentiveAmount))
-    }));
+    $("technicianChoices").innerHTML=active.length
+      ? active.map(tech=>`
+        <label class="technician-choice">
+          <input type="checkbox" value="${tech.id}" ${selected.has(tech.id)?"checked":""}>
+          <span>${esc(tech.name)}</span>
+        </label>`).join("")
+      : `<div class="empty compact">Belum ada teknisi. Tambahkan melalui menu Teknisi.</div>`;
   }
 
   function confirmResetInvoice(){
@@ -485,13 +457,6 @@
   $("saveWhatsappBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({whatsappAfter:true});});
 
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
-    const editingId=$("invoiceId").value;
-    const editingInvoice=editingId ? state.invoices.find(inv=>inv.id===editingId) : null;
-    if(editingInvoice?.invoice_technicians?.some(row=>row.status==="paid")){
-      alert("Nota ini tidak dapat diubah karena insentif teknisi sudah dibayar.");
-      return;
-    }
-
     if(whatsappAfter){
       const phone=normalizeWhatsAppNumber($("customerPhone").value);
       if(phone.length<10){
@@ -501,27 +466,33 @@
       }
     }
 
-
     try{
       const params=formData();
-      const incentiveRows=collectIncentiveRows();
       const selectedTechnicians=getSelectedTechnicianIds();
-      const incentiveTotal=incentiveRows.reduce((sum,row)=>sum+safeNumber(row.incentive_amount),0);
-      if(incentiveTotal>0 && !selectedTechnicians.length) throw new Error("Pilih minimal satu teknisi lapangan untuk membagi insentif.");
+
       loading(true);
       const {data,error}=await db.rpc("save_invoice",params);
       if(error) throw error;
-      const {data:savedRaw,error:savedError}=await db.from("invoices").select("*, invoice_items(*)").eq("id",data.id).single();
+
+      const {data:savedRaw,error:savedError}=await db
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .eq("id",data.id)
+        .single();
+
       if(savedError) throw savedError;
-      await saveInvoiceIncentives(savedRaw,incentiveRows,selectedTechnicians);
+
+      await saveInvoiceTechnicians(savedRaw,selectedTechnicians);
       await refreshAll();
-      const saved=state.invoices.find(x=>x.id===data.id)||savedRaw;
+
+      const saved=state.invoices.find(invoice=>invoice.id===data.id)||savedRaw;
 
       if(printAfter) printInvoice(saved);
       if(downloadAfter) downloadInvoice(saved);
       if(whatsappAfter) downloadAndOpenWhatsApp(saved);
 
-      resetInvoice();showPage("dashboard");
+      resetInvoice();
+      showPage("dashboard");
 
       if(downloadAfter) toast("Nota disimpan dan PDF sedang diunduh.");
       else if(whatsappAfter) toast("Nota disimpan. PDF diunduh dan chat WhatsApp pelanggan dibuka.");
@@ -533,51 +504,36 @@
     }
   }
 
-  async function saveInvoiceIncentives(invoice,incentiveRows,technicianIds){
-    const sortedItems=(invoice.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order);
-    const incentiveTotal=incentiveRows.reduce((sum,row)=>sum+safeNumber(row.incentive_amount),0);
-    const {error:deleteItemError}=await db.from("invoice_item_incentives").delete().eq("invoice_id",invoice.id);
-    if(deleteItemError) throw deleteItemError;
-    const itemPayload=sortedItems.map((item,index)=>({
-      user_id:uid(),invoice_id:invoice.id,invoice_item_id:item.id,
-      cost_price:incentiveRows[index]?.cost_price||0,
-      incentive_basis:incentiveRows[index]?.incentive_basis||"none",
-      incentive_rate:incentiveRows[index]?.incentive_rate||0,
-      incentive_base:incentiveRows[index]?.incentive_base||0,
-      incentive_amount:incentiveRows[index]?.incentive_amount||0
-    }));
-    if(itemPayload.length){
-      const {error}=await db.from("invoice_item_incentives").insert(itemPayload);
-      if(error) throw error;
-    }
-    const previousAssignments=state.invoiceTechnicians.filter(row=>row.invoice_id===invoice.id);
-    const {error:deleteTechError}=await db.from("invoice_technicians").delete().eq("invoice_id",invoice.id);
-    if(deleteTechError) throw deleteTechError;
-    if(technicianIds.length){
-      const baseShare=Math.floor(incentiveTotal/technicianIds.length);
-      let remainder=incentiveTotal-(baseShare*technicianIds.length);
-      const defaultStatus=invoice.status==="Lunas"?"ready":"pending";
-      const payload=technicianIds.map(technicianId=>{
-        const previous=previousAssignments.find(row=>row.technician_id===technicianId);
-        return {
-          user_id:uid(),invoice_id:invoice.id,technician_id:technicianId,
-          share_amount:baseShare+(remainder-->0?1:0),
-          status:previous?.status==="paid"?"paid":defaultStatus,
-          paid_at:previous?.status==="paid"?previous.paid_at:null,
-          payment_note:previous?.status==="paid"?previous.payment_note:null
-        };
-      });
-      const {error}=await db.from("invoice_technicians").insert(payload);
-      if(error) throw error;
-    }
-  }
+  async function saveInvoiceTechnicians(invoice,technicianIds){
+    const {error:deleteError}=await db
+      .from("invoice_technicians")
+      .delete()
+      .eq("invoice_id",invoice.id);
 
-  async function syncIncentiveStatus(invoice){
-    const rows=state.invoiceTechnicians.filter(row=>row.invoice_id===invoice.id && row.status!=="paid");
-    if(!rows.length) return;
-    const nextStatus=invoice.status==="Lunas"?"ready":"pending";
-    const {error}=await db.from("invoice_technicians").update({status:nextStatus}).eq("invoice_id",invoice.id).neq("status","paid");
-    if(error) throw error;
+    if(deleteError){
+      throw new Error(
+        "Data teknisi lama belum dapat diperbarui. Jalankan file supabase-remove-incentive-v35.sql satu kali. "+
+        deleteError.message
+      );
+    }
+
+    if(!technicianIds.length) return;
+
+    const payload=technicianIds.map(technicianId=>({
+      user_id:uid(),
+      invoice_id:invoice.id,
+      technician_id:technicianId,
+      share_amount:0,
+      status:"pending",
+      paid_at:null,
+      payment_note:null
+    }));
+
+    const {error:insertError}=await db
+      .from("invoice_technicians")
+      .insert(payload);
+
+    if(insertError) throw insertError;
   }
 
   function editInvoice(id){
@@ -621,10 +577,8 @@
           <div><span>Sisa</span><strong>${money(inv.balance)}</strong></div>
         </div>
       </div>
-      <div class="detail-box" style="margin-top:16px"><h4>Insentif Teknisi</h4>
-        <div class="detail-row"><span>Pool insentif</span><strong>${money(inv.incentive_total||0)}</strong></div>
-        <div class="detail-row"><span>Tim lapangan</span><strong>${esc((inv.invoice_technicians||[]).map(row=>row.technician?.name||"-").join(", ")||"Belum dipilih")}</strong></div>
-        ${(inv.invoice_technicians||[]).map(row=>`<div class="detail-row"><span>${esc(row.technician?.name||"Teknisi")}</span><strong>${money(row.share_amount)} · ${incentiveStatusLabel(row.status)}</strong></div>`).join("")}
+      <div class="detail-box" style="margin-top:16px"><h4>Teknisi Lapangan</h4>
+        <div class="detail-row"><span>Nama teknisi</span><strong>${esc((inv.invoice_technicians||[]).map(row=>row.technician?.name||"-").join(", ")||"Belum dipilih")}</strong></div>
       </div>
       <div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
         <div class="form-grid"><div class="field"><label>Jumlah yang Sudah Dibayar</label><input id="detailPaid" type="number" min="0" max="${inv.total}" value="${inv.paid}"></div>
@@ -666,54 +620,35 @@
       loading(true);const paid=Math.max(0,Number($("detailPaid").value)||0);
       const {data,error}=await db.rpc("update_invoice_payment",{p_invoice_id:id,p_paid:paid});
       if(error)throw error;
-      const {data:fresh,error:freshError}=await db.from("invoices").select("*").eq("id",id).single();
-      if(freshError) throw freshError;
-      await syncIncentiveStatus(fresh);
-      await refreshAll();const inv=state.invoices.find(x=>x.id===id)||data;
-      closeModal();if(printAfter)printInvoice(inv);toast("Pembayaran dan status insentif berhasil diperbarui.");
+      await refreshAll();
+      const inv=state.invoices.find(x=>x.id===id)||data;
+      closeModal();
+      if(printAfter) printInvoice(inv);
+      toast("Pembayaran berhasil diperbarui.");
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
   async function deleteInvoice(id,number){
-    const invoice=state.invoices.find(item=>item.id===id);
-    if(invoice?.invoice_technicians?.some(row=>row.status==="paid")){
-      alert("Nota tidak dapat dihapus karena insentif teknisi sudah dibayar.");
+    if(!confirm(`Hapus nota ${number}?`)) return;
+
+    loading(true);
+    const {error}=await db.from("invoices").delete().eq("id",id);
+    loading(false);
+
+    if(error){
+      alert(
+        error.message?.includes("Insentif yang sudah dibayar")
+          ? "Nota belum dapat dihapus. Jalankan file supabase-remove-incentive-v35.sql satu kali."
+          : errorMessage(error)
+      );
       return;
     }
-    if(!confirm(`Hapus nota ${number}?`))return;
-    loading(true);const {error}=await db.from("invoices").delete().eq("id",id);loading(false);
-    if(error){alert(errorMessage(error));return;}closeModal();await refreshAll();toast("Nota dihapus.");
+
+    closeModal();
+    await refreshAll();
+    toast("Nota dihapus.");
   }
 
   function renderIncentives(){
-    if(!$("incentiveBody")) return;
-    const period=$("incentivePeriod").value;
-    const status=$("incentiveStatus").value;
-    const query=$("incentiveSearch").value.trim().toLowerCase();
-    const allowedInvoices=new Set(filterPeriod(state.invoices,period).map(inv=>inv.id));
-    let rows=state.invoiceTechnicians.filter(row=>allowedInvoices.has(row.invoice_id));
-    if(status!=="all") rows=rows.filter(row=>row.status===status);
-    rows=rows.map(row=>({
-      ...row,
-      invoice:state.invoices.find(inv=>inv.id===row.invoice_id),
-      technician:state.technicians.find(tech=>tech.id===row.technician_id)
-    })).filter(row=>!query||`${row.technician?.name||""} ${row.invoice?.invoice_number||""} ${row.invoice?.customer_name||""}`.toLowerCase().includes(query));
-
-    const todayInvoices=new Set(state.invoices.filter(inv=>inv.work_date===localDate()).map(inv=>inv.id));
-    $("statTechnicianToday").textContent=money(state.invoiceTechnicians.filter(row=>todayInvoices.has(row.invoice_id)).reduce((sum,row)=>sum+safeNumber(row.share_amount),0));
-    $("statTechnicianReady").textContent=money(state.invoiceTechnicians.filter(row=>row.status==="ready").reduce((sum,row)=>sum+safeNumber(row.share_amount),0));
-    $("statTechnicianPaidMonth").textContent=money(state.invoiceTechnicians.filter(row=>row.status==="paid" && String(row.paid_at||"").slice(0,7)===localDate().slice(0,7)).reduce((sum,row)=>sum+safeNumber(row.share_amount),0));
-    $("statTechnicianJobs").textContent=new Set(state.invoiceTechnicians.filter(row=>todayInvoices.has(row.invoice_id)).map(row=>row.invoice_id)).size;
-
-    $("incentiveBody").innerHTML=rows.length?rows.map(row=>`<tr>
-      <td>${formatDate(row.invoice?.work_date)}</td>
-      <td><strong>${esc(row.technician?.name||"-")}</strong></td>
-      <td>${esc(row.invoice?.invoice_number||"-")}</td>
-      <td>${esc(row.invoice?.customer_name||"-")}</td>
-      <td><strong>${money(row.share_amount)}</strong></td>
-      <td>${incentiveBadge(row.status)}</td>
-      <td>${row.status==="ready"?`<button class="btn primary pay-incentive-btn" data-id="${row.id}">Bayar</button>`:row.status==="paid"?`<small>${formatDate(String(row.paid_at).slice(0,10))}</small>`:"-"}</td>
-    </tr>`).join(""):`<tr><td colspan="7" class="empty">Belum ada data insentif pada filter ini.</td></tr>`;
-    $("incentiveBody").querySelectorAll(".pay-incentive-btn").forEach(btn=>btn.addEventListener("click",()=>payIncentive(btn.dataset.id)));
     renderTechnicianAdmin();
   }
 
@@ -740,19 +675,6 @@
 
     $("technicianAdminBody").querySelectorAll(".delete-tech-btn")
       .forEach(btn=>btn.addEventListener("click",()=>deleteTechnician(btn.dataset.id)));
-  }
-
-  async function payIncentive(id){
-    const row=state.invoiceTechnicians.find(item=>item.id===id);
-    const tech=state.technicians.find(item=>item.id===row?.technician_id);
-    if(!row || !confirm(`Tandai insentif ${tech?.name||"teknisi"} sebesar ${money(row.share_amount)} sebagai sudah dibayar?`)) return;
-    const note=prompt("Catatan pembayaran insentif:","Tunai");
-    if(note===null) return;
-    loading(true);
-    const {error}=await db.from("invoice_technicians").update({status:"paid",paid_at:new Date().toISOString(),payment_note:note.trim()||null}).eq("id",id);
-    loading(false);
-    if(error){alert(errorMessage(error));return;}
-    await refreshAll();toast("Insentif ditandai sudah dibayar.");
   }
 
   async function toggleTechnician(id){
@@ -805,8 +727,8 @@
     const hasHistory=state.invoiceTechnicians.some(row=>row.technician_id===id);
     if(hasHistory){
       alert(
-        `Teknisi ${tech.name} sudah tercatat pada riwayat nota atau insentif, sehingga tidak dapat dihapus. `+
-        `Gunakan tombol Nonaktifkan agar riwayat lama tetap tersimpan.`
+        `Teknisi ${tech.name} sudah tercatat pada riwayat nota, sehingga tidak dapat dihapus. `+
+        `Gunakan tombol Nonaktifkan agar riwayat pekerjaan tetap tersimpan.`
       );
       return;
     }
@@ -851,7 +773,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:32,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,item_incentives:state.itemIncentives,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:35,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -861,7 +783,6 @@
     state.realtime=db.channel(`lorhil-${uid()}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"invoices",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"technicians",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
-      .on("postgres_changes",{event:"*",schema:"public",table:"invoice_item_incentives",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"invoice_technicians",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
       .subscribe();
   }

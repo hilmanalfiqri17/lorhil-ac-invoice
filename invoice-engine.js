@@ -323,23 +323,70 @@
     return String(payload.filename||"nota-lorhil-ac.pdf").replace(/[^a-zA-Z0-9._-]+/g,"-");
   }
 
-  function triggerDownload(blob,name){
+  function cleanFilename(value){
+    const fallback="nota-lorhil-ac.pdf";
+    const name=String(value||fallback)
+      .replace(/[\\/:*?"<>|]+/g,"-")
+      .replace(/\s+/g," ")
+      .trim();
+    return name.toLowerCase().endsWith(".pdf")?name:`${name}.pdf`;
+  }
+
+  function pdfDownloadUrl(id,name){
+    const base=new URL("./__lorhil_download__/",window.location.href);
+    return `${base.href}${encodeURIComponent(id)}/${encodeURIComponent(name)}`;
+  }
+
+  function registerPdfWithServiceWorker(bytes,name){
+    if(!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return null;
+
+    const id=`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+
+    navigator.serviceWorker.controller.postMessage({
+      type:"REGISTER_PDF_DOWNLOAD",
+      id,
+      filename:name,
+      bytes:buffer
+    },[buffer]);
+
+    return pdfDownloadUrl(id,name);
+  }
+
+  function openBlobFallback(bytes,name){
+    const blob=new Blob([bytes],{type:"application/pdf"});
     const url=URL.createObjectURL(blob);
-    const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isiOS){
-      const opened=window.open(url,"_blank");
-      if(!opened) window.location.href=url;
-    }else{
+    const link=document.createElement("a");
+    link.href=url;
+    link.target="_blank";
+    link.rel="noopener";
+    link.style.display="none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),180000);
+    return true;
+  }
+
+  function startPdfDownload(bytes,name,{background=false}={}){
+    const safeName=cleanFilename(name);
+    const url=registerPdfWithServiceWorker(bytes,safeName);
+
+    if(url){
       const link=document.createElement("a");
       link.href=url;
-      link.download=name;
+      link.download=safeName;
       link.rel="noopener";
+      if(background) link.target="_blank";
       link.style.display="none";
       document.body.appendChild(link);
       link.click();
       link.remove();
+      return {started:true,method:"service-worker"};
     }
-    setTimeout(()=>URL.revokeObjectURL(url),180000);
+
+    openBlobFallback(bytes,safeName);
+    return {started:true,method:"preview"};
   }
 
   function whatsappUrl(payload){
@@ -348,7 +395,7 @@
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   }
 
-  function showStatus(message){
+  function showStatus(message,duration=4200){
     let box=document.getElementById("lorhilInvoiceStatus");
     if(!box){
       box=document.createElement("div");
@@ -359,15 +406,20 @@
     box.textContent=message;
     box.style.display="block";
     clearTimeout(showStatus.timer);
-    showStatus.timer=setTimeout(()=>{box.style.display="none";},3500);
+    showStatus.timer=setTimeout(()=>{box.style.display="none";},duration);
   }
 
   function downloadPdf(payload){
     try{
-      showStatus("Membuat PDF...");
-      const blob=createPdfBlob(payload);
-      triggerDownload(blob,filename(payload));
-      showStatus("PDF berhasil dibuat. Periksa folder Download.");
+      showStatus("Menyiapkan PDF...");
+      const bytes=createPdfBytes(payload);
+      const result=startPdfDownload(bytes,filename(payload));
+
+      if(result.method==="service-worker"){
+        showStatus("Download dimulai. Periksa notifikasi unduhan atau folder Download.",5200);
+      }else{
+        showStatus("PDF dibuka di browser. Tekan ikon unduh untuk menyimpannya.",6500);
+      }
       return true;
     }catch(error){
       console.error("Gagal membuat PDF",error);
@@ -382,12 +434,20 @@
       alert("Nomor WhatsApp pelanggan pada nota belum valid.");
       return false;
     }
+
     try{
-      showStatus("Membuat dan mengunduh PDF...");
-      const blob=createPdfBlob(payload);
-      triggerDownload(blob,filename(payload));
-      showStatus("PDF diunduh. Membuka WhatsApp pelanggan...");
-      setTimeout(()=>{window.location.href=whatsappUrl(payload);},700);
+      showStatus("Menyiapkan PDF...");
+      const bytes=createPdfBytes(payload);
+      const result=startPdfDownload(bytes,filename(payload),{background:true});
+
+      showStatus(
+        result.method==="service-worker"
+          ? "Download dimulai. WhatsApp pelanggan akan dibuka."
+          : "PDF dibuka untuk disimpan. WhatsApp pelanggan akan dibuka.",
+        5000
+      );
+
+      setTimeout(()=>{window.location.href=whatsappUrl(payload);},1400);
       return true;
     }catch(error){
       console.error("Gagal mengunduh PDF dan membuka WhatsApp",error);

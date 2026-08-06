@@ -1,4 +1,38 @@
-const CACHE = "lorhil-ac-online-v33";
+const PDF_DOWNLOADS = new Map();
+const PDF_WAITERS = new Map();
+
+function resolvePdfWaiter(id,entry){
+  const waiter=PDF_WAITERS.get(id);
+  if(waiter){
+    PDF_WAITERS.delete(id);
+    waiter(entry);
+  }
+}
+
+function waitForPdf(id,timeoutMs=5000){
+  const existing=PDF_DOWNLOADS.get(id);
+  if(existing) return Promise.resolve(existing);
+
+  return new Promise(resolve=>{
+    const timer=setTimeout(()=>{
+      PDF_WAITERS.delete(id);
+      resolve(null);
+    },timeoutMs);
+
+    PDF_WAITERS.set(id,entry=>{
+      clearTimeout(timer);
+      resolve(entry);
+    });
+  });
+}
+
+function safeAttachmentFilename(name){
+  return String(name||"nota-lorhil-ac.pdf")
+    .replace(/[\\\r\n\"]+/g,"-")
+    .trim() || "nota-lorhil-ac.pdf";
+}
+
+const CACHE = "lorhil-ac-online-v34";
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -42,6 +76,36 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
+
+  if(url.pathname.includes("/__lorhil_download__/")){
+    event.respondWith((async()=>{
+      const marker="/__lorhil_download__/";
+      const rest=url.pathname.slice(url.pathname.indexOf(marker)+marker.length);
+      const id=decodeURIComponent(rest.split("/")[0]||"");
+      const entry=await waitForPdf(id);
+
+      if(!entry){
+        return new Response("File PDF tidak tersedia.",{status:404,headers:{"Content-Type":"text/plain; charset=utf-8"}});
+      }
+
+      const filename=safeAttachmentFilename(entry.filename);
+      const encoded=encodeURIComponent(filename);
+      setTimeout(()=>PDF_DOWNLOADS.delete(id),120000);
+
+      return new Response(entry.bytes,{
+        status:200,
+        headers:{
+          "Content-Type":"application/pdf",
+          "Content-Disposition":`attachment; filename="${filename}"; filename*=UTF-8''${encoded}`,
+          "Content-Length":String(entry.bytes.byteLength),
+          "Cache-Control":"no-store, no-cache, must-revalidate",
+          "Pragma":"no-cache"
+        }
+      });
+    })());
+    return;
+  }
+
   if(url.hostname.includes("supabase.co")) return;
 
   const networkFirst =
@@ -76,5 +140,27 @@ self.addEventListener("fetch", event => {
 });
 
 self.addEventListener("message", event => {
-  if(event.data?.type === "SKIP_WAITING") self.skipWaiting();
+  const data=event.data||{};
+
+  if(data.type === "SKIP_WAITING"){
+    self.skipWaiting();
+    return;
+  }
+
+  if(data.type === "REGISTER_PDF_DOWNLOAD"){
+    const id=String(data.id||"");
+    const bytes=data.bytes;
+    if(!id || !(bytes instanceof ArrayBuffer)) return;
+
+    const entry={
+      bytes,
+      filename:safeAttachmentFilename(data.filename),
+      createdAt:Date.now()
+    };
+    PDF_DOWNLOADS.set(id,entry);
+    resolvePdfWaiter(id,entry);
+
+    setTimeout(()=>PDF_DOWNLOADS.delete(id),180000);
+    if(event.ports?.[0]) event.ports[0].postMessage({ok:true});
+  }
 });

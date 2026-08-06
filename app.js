@@ -82,7 +82,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=24",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=30",{
             updateViaCache:"none"
           });
 
@@ -92,13 +92,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v24")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v30")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v24";
+            const reloadKey="lorhil-sw-reloaded-v30";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -485,7 +485,6 @@
   $("saveWhatsappBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({whatsappAfter:true});});
 
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
-    let pendingWindow=null;
     const editingId=$("invoiceId").value;
     const editingInvoice=editingId ? state.invoices.find(inv=>inv.id===editingId) : null;
     if(editingInvoice?.invoice_technicians?.some(row=>row.status==="paid")){
@@ -502,17 +501,6 @@
       }
     }
 
-    if(printAfter || downloadAfter || whatsappAfter){
-      pendingWindow=window.open("","_blank");
-      if(pendingWindow){
-        pendingWindow.document.write(
-          '<!doctype html><html><head><meta charset="utf-8"><title>Memproses Nota</title></head>' +
-          '<body style="font-family:Arial,sans-serif;padding:30px;text-align:center">' +
-          '<h2>Memproses nota...</h2><p>Mohon tunggu sebentar.</p></body></html>'
-        );
-        pendingWindow.document.close();
-      }
-    }
 
     try{
       const params=formData();
@@ -529,9 +517,9 @@
       await refreshAll();
       const saved=state.invoices.find(x=>x.id===data.id)||savedRaw;
 
-      if(printAfter) printInvoice(saved,pendingWindow);
-      if(downloadAfter) downloadInvoice(saved,pendingWindow);
-      if(whatsappAfter) downloadAndOpenWhatsApp(saved,pendingWindow);
+      if(printAfter) printInvoice(saved);
+      if(downloadAfter) downloadInvoice(saved);
+      if(whatsappAfter) downloadAndOpenWhatsApp(saved);
 
       resetInvoice();showPage("dashboard");
 
@@ -539,7 +527,6 @@
       else if(whatsappAfter) toast("Nota disimpan. PDF diunduh dan chat WhatsApp pelanggan dibuka.");
       else toast("Nota berhasil disimpan.");
     }catch(error){
-      if(pendingWindow && !pendingWindow.closed) pendingWindow.close();
       alert(errorMessage(error));
     }finally{
       loading(false);
@@ -864,7 +851,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:29,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,item_incentives:state.itemIncentives,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:30,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,item_incentives:state.itemIncentives,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -976,1111 +963,73 @@
     return `${number}-${customer||"pelanggan"}.pdf`;
   }
 
-  function buildInvoiceDocument(inv,mode="print"){
-    const s=state.settings||{};
-    const items=(inv.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order);
-    const sig=SIGNATURE_DATA_URI;
-    const stamp=STAMP_DATA_URI;
-    const logo=LOGO_DATA_URI;
-    const pdfLibrary="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js";
-    const filename=invoicePdfFilename(inv);
-    const shareMessage=buildWhatsAppMessage(inv);
-    const shareTitle=`Nota ${inv.invoice_number} - ${s.store_name||"LORHIL AC"}`;
-    const customerPhone=normalizeWhatsAppNumber(inv.customer_phone);
-
-    const instagramUrl="https://www.instagram.com/lorhillac/";
-    const whatsappStore="081366752281";
-
-    return `<!doctype html>
-    <html lang="id">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>${esc(inv.invoice_number)}</title>
-      <style>
-        :root{
-          --navy:#0f3442;
-          --navy-2:#123e4e;
-          --blue:#1384b5;
-          --blue-soft:#eaf4f7;
-          --ink:#172f3a;
-          --muted:#687d87;
-          --line:#d8e4e9;
-          --panel:#f8fbfc;
-          --white:#ffffff;
-          --success:#2d995b;
-        }
-
-        @page{size:A4;margin:0}
-
-        *{box-sizing:border-box}
-
-        html,body{
-          margin:0;
-          padding:0;
-          background:#eef3f5;
-          color:var(--ink);
-          font-family:Inter,Arial,Helvetica,sans-serif;
-          -webkit-print-color-adjust:exact!important;
-          print-color-adjust:exact!important;
-        }
-
-        body{
-          display:flex;
-          justify-content:center;
-          align-items:flex-start;
-        }
-
-        .sheet{
-          position:relative;
-          width:210mm;
-          height:296mm;
-          background:var(--white);
-          overflow:hidden;
-        }
-
-        .fit{
-          width:100%;
-          min-height:296mm;
-          transform-origin:top left;
-        }
-
-        .topbar-accent{
-          height:3mm;
-          background:linear-gradient(90deg,var(--navy) 0 72%,var(--blue) 72% 100%);
-        }
-
-        .header{
-          position:relative;
-          min-height:55mm;
-          padding:8mm 11mm 6mm;
-          display:grid;
-          /* Beri ruang lebih besar untuk panel informasi invoice. */
-          grid-template-columns:minmax(0,1.18fr) minmax(76mm,.82fr);
-          gap:6mm;
-          background:#fff;
-        }
-
-        .brand-wrap{
-          display:grid;
-          grid-template-columns:34mm 1fr;
-          align-items:center;
-          gap:4mm;
-        }
-
-        .brand-logo{
-          display:block;
-          width:32mm;
-          height:32mm;
-          object-fit:contain;
-          object-position:center;
-          background:transparent;
-          border-radius:50%;
-        }
-
-        .brand-name{
-          margin:0;
-          color:var(--navy);
-          font-size:25pt;
-          line-height:1;
-          font-weight:800;
-          letter-spacing:.2pt;
-        }
-
-        .brand-subtitle{
-          margin-top:2mm;
-          color:var(--blue);
-          font-size:10pt;
-          font-weight:800;
-          letter-spacing:.4pt;
-        }
-
-        .brand-contact{
-          margin-top:5mm;
-          display:grid;
-          gap:1.8mm;
-          font-size:7.6pt;
-          color:#324c57;
-        }
-
-        .brand-contact div{
-          display:grid;
-          grid-template-columns:6mm 1fr;
-          gap:1mm;
-          align-items:center;
-        }
-
-        .brand-contact .icon{
-          font-size:9pt;
-          color:var(--navy);
-        }
-
-        .invoice-box{
-          position:relative;
-          min-width:0;
-          min-height:48mm;
-          padding:7mm 6mm 5mm 9mm;
-          background:var(--navy);
-          color:#fff;
-          clip-path:polygon(13% 0,100% 0,100% 100%,0 100%);
-        }
-
-        .invoice-box:before{
-          content:"";
-          position:absolute;
-          left:6mm;
-          top:0;
-          bottom:0;
-          width:1.5mm;
-          background:var(--blue);
-          transform:skewX(-13deg);
-          transform-origin:top;
-        }
-
-        .invoice-title{
-          margin:0 0 4mm;
-          text-align:right;
-          font-size:30pt;
-          line-height:1;
-          font-weight:900;
-          letter-spacing:.5pt;
-        }
-
-        .invoice-meta{
-          display:grid;
-          grid-template-columns:17mm minmax(0,1fr);
-          gap:1.8mm 2mm;
-          justify-content:end;
-          /* Jarak lama 15 mm membuat kolom nilai terlalu sempit. */
-          margin-left:7mm;
-          font-size:7.4pt;
-        }
-
-        .invoice-meta span{
-          color:#cfe0e7;
-          font-weight:700;
-        }
-
-        .invoice-meta strong{
-          min-width:0;
-          color:#fff;
-          text-align:right;
-          white-space:nowrap;
-          word-break:keep-all;
-          overflow-wrap:normal;
-          hyphens:none;
-        }
-
-        .status-pill{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          padding:1.2mm 3mm;
-          border-radius:999px;
-          background:#dff3e6;
-          color:#24784a!important;
-          font-size:7.4pt;
-          font-weight:900;
-        }
-
-        .content{
-          padding:0 9mm 11mm;
-        }
-
-        .info-grid{
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:4mm;
-          margin-bottom:4mm;
-        }
-
-        .info-card{
-          min-height:31mm;
-          padding:4.5mm 5mm;
-          border:1px solid var(--line);
-          border-radius:3mm;
-          background:linear-gradient(180deg,#fff 0%,#f8fbfc 100%);
-        }
-
-        .card-title{
-          display:flex;
-          align-items:center;
-          gap:2mm;
-          margin-bottom:3mm;
-          color:var(--navy);
-          font-size:8.6pt;
-          font-weight:900;
-          text-transform:uppercase;
-          letter-spacing:.2pt;
-        }
-
-        .title-icon{
-          width:8mm;
-          height:8mm;
-          display:grid;
-          place-items:center;
-          border-radius:1.5mm;
-          background:var(--navy);
-          color:#fff;
-          font-size:9pt;
-        }
-
-        .card-line{
-          display:grid;
-          grid-template-columns:20mm 3mm 1fr;
-          gap:1.2mm;
-          margin-bottom:1.8mm;
-          font-size:7.5pt;
-          line-height:1.35;
-        }
-
-        .card-line .label{
-          color:#526a75;
-          font-weight:700;
-        }
-
-        .customer-name{
-          margin:0 0 2mm;
-          font-size:12pt;
-          font-weight:900;
-          color:var(--ink);
-        }
-
-        .table-wrap{
-          border:1px solid var(--line);
-          border-radius:2.5mm;
-          overflow:hidden;
-          margin-bottom:4mm;
-        }
-
-        table{
-          width:100%;
-          border-collapse:collapse;
-        }
-
-        thead{display:table-header-group}
-
-        th{
-          padding:3mm 3.2mm;
-          background:var(--navy);
-          color:#fff;
-          font-size:7.7pt;
-          text-align:left;
-          font-weight:800;
-          text-transform:uppercase;
-          letter-spacing:.15pt;
-        }
-
-        th.no{width:11mm;text-align:center}
-        th.unit{width:31mm;text-align:right}
-        th.qty{width:18mm;text-align:center}
-        th.total{width:35mm;text-align:right}
-
-        td{
-          padding:3.2mm;
-          border-bottom:1px solid #e5edf0;
-          font-size:7.6pt;
-          vertical-align:middle;
-        }
-
-        tbody tr:last-child td{border-bottom:0}
-
-        .no-cell{text-align:center}
-        .unit-cell{text-align:right;white-space:nowrap}
-        .qty-cell{text-align:center}
-        .total-cell{text-align:right;white-space:nowrap;color:var(--blue);font-weight:900}
-
-        .desc strong{
-          display:block;
-          font-size:8.1pt;
-          color:var(--ink);
-        }
-
-        .desc small{
-          display:block;
-          margin-top:.7mm;
-          color:var(--muted);
-          font-size:6.8pt;
-        }
-
-        .bottom-grid{
-          display:grid;
-          grid-template-columns:1fr 1fr 1.12fr;
-          gap:4mm;
-          align-items:start;
-        }
-
-        .small-card{
-          min-height:30mm;
-          padding:4mm;
-          border:1px solid var(--line);
-          border-radius:2.5mm;
-          background:#fff;
-        }
-
-        .small-card h3{
-          margin:0 0 3mm;
-          padding-bottom:2mm;
-          color:var(--navy);
-          border-bottom:.5mm solid var(--blue);
-          font-size:8.3pt;
-          text-transform:uppercase;
-          letter-spacing:.15pt;
-        }
-
-        .small-card .body{
-          color:#314b56;
-          font-size:7.3pt;
-          line-height:1.5;
-          white-space:pre-wrap;
-        }
-
-        .totals{
-          overflow:hidden;
-          border:1px solid var(--navy);
-          border-radius:2.5mm;
-          background:#fff;
-        }
-
-        .totals-title{
-          padding:3mm 4mm;
-          background:var(--navy);
-          color:#fff;
-          font-size:8.5pt;
-          font-weight:900;
-          text-transform:uppercase;
-        }
-
-        .total-row{
-          display:grid;
-          grid-template-columns:1fr auto;
-          gap:4mm;
-          padding:2.6mm 4mm;
-          border-bottom:1px solid var(--line);
-          font-size:7.6pt;
-        }
-
-        .total-row:last-child{border-bottom:0}
-
-        .total-row.grand{
-          padding-top:3.5mm;
-          padding-bottom:3.5mm;
-          background:var(--navy);
-          color:#fff;
-          font-size:10.5pt;
-          font-weight:900;
-        }
-
-        .signature-thanks{
-          display:grid;
-          grid-template-columns:1.2fr .8fr;
-          gap:4mm;
-          margin-top:4mm;
-        }
-
-        .signature-card,
-        .thanks-card{
-          min-height:41mm;
-          padding:4mm 5mm;
-          border:1px solid var(--line);
-          border-radius:2.5mm;
-          background:#fff;
-        }
-
-        .signature-card{
-          position:relative;
-          overflow:hidden;
-        }
-
-        .signature-label{
-          font-size:7.2pt;
-          color:#425965;
-        }
-
-        .signature-area{
-          position:relative;
-          height:31mm;
-          margin-top:1.5mm;
-        }
-
-        .signature-img{
-          position:absolute;
-          left:0;
-          bottom:5mm;
-          width:55mm;
-          height:18mm;
-          object-fit:contain;
-          object-position:left bottom;
-          z-index:3;
-        }
-
-        .stamp-img{
-          position:absolute;
-          right:2mm;
-          bottom:1mm;
-          width:28mm;
-          height:28mm;
-          object-fit:contain;
-          object-position:center;
-          transform:rotate(-5deg);
-          opacity:.88;
-          z-index:2;
-        }
-
-        .signer{
-          position:absolute;
-          left:0;
-          bottom:0;
-          width:50mm;
-          border-top:1px solid #4d626c;
-          padding-top:1.3mm;
-          z-index:4;
-        }
-
-        .signer strong{
-          display:block;
-          font-size:7.8pt;
-          color:var(--navy);
-        }
-
-        .signer span{
-          display:block;
-          margin-top:.5mm;
-          font-size:6.8pt;
-          color:#536b75;
-        }
-
-        .thanks-card{
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          text-align:center;
-        }
-
-        .thanks-card strong{
-          display:block;
-          color:var(--navy);
-          font-size:11pt;
-          margin-bottom:1.5mm;
-        }
-
-        .thanks-card span{
-          display:block;
-          color:var(--muted);
-          font-size:7pt;
-          line-height:1.45;
-        }
-
-        .footer{
-          position:absolute;
-          left:0;
-          right:0;
-          bottom:0;
-          height:10mm;
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          align-items:center;
-          background:var(--navy);
-          color:#fff;
-          border-top:1.3mm solid var(--blue);
-          font-size:7.2pt;
-        }
-
-        .footer div{
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          gap:2mm;
-          padding:0 5mm;
-        }
-
-        .footer div:first-child{
-          border-right:1px solid rgba(255,255,255,.35);
-        }
-
-        .buttons{
-          position:fixed;
-          right:15px;
-          top:15px;
-          z-index:10;
-          display:flex;
-          flex-wrap:wrap;
-          gap:6px;
-          justify-content:flex-end;
-        }
-
-        .buttons button{
-          border:0;
-          border-radius:8px;
-          padding:10px 12px;
-          background:var(--navy);
-          color:#fff;
-          font-weight:800;
-          cursor:pointer;
-        }
-
-        .buttons .download{background:var(--blue)}
-        .buttons .share{background:#1f8f5f}
-        .buttons button:disabled{opacity:.55;cursor:not-allowed}
-        .buttons button.busy{position:relative;padding-right:34px}
-        .buttons button.busy::after{
-          content:"";
-          position:absolute;
-          right:11px;
-          top:50%;
-          width:12px;
-          height:12px;
-          margin-top:-7px;
-          border:2px solid rgba(255,255,255,.45);
-          border-top-color:#fff;
-          border-radius:50%;
-          animation:pdfSpin .8s linear infinite;
-        }
-        @keyframes pdfSpin{to{transform:rotate(360deg)}}
-
-        .download-status{
-          position:fixed;
-          left:15px;
-          top:15px;
-          z-index:10;
-          max-width:320px;
-          padding:10px 13px;
-          border-radius:8px;
-          background:#fff;
-          box-shadow:0 4px 15px rgba(0,0,0,.15);
-          font-size:13px;
-          line-height:1.4;
-        }
-
-        @media print{
-          html,body{background:#fff}
-          .buttons,.download-status{display:none!important}
-          .sheet{box-shadow:none}
-        }
-      </style>
-      <script src="${pdfLibrary}"><\/script>
-    </head>
-    <body>
-      <div id="downloadStatus" class="download-status" style="display:none">
-        Mempersiapkan PDF...
-      </div>
-
-      <div class="buttons">
-        <button onclick="printDocument()">Cetak / PDF</button>
-        <button id="downloadPdfBtn" class="download" onclick="downloadPdf()">Download PDF</button>
-        <button id="sharePdfBtn" class="share" onclick="downloadPdfAndOpenWhatsApp()">Download PDF & Buka WhatsApp</button>
-        <button onclick="copyShareMessage()">Salin Pesan</button>
-        <button onclick="window.close()">Tutup</button>
-      </div>
-
-      <article class="sheet">
-        <div class="fit">
-          <div class="topbar-accent"></div>
-
-          <header class="header">
-            <section>
-              <div class="brand-wrap">
-                <img class="brand-logo" src="${logo}" alt="Logo LORHIL AC">
-                <div>
-                  <h1 class="brand-name">${esc(s.store_name||"LORHIL AC")}</h1>
-                  <div class="brand-subtitle">SPESIALIS AIR CONDITIONER</div>
-
-                  <div class="brand-contact">
-                    <div><span class="icon">☎</span><span>WhatsApp: ${esc(s.phone||whatsappStore)}</span></div>
-                    <div><span class="icon">⌖</span><span>Alamat: ${esc(s.address||"Alamat LORHIL AC")}</span></div>
-                    <div><span class="icon">⚙</span><span>Layanan: AC Baru, AC Second & Jasa Servis</span></div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="invoice-box">
-              <h2 class="invoice-title">INVOICE</h2>
-              <div class="invoice-meta">
-                <span>NO.</span><strong>${esc(inv.invoice_number)}</strong>
-                <span>TANGGAL</span><strong>${formatDate(inv.work_date)} • ${esc((inv.work_time||"").slice(0,5))}</strong>
-                <span>STATUS</span><strong><span class="status-pill">${esc(inv.status)}</span></strong>
-              </div>
-            </section>
-          </header>
-
-          <main class="content">
-            <section class="info-grid">
-              <div class="info-card">
-                <div class="card-title"><span class="title-icon">☎</span>Rincian Kontak</div>
-                <div class="card-line"><span class="label">WhatsApp</span><span>:</span><span>${esc(s.phone||whatsappStore)}</span></div>
-                <div class="card-line"><span class="label">Alamat</span><span>:</span><span>${esc(s.address||"Alamat LORHIL AC")}</span></div>
-                <div class="card-line"><span class="label">Layanan</span><span>:</span><span>AC Baru, AC Second & Jasa Servis</span></div>
-              </div>
-
-              <div class="info-card">
-                <div class="card-title"><span class="title-icon">●</span>Kepada</div>
-                <div class="customer-name">${esc(inv.customer_name)}</div>
-                <div class="card-line"><span class="label">WhatsApp</span><span>:</span><span>${esc(inv.customer_phone||"-")}</span></div>
-                <div class="card-line"><span class="label">Alamat</span><span>:</span><span>${esc(inv.customer_address||"-")}</span></div>
-              </div>
-            </section>
-
-            <section class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="no">No.</th>
-                    <th>Keterangan</th>
-                    <th class="unit">Harga Unit</th>
-                    <th class="qty">Qty</th>
-                    <th class="total">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${items.map((item,index)=>`
-                    <tr>
-                      <td class="no-cell">${index+1}</td>
-                      <td class="desc">
-                        <strong>${esc(item.description)}</strong>
-                        <small>Pekerjaan / produk LORHIL AC</small>
-                      </td>
-                      <td class="unit-cell">${money(item.unit_price)}</td>
-                      <td class="qty-cell">${item.quantity}</td>
-                      <td class="total-cell">${money(item.line_total)}</td>
-                    </tr>
-                  `).join("")}
-                </tbody>
-              </table>
-            </section>
-
-            <section class="bottom-grid">
-              <div class="small-card">
-                <h3>Metode Pembayaran</h3>
-                <div class="body">${esc(s.payment_info||"Tunai / Transfer")}</div>
-              </div>
-
-              <div class="small-card">
-                <h3>Catatan</h3>
-                <div class="body">${esc(inv.notes||s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</div>
-              </div>
-
-              <div class="totals">
-                <div class="totals-title">Ringkasan Total</div>
-                <div class="total-row"><span>Subtotal</span><strong>${money(inv.subtotal)}</strong></div>
-                <div class="total-row"><span>Diskon</span><strong>${money(inv.discount)}</strong></div>
-                <div class="total-row"><span>Dibayar</span><strong>${money(inv.paid)}</strong></div>
-                <div class="total-row"><span>Sisa</span><strong>${money(inv.balance)}</strong></div>
-                <div class="total-row grand"><span>Total</span><strong>${money(inv.total)}</strong></div>
-              </div>
-            </section>
-
-            <section class="signature-thanks">
-              <div class="signature-card">
-                <div class="signature-label">Hormat kami,</div>
-                <div class="signature-area">
-                  <img class="signature-img" src="${sig}" alt="Tanda tangan">
-                  <img class="stamp-img" src="${stamp}" alt="Stempel LORHIL AC">
-                  <div class="signer">
-                    <strong>${esc(s.signer_name||"Hendri Nova Lismana")}</strong>
-                    <span>${esc(s.signer_role||"Pemilik LORHIL AC")}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="thanks-card">
-                <div>
-                  <strong>TERIMA KASIH</strong>
-                  <span>${esc(s.footer_note||"Terima kasih telah menggunakan layanan LORHIL AC.")}</span>
-                </div>
-              </div>
-            </section>
-          </main>
-
-          <footer class="footer">
-            <div><span>◎</span><span>Instagram: ${instagramUrl}</span></div>
-            <div><span>◉</span><span>WhatsApp: ${whatsappStore}</span></div>
-          </footer>
-        </div>
-      </article>
-
-      <script>
-        const START_MODE=${JSON.stringify(mode)};
-        const PDF_FILENAME=${JSON.stringify(filename)};
-        const SHARE_TITLE=${JSON.stringify(shareTitle)};
-        const SHARE_MESSAGE=${JSON.stringify(shareMessage)};
-        const CUSTOMER_PHONE=${JSON.stringify(customerPhone)};
-
-        let preparedPdfBlob=null;
-        let operationRunning=false;
-
-        function statusBox(message,visible=true){
-          const status=document.getElementById("downloadStatus");
-          if(!status) return;
-          status.textContent=message||"";
-          status.style.display=visible?"block":"none";
-        }
-
-        function fit(){
-          const page=document.querySelector(".sheet");
-          const content=document.querySelector(".fit");
-          if(!page || !content) return;
-
-          content.style.transform="none";
-          content.style.width="100%";
-
-          const scale=Math.min(1,page.clientHeight/content.scrollHeight);
-          if(scale<1){
-            content.style.transform="scale("+scale+")";
-            content.style.transformOrigin="top left";
-            content.style.width=(100/scale)+"%";
-          }
-        }
-
-        async function waitForImages(){
-          try{
-            await Promise.all(
-              [...document.images].map(img=>
-                img.decode ? img.decode().catch(()=>{}) : Promise.resolve()
-              )
-            );
-          }catch(error){}
-        }
-
-        function loadPdfScript(url){
-          return new Promise((resolve,reject)=>{
-            const existing=[...document.scripts].find(script=>script.src===url);
-            if(existing){
-              if(typeof html2pdf==="function") resolve();
-              else{
-                existing.addEventListener("load",resolve,{once:true});
-                existing.addEventListener("error",reject,{once:true});
-              }
-              return;
-            }
-
-            const script=document.createElement("script");
-            script.src=url;
-            script.async=true;
-            script.onload=resolve;
-            script.onerror=reject;
-            document.head.appendChild(script);
-          });
-        }
-
-        async function waitForPdfLibrary(){
-          if(typeof html2pdf==="function") return;
-
-          const fallbackUrls=[
-            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
-            "https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"
-          ];
-
-          for(const url of fallbackUrls){
-            try{
-              await loadPdfScript(url);
-              if(typeof html2pdf==="function") return;
-            }catch(error){
-              console.warn("Gagal memuat komponen PDF:",url,error);
-            }
-          }
-
-          const started=Date.now();
-          while(typeof html2pdf!=="function"){
-            if(Date.now()-started>5000){
-              throw new Error("Komponen PDF gagal dimuat. Pastikan internet aktif, lalu tekan Download PDF kembali.");
-            }
-            await new Promise(resolve=>setTimeout(resolve,120));
-          }
-        }
-
-        function pdfOptions(){
-          return {
-            margin:0,
-            filename:PDF_FILENAME,
-            image:{type:"jpeg",quality:0.98},
-            html2canvas:{
-              scale:2,
-              useCORS:true,
-              allowTaint:false,
-              backgroundColor:"#ffffff",
-              logging:false,
-              scrollX:0,
-              scrollY:0
-            },
-            jsPDF:{
-              unit:"mm",
-              format:"a4",
-              orientation:"portrait",
-              compress:true
-            },
-            pagebreak:{mode:[]}
-          };
-        }
-
-        function setPdfButtonsBusy(isBusy,activeId=""){
-          document.querySelectorAll(".buttons button").forEach(button=>{
-            button.disabled=isBusy;
-            button.classList.toggle("busy",isBusy && button.id===activeId);
-          });
-        }
-
-        async function preparePdf(){
-          await waitForPdfLibrary();
-          await waitForImages();
-          fit();
-          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-        }
-
-        async function createPdfBlob(){
-          await preparePdf();
-
-          return html2pdf()
-            .set(pdfOptions())
-            .from(document.querySelector(".sheet"))
-            .toPdf()
-            .outputPdf("blob");
-        }
-
-        async function savePdfDirect(){
-          await preparePdf();
-
-          return html2pdf()
-            .set(pdfOptions())
-            .from(document.querySelector(".sheet"))
-            .save(PDF_FILENAME);
-        }
-
-        async function getPdfBlob(){
-          if(!preparedPdfBlob){
-            statusBox("Membuat file PDF...");
-            preparedPdfBlob=await createPdfBlob();
-          }
-          return preparedPdfBlob;
-        }
-
-        function saveBlob(blob){
-          const url=URL.createObjectURL(blob);
-          const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-
-          if(isiOS){
-            const link=document.createElement("a");
-            link.href=url;
-            link.target="_blank";
-            link.rel="noopener";
-            link.style.display="none";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            statusBox("PDF sudah dibuka. Pada iPhone, gunakan tombol Bagikan lalu pilih Simpan ke File.");
-          }else{
-            const link=document.createElement("a");
-            link.href=url;
-            link.download=PDF_FILENAME;
-            link.rel="noopener";
-            link.style.display="none";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          }
-
-          setTimeout(()=>URL.revokeObjectURL(url),180000);
-        }
-
-        function customerWhatsAppUrl(){
-          return "https://wa.me/"+CUSTOMER_PHONE+"?text="+encodeURIComponent(SHARE_MESSAGE);
-        }
-
-        async function downloadPdf(){
-          if(operationRunning) return;
-          operationRunning=true;
-          setPdfButtonsBusy(true,"downloadPdfBtn");
-
-          try{
-            statusBox("Membuat file PDF. Mohon tunggu...");
-            await savePdfDirect();
-            statusBox("PDF berhasil dibuat. Periksa folder Download di HP.");
-            setTimeout(()=>statusBox("",false),3500);
-          }catch(primaryError){
-            console.warn("Metode simpan utama gagal, memakai cadangan Blob.",primaryError);
-
-            try{
-              const blob=await getPdfBlob();
-              saveBlob(blob);
-              statusBox("PDF berhasil dibuat dengan metode cadangan.");
-              setTimeout(()=>statusBox("",false),3500);
-            }catch(fallbackError){
-              console.error(fallbackError);
-              statusBox("",false);
-              alert(fallbackError.message||"PDF belum berhasil dibuat. Muat ulang halaman lalu coba kembali.");
-            }
-          }finally{
-            operationRunning=false;
-            setPdfButtonsBusy(false);
-          }
-        }
-
-        function openCustomerWhatsApp(){
-          if(!CUSTOMER_PHONE || CUSTOMER_PHONE.length<10){
-            alert("Nomor WhatsApp pelanggan pada nota belum valid.");
-            return;
-          }
-
-          statusBox("Membuka chat WhatsApp pelanggan...");
-          const url=customerWhatsAppUrl();
-          const opened=window.open(url,"_blank","noopener,noreferrer");
-
-          if(!opened){
-            window.location.href=url;
-          }
-
-          setTimeout(()=>{
-            statusBox("Chat pelanggan dibuka. Lampirkan PDF nota secara manual sebelum mengirim.");
-          },500);
-        }
-
-        async function downloadPdfAndOpenWhatsApp(){
-          if(operationRunning) return;
-
-          if(!CUSTOMER_PHONE || CUSTOMER_PHONE.length<10){
-            alert("Nomor WhatsApp pelanggan pada nota belum valid.");
-            return;
-          }
-
-          operationRunning=true;
-          setPdfButtonsBusy(true,"sharePdfBtn");
-
-          try{
-            statusBox("Membuat dan mengunduh PDF...");
-            const blob=await getPdfBlob();
-            saveBlob(blob);
-
-            statusBox("PDF selesai dibuat. Membuka chat WhatsApp pelanggan...");
-            await new Promise(resolve=>setTimeout(resolve,1500));
-            window.location.href=customerWhatsAppUrl();
-          }catch(error){
-            console.error(error);
-            statusBox("",false);
-            alert(error.message||"PDF atau WhatsApp belum berhasil dibuka.");
-            operationRunning=false;
-            setPdfButtonsBusy(false);
-          }
-        }
-
-        async function copyShareMessage(){
-          try{
-            await navigator.clipboard.writeText(SHARE_MESSAGE);
-            alert("Pesan nota berhasil disalin.");
-          }catch(error){
-            window.prompt("Salin pesan berikut:",SHARE_MESSAGE);
-          }
-        }
-
-        async function printDocument(){
-          if(operationRunning) return;
-          operationRunning=true;
-
-          try{
-            statusBox("Menyiapkan tampilan cetak...");
-            await waitForImages();
-            fit();
-            setTimeout(()=>{
-              statusBox("",false);
-              window.print();
-              operationRunning=false;
-            },300);
-          }catch(error){
-            console.error(error);
-            operationRunning=false;
-            statusBox("",false);
-            alert("Tampilan cetak belum berhasil dibuka.");
-          }
-        }
-
-        window.addEventListener("resize",()=>setTimeout(fit,100));
-
-        window.addEventListener("load",async()=>{
-          await waitForImages();
-          fit();
-
-          setTimeout(async()=>{
-            fit();
-
-            if(START_MODE==="download-whatsapp"){
-              await downloadPdfAndOpenWhatsApp();
-            }else if(START_MODE==="download"){
-              await downloadPdf();
-            }else if(START_MODE==="print"){
-              await printDocument();
-            }else if(START_MODE==="share"){
-              await downloadPdfAndOpenWhatsApp();
-            }else{
-              statusBox(
-                "Pilih Cetak / PDF, Download PDF, atau Download PDF & Buka WhatsApp.",
-                true
-              );
-            }
-          },500);
-        });
-      <\/script>
-    </body>
-    </html>`;
+  function invoiceEnginePayload(inv){
+    return {
+      invoice:{
+        id:inv.id,
+        invoice_number:inv.invoice_number,
+        work_date:inv.work_date,
+        work_time:inv.work_time,
+        customer_name:inv.customer_name,
+        customer_phone:inv.customer_phone,
+        customer_address:inv.customer_address,
+        subtotal:inv.subtotal,
+        discount:inv.discount,
+        total:inv.total,
+        paid:inv.paid,
+        balance:inv.balance,
+        status:inv.status,
+        notes:inv.notes,
+        invoice_items:[...(inv.invoice_items||[])].map(item=>({
+          description:item.description,
+          quantity:item.quantity,
+          unit_price:item.unit_price,
+          line_total:item.line_total,
+          sort_order:item.sort_order
+        }))
+      },
+      settings:{...(state.settings||{})},
+      filename:invoicePdfFilename(inv),
+      phone:normalizeWhatsAppNumber(inv.customer_phone),
+      message:buildWhatsAppMessage(inv)
+    };
   }
 
-
-  function isMobileInvoiceDevice(){
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-      window.matchMedia("(max-width: 820px)").matches;
-  }
-
-  function openInvoiceDocument(inv,mode="print",targetWindow=null){
-    // Browser HP sering memblokir print, download, atau share yang berjalan
-    // otomatis setelah halaman baru terbuka. Karena itu HP membuka preview
-    // terlebih dahulu, lalu pengguna menekan tombol aksi pada halaman tersebut.
-    const directModes=["download","download-whatsapp"];
-    const documentMode=
-      directModes.includes(mode)
-        ? mode
-        : (isMobileInvoiceDevice()?"preview":mode);
-    const html=buildInvoiceDocument(inv,documentMode);
-
-    const popup=(targetWindow && !targetWindow.closed)
-      ? targetWindow
-      : window.open("about:blank","_blank");
-
-    if(popup){
-      popup.document.open();
-      popup.document.write(html);
-      popup.document.close();
-      try{ popup.focus(); }catch(error){}
-      return;
+  function invoiceEngine(){
+    const engine=window.LorhilInvoiceEngine;
+    if(!engine){
+      alert("Komponen nota belum termuat. Muat ulang halaman lalu coba kembali.");
+      return null;
     }
-
-    // Cadangan untuk PWA atau browser yang memblokir popup.
-    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement("a");
-    link.href=url;
-    link.target="_blank";
-    link.rel="noopener";
-    link.style.display="none";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setTimeout(()=>URL.revokeObjectURL(url),120000);
+    return engine;
   }
 
-  function printInvoice(inv,targetWindow=null){
-    openInvoiceDocument(inv,"print",targetWindow);
+  function printInvoice(inv){
+    const engine=invoiceEngine();
+    if(!engine) return false;
+    closeModal();
+    return engine.openPrintPreview(invoiceEnginePayload(inv));
   }
 
-  function downloadInvoice(inv,targetWindow=null){
-    openInvoiceDocument(inv,"download",targetWindow);
+  function downloadInvoice(inv){
+    const engine=invoiceEngine();
+    if(!engine) return false;
+    return engine.downloadPdf(invoiceEnginePayload(inv));
   }
 
-  function downloadAndOpenWhatsApp(inv,targetWindow=null){
-    openInvoiceDocument(inv,"download-whatsapp",targetWindow);
+  function downloadAndOpenWhatsApp(inv){
+    const phone=normalizeWhatsAppNumber(inv.customer_phone);
+    if(phone.length<10){
+      alert("Nomor WhatsApp pelanggan pada nota belum valid.");
+      return false;
+    }
+    const engine=invoiceEngine();
+    if(!engine) return false;
+    return engine.downloadPdfAndOpenWhatsApp(invoiceEnginePayload(inv));
   }
 
-  function shareInvoicePdf(inv,targetWindow=null){
-    downloadAndOpenWhatsApp(inv,targetWindow);
+  function shareInvoicePdf(inv){
+    return downloadAndOpenWhatsApp(inv);
   }
 
   init();

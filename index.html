@@ -8,8 +8,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=35">
-  <title>LORHIL AC Online V35</title>
+  <link rel="stylesheet" href="style.css?v=36">
+  <title>LORHIL AC Online V36</title>
 
   <style>
     .invoice-actions{
@@ -104,26 +104,17 @@
       font-weight:400;
     }
 
-    .stats.dashboard-stats{grid-template-columns:repeat(6,minmax(0,1fr));}
-    .stats.incentive-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
+    .stats.dashboard-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
     .technician-choice-grid{display:flex;flex-wrap:wrap;gap:10px;}
     .technician-choice{display:flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid #d9e4ea;border-radius:10px;background:#fff;cursor:pointer;font-weight:700;color:#163746;}
     .technician-choice input{width:auto;margin:0;}
-    .incentive-summary{margin-top:16px;padding:16px;border:1px solid #cfe1e8;border-radius:12px;background:#f5fafc;}
-    .incentive-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
-    .incentive-summary-item{padding:12px;border-radius:10px;background:#fff;border:1px solid #d9e4ea;}
-    .incentive-summary-item span{display:block;color:#6b7e88;font-size:12px;margin-bottom:5px;}
-    .incentive-summary-item strong{font-size:18px;color:#153746;}
     .item-table .qty{min-width:78px;}
     .item-table .price{min-width:135px;}
     .item-table th:nth-child(4),
     .item-table th:nth-child(5),
-    .item-table th:nth-child(6),
     .item-table td:nth-child(4),
-    .item-table td:nth-child(5),
-    .item-table td:nth-child(6){text-align:right;}
-    .item-table .line-total,
-    .item-table .line-incentive{white-space:nowrap;}
+    .item-table td:nth-child(5){text-align:right;}
+    .item-table .line-total{white-space:nowrap;}
     .empty.compact{padding:12px;text-align:left;}
     .technician-form-row{
       display:grid;
@@ -145,10 +136,8 @@
       width:130px;
       white-space:nowrap;
     }
-    .incentive-note{margin-top:12px;color:#607680;font-size:13px;line-height:1.5;}
     @media (max-width:1100px){
       .stats.dashboard-stats{grid-template-columns:repeat(3,minmax(0,1fr));}
-      .stats.incentive-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
       
     }
 
@@ -199,13 +188,12 @@
       .invoice-reset-action{
         width:100%;
       }
-      .stats.dashboard-stats,.stats.incentive-stats{grid-template-columns:1fr 1fr;}
-      .incentive-summary-grid{grid-template-columns:1fr 1fr;}
+      .stats.dashboard-stats{grid-template-columns:1fr 1fr;}
       .technician-form-row{grid-template-columns:1fr;}
     }
   </style>
 </head>
-<body data-app-version="34">
+<body data-app-version="36">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
@@ -250,7 +238,7 @@
         <button class="nav-btn" data-page="invoice">＋ Buat Nota</button>
         <button class="nav-btn" data-page="history">▤ Riwayat Nota</button>
         <button class="nav-btn" data-page="customers">♙ Pelanggan</button>
-        <button class="nav-btn" data-page="incentives">◉ Teknisi</button>
+        <button class="nav-btn" data-page="technicians">◉ Teknisi</button>
         <button class="nav-btn" data-page="settings">⚙ Pengaturan</button>
         <button class="nav-btn" data-page="backup">⇩ Backup</button>
       </nav>
@@ -440,7 +428,7 @@
           </div>
         </section>
 
-        <section id="page-incentives" class="page">
+        <section id="page-technicians" class="page">
           <div class="page-head">
             <div>
               <h2>Teknisi</h2>
@@ -524,7 +512,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="invoice-engine.js?v=35"></script>
-  <script src="app.js?v=35"></script>
+  <script src="invoice-engine.js?v=36"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>

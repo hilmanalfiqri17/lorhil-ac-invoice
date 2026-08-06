@@ -32,7 +32,7 @@ function safeAttachmentFilename(name){
     .trim() || "nota-lorhil-ac.pdf";
 }
 
-const CACHE = "lorhil-ac-online-v35";
+const CACHE = "lorhil-ac-online-v36";
 const CORE_ASSETS = [
   "./",
   "index.html",

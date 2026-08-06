@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=35",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=36",{
             updateViaCache:"none"
           });
 
@@ -90,13 +90,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v35")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v36")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v35";
+            const reloadKey="lorhil-sw-reloaded-v36";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -140,7 +140,7 @@
   $("menuBtn").addEventListener("click",()=> $("sidebar").classList.toggle("open"));
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
-  const titles={dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",incentives:"Teknisi",settings:"Pengaturan",backup:"Backup"};
+  const titles={dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",technicians:"Teknisi",settings:"Pengaturan",backup:"Backup"};
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
   document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{resetInvoice();showPage("invoice");}));
 
@@ -154,7 +154,7 @@
     if(page==="dashboard") renderDashboard();
     if(page==="history") renderHistory();
     if(page==="customers") renderCustomers();
-    if(page==="incentives") renderIncentives();
+    if(page==="technicians") renderTechnicians();
     if(page==="settings") renderSettings();
     if(page==="invoice"){ refreshCustomerList(); renderTechnicianChoices(); }
   }
@@ -172,8 +172,8 @@
 
       if(invoiceResult.error) throw invoiceResult.error;
       if(settingsResult.error) throw settingsResult.error;
-      if(technicianResult.error) throw new Error("Data teknisi belum tersedia. " + technicianResult.error.message);
-      if(invoiceTechnicianResult.error) throw invoiceTechnicianResult.error;
+      if(technicianResult.error) throw new Error("Tabel teknisi belum siap. Jalankan supabase-setup-v36.sql melalui Supabase SQL Editor. " + technicianResult.error.message);
+      if(invoiceTechnicianResult.error) throw new Error("Relasi teknisi pada nota belum siap. Jalankan supabase-setup-v36.sql melalui Supabase SQL Editor. " + invoiceTechnicianResult.error.message);
 
       state.technicians=technicianResult.data||[];
       state.invoiceTechnicians=invoiceTechnicianResult.data||[];
@@ -193,7 +193,7 @@
       renderDashboard();
       renderHistory();
       renderCustomers();
-      renderIncentives();
+      renderTechnicians();
       refreshCustomerList();
       renderTechnicianChoices();
     }catch(error){
@@ -394,10 +394,12 @@
 
   function renderTechnicianChoices(selectedIds=null){
     const selected=new Set(selectedIds||getSelectedTechnicianIds());
-    const active=state.technicians.filter(tech=>tech.is_active!==false);
+    const choices=state.technicians.filter(
+      tech=>tech.is_active!==false || selected.has(tech.id)
+    );
 
-    $("technicianChoices").innerHTML=active.length
-      ? active.map(tech=>`
+    $("technicianChoices").innerHTML=choices.length
+      ? choices.map(tech=>`
         <label class="technician-choice">
           <input type="checkbox" value="${tech.id}" ${selected.has(tech.id)?"checked":""}>
           <span>${esc(tech.name)}</span>
@@ -512,7 +514,7 @@
 
     if(deleteError){
       throw new Error(
-        "Data teknisi lama belum dapat diperbarui. Jalankan file supabase-remove-incentive-v35.sql satu kali. "+
+        "Data teknisi belum dapat diperbarui. Jalankan supabase-setup-v36.sql satu kali melalui Supabase SQL Editor. "+
         deleteError.message
       );
     }
@@ -522,11 +524,7 @@
     const payload=technicianIds.map(technicianId=>({
       user_id:uid(),
       invoice_id:invoice.id,
-      technician_id:technicianId,
-      share_amount:0,
-      status:"pending",
-      paid_at:null,
-      payment_note:null
+      technician_id:technicianId
     }));
 
     const {error:insertError}=await db
@@ -635,11 +633,7 @@
     loading(false);
 
     if(error){
-      alert(
-        error.message?.includes("Insentif yang sudah dibayar")
-          ? "Nota belum dapat dihapus. Jalankan file supabase-remove-incentive-v35.sql satu kali."
-          : errorMessage(error)
-      );
+      alert(errorMessage(error));
       return;
     }
 
@@ -648,7 +642,7 @@
     toast("Nota dihapus.");
   }
 
-  function renderIncentives(){
+  function renderTechnicians(){
     renderTechnicianAdmin();
   }
 
@@ -773,7 +767,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:35,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:36,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

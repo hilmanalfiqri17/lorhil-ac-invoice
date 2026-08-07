@@ -39,3 +39,5 @@ Ekstrak ZIP, lalu unggah seluruh isi folder ke root repository GitHub.
 Tidak perlu menjalankan SQL baru apabila database V36 sudah berfungsi.
 
 Setelah deploy, hapus cache situs atau data PWA satu kali agar V37 termuat.
+
+Deploy ulang GitHub Pages

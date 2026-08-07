@@ -193,7 +193,7 @@
     }
   </style>
 </head>
-<body data-app-version="40">
+<body data-app-version="41">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
@@ -367,18 +367,18 @@
 
                 <div class="invoice-actions-main">
                   <button type="submit" class="btn primary invoice-primary-action">Simpan Nota</button>
-                  <button type="button" id="savePrintBtn" class="btn outline">Simpan & Cetak</button>
+                  <button type="button" id="saveWhatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
 
                   <details id="invoiceActionMenu" class="invoice-action-menu">
                     <summary class="btn secondary">Opsi PDF ▾</summary>
                     <div class="invoice-action-menu-list">
+                      <button type="button" id="savePrintBtn">
+                        Simpan & Cetak
+                        <small>Simpan nota lalu buka dialog cetak.</small>
+                      </button>
                       <button type="button" id="saveDownloadBtn">
                         Download PDF
                         <small>Simpan nota lalu unduh file PDF.</small>
-                      </button>
-                      <button type="button" id="saveWhatsappBtn">
-                        Kirim Invoice Otomatis
-                        <small>Simpan nota, buat PDF, lalu kirim langsung melalui WhatsApp Cloud API.</small>
                       </button>
                     </div>
                   </details>
@@ -512,7 +512,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="invoice-engine.js?v=40"></script>
-  <script src="app.js?v=39"></script>
+  <script src="invoice-engine.js?v=41"></script>
+  <script src="app.js?v=41"></script>
 </body>
 </html>

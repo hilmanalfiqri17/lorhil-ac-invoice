@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=38",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=40",{
             updateViaCache:"none"
           });
 

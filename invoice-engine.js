@@ -225,8 +225,6 @@
     const lowerTop=Math.max(500,rowTop+18);
     drawText('CATATAN & KETENTUAN',32,lowerTop+10,7.4,{bold:true,color:blue});
     drawWrapped(inv.notes||settings.footer_note||'Terima kasih telah menggunakan layanan LORHIL AC.',32,lowerTop+29,315,7.1,10,{color:muted,maxLines:5});
-    drawText('Pembayaran:',32,lowerTop+87,7.1,{bold:true,color:ink});
-    drawWrapped(settings.payment_info||'Tunai / Transfer',94,lowerTop+87,250,7.1,9.5,{color:muted,maxLines:3});
 
     const totalX=379,totalW=184;
     const rows=[
@@ -502,7 +500,7 @@
         <section class="party"><div class="customer"><div class="eyebrow">INVOICE TO:</div><h3>${htmlEscape(inv.customer_name||'Pelanggan')}</h3><p>WhatsApp: ${htmlEscape(inv.customer_phone||'-')}<br>Alamat: ${htmlEscape(inv.customer_address||'-')}</p></div><div class="payment"><div class="eyebrow">METODE PEMBAYARAN</div><p>${htmlEscape(s.payment_info||'Tunai / Transfer')}</p></div></section>
         <div class="rule"></div><div class="detail-title">DETAIL PEKERJAAN</div><p class="detail-copy">Rincian jasa dan pekerjaan sesuai pesanan pelanggan.</p>
         <section class="table-wrap"><table><thead><tr><th>No.</th><th>Keterangan Pekerjaan</th><th>Harga</th><th>Qty</th><th>Total</th></tr></thead><tbody>${rows||'<tr><td>01</td><td>-</td><td>Rp 0</td><td>0</td><td>Rp 0</td></tr>'}</tbody></table></section>
-        <section class="lower"><div class="terms"><h4>CATATAN & KETENTUAN</h4><p>${htmlEscape(inv.notes||s.footer_note||'Terima kasih telah menggunakan layanan LORHIL AC.')}</p><p><b>Pembayaran:</b><br>${htmlEscape(s.payment_info||'Tunai / Transfer')}</p></div><div class="totals"><div class="total-row"><span>Subtotal</span><strong>${htmlEscape(rupiah(inv.subtotal))}</strong></div><div class="total-row"><span>Diskon</span><strong>${htmlEscape(rupiah(inv.discount))}</strong></div><div class="total-row"><span>Dibayar</span><strong>${htmlEscape(rupiah(inv.paid))}</strong></div><div class="total-row"><span>Sisa</span><strong>${htmlEscape(rupiah(inv.balance))}</strong></div><div class="grand"><span>Total</span><strong>${htmlEscape(rupiah(inv.total))}</strong></div></div></section>
+        <section class="lower"><div class="terms"><h4>CATATAN & KETENTUAN</h4><p>${htmlEscape(inv.notes||s.footer_note||'Terima kasih telah menggunakan layanan LORHIL AC.')}</p></div><div class="totals"><div class="total-row"><span>Subtotal</span><strong>${htmlEscape(rupiah(inv.subtotal))}</strong></div><div class="total-row"><span>Diskon</span><strong>${htmlEscape(rupiah(inv.discount))}</strong></div><div class="total-row"><span>Dibayar</span><strong>${htmlEscape(rupiah(inv.paid))}</strong></div><div class="total-row"><span>Sisa</span><strong>${htmlEscape(rupiah(inv.balance))}</strong></div><div class="grand"><span>Total</span><strong>${htmlEscape(rupiah(inv.total))}</strong></div></div></section>
         <section class="closing"><div class="thanks"><p>Terima kasih telah menggunakan</p><strong>${htmlEscape(s.store_name||'LORHIL AC')}</strong><p>Kami menghargai kepercayaan Anda.</p></div><div class="signature">Hormat kami,<br><img class="sig" src="${imageDataUri(IMAGE_DATA.signature)}"><img class="stamp" src="${imageDataUri(IMAGE_DATA.stamp)}"><div class="line"></div><b>${htmlEscape(s.signer_name||'Hendri Nova Lismana')}</b><small>${htmlEscape(s.signer_role||'Pemilik LORHIL AC')}</small></div></section>
       </main>
       <footer class="footer"><span>WhatsApp: ${htmlEscape(s.phone||'081366752281')}</span><span>LORHIL AC • Spesialis Air Conditioner</span></footer>

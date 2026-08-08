@@ -454,9 +454,9 @@
   }
 
   $("invoiceForm").addEventListener("submit",async e=>{e.preventDefault();closeInvoiceActionMenu();await saveInvoice({});});
-  $("savePrintBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({printAfter:true});});
-  $("saveDownloadBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({downloadAfter:true});});
-  $("saveWhatsappBtn").addEventListener("click",()=>{closeInvoiceActionMenu();saveInvoice({whatsappAfter:true});});
+  $("savePrintBtn").addEventListener("click",async()=>{closeInvoiceActionMenu();await saveInvoice({printAfter:true});});
+  $("saveDownloadBtn").addEventListener("click",async()=>{closeInvoiceActionMenu();await saveInvoice({downloadAfter:true});});
+  $("saveWhatsappBtn").addEventListener("click",async()=>{closeInvoiceActionMenu();await saveInvoice({whatsappAfter:true});});
 
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
     if(whatsappAfter){
@@ -476,8 +476,19 @@
       const selectedTechnicians=getSelectedTechnicianIds();
 
       loading(true);
+
+      // 1. Simpan nota ke database terlebih dahulu.
       const {data,error}=await db.rpc("save_invoice",params);
       if(error) throw error;
+      if(!data?.id){
+        throw new Error("Nota belum berhasil disimpan. ID nota tidak diterima dari database.");
+      }
+
+      // Simpan ID ke form secepatnya agar klik ulang memperbarui nota yang sama,
+      // bukan membuat nota baru.
+      $("invoiceId").value=data.id;
+      $("invoiceNumber").value=data.invoice_number||"";
+      $("numberPreview").textContent=data.invoice_number||"Tersimpan";
 
       const {data:savedRaw,error:savedError}=await db
         .from("invoices")
@@ -486,16 +497,32 @@
         .single();
 
       if(savedError) throw savedError;
+      if(!savedRaw?.id){
+        throw new Error("Nota belum dapat diverifikasi setelah disimpan.");
+      }
 
       await saveInvoiceTechnicians(savedRaw,selectedTechnicians);
       await refreshAll();
 
       saved=state.invoices.find(invoice=>invoice.id===data.id)||savedRaw;
 
+      // Verifikasi sekali lagi bahwa nota benar-benar ada sebelum aksi lanjutan.
+      const {data:verified,error:verifyError}=await db
+        .from("invoices")
+        .select("id, invoice_number")
+        .eq("id",saved.id)
+        .single();
+
+      if(verifyError || !verified?.id){
+        throw new Error("Nota belum terverifikasi tersimpan. Pengiriman WhatsApp dibatalkan agar data tidak hilang.");
+      }
+
       if(printAfter) printInvoice(saved);
       if(downloadAfter) downloadInvoice(saved);
 
+      // 2. Hanya setelah nota terverifikasi tersimpan, kirim invoice ke WhatsApp.
       if(whatsappAfter){
+        toast(`Nota ${saved.invoice_number} sudah tersimpan. Mengirim invoice ke WhatsApp...`);
         try{
           await invokeAutomaticInvoice(saved);
         }catch(error){
@@ -508,16 +535,18 @@
 
       if(whatsappError){
         alert(
-          `Nota ${saved.invoice_number} sudah tersimpan, tetapi invoice belum terkirim ke WhatsApp.\n\n`+
+          `Nota ${saved.invoice_number} sudah tersimpan otomatis, tetapi invoice belum terkirim ke WhatsApp.\n\n`+
           `${whatsappError.message||whatsappError}\n\n`+
-          "Buka detail nota lalu tekan Kirim Invoice Otomatis untuk mencoba kembali."
+          "Nota tetap aman di Riwayat Nota. Buka detail nota lalu tekan Kirim Invoice Otomatis untuk mencoba kembali."
         );
       }else if(downloadAfter){
-        toast("Nota disimpan dan PDF sedang diunduh.");
+        toast(`Nota ${saved.invoice_number} tersimpan dan PDF sedang diunduh.`);
       }else if(whatsappAfter){
-        toast(`Invoice ${saved.invoice_number} berhasil dikirim ke WhatsApp pelanggan.`);
+        toast(`Nota ${saved.invoice_number} tersimpan dan invoice berhasil dikirim ke WhatsApp pelanggan.`);
+      }else if(printAfter){
+        toast(`Nota ${saved.invoice_number} tersimpan dan siap dicetak.`);
       }else{
-        toast("Nota berhasil disimpan.");
+        toast(`Nota ${saved.invoice_number} berhasil disimpan.`);
       }
     }catch(error){
       alert(errorMessage(error));

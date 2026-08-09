@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=43",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=44",{
             updateViaCache:"none"
           });
 
@@ -96,7 +96,7 @@
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v43";
+            const reloadKey="lorhil-sw-reloaded-v44";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -278,7 +278,7 @@
 
   function renderInvoiceRows(body,data,showTime){
     if(!data.length){
-      body.innerHTML=`<tr><td colspan="${showTime?9:8}" class="empty">Belum ada data pada filter ini.</td></tr>`;
+      body.innerHTML=`<tr><td colspan="${showTime?10:8}" class="empty">Belum ada data pada filter ini.</td></tr>`;
       return;
     }
 
@@ -292,6 +292,7 @@
         <td>${esc((inv.invoice_technicians||[]).map(row=>row.technician?.name||"-").join(", ")||"-")}</td>
         <td><strong>${money(inv.total)}</strong></td>
         <td>${badge(inv.status)}</td>
+        ${showTime?`<td>${whatsappStatusBadge(inv.whatsapp_status)}</td>`:""}
         <td><button class="btn primary detail-btn" data-id="${inv.id}">Lihat Detail</button></td>
       </tr>`).join("");
 
@@ -604,11 +605,11 @@
   function whatsappStatusLabel(status){
     const value=String(status||"").toLowerCase();
     const labels={
-      processing:"Sedang diproses",
+      processing:"Diproses",
       accepted:"Diterima Meta",
       sent:"Terkirim",
-      delivered:"Tersampaikan",
-      read:"Dibaca",
+      delivered:"Terkirim • Belum Dibaca",
+      read:"Sudah Dibaca",
       failed:"Gagal"
     };
     return labels[value]||"Belum dikirim";
@@ -616,7 +617,7 @@
 
   function whatsappStatusBadge(status){
     const value=String(status||"").toLowerCase();
-    const klass=value==="read"||value==="delivered"?"paid":value==="failed"?"unpaid":"partial";
+    const klass=value==="read"?"paid":value==="failed"?"unpaid":"partial";
     return `<span class="badge ${klass}">${esc(whatsappStatusLabel(value))}</span>`;
   }
 

@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=40",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=43",{
             updateViaCache:"none"
           });
 
@@ -90,13 +90,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v38")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v43")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v38";
+            const reloadKey="lorhil-sw-reloaded-v43";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -525,6 +525,8 @@
         toast(`Nota ${saved.invoice_number} sudah tersimpan. Mengirim invoice ke WhatsApp...`);
         try{
           await invokeAutomaticInvoice(saved);
+          await refreshAll();
+          saved=state.invoices.find(invoice=>invoice.id===saved.id)||saved;
         }catch(error){
           whatsappError=error;
         }
@@ -542,7 +544,7 @@
       }else if(downloadAfter){
         toast(`Nota ${saved.invoice_number} tersimpan dan PDF sedang diunduh.`);
       }else if(whatsappAfter){
-        toast(`Nota ${saved.invoice_number} tersimpan dan invoice berhasil dikirim ke WhatsApp pelanggan.`);
+        toast(`Nota ${saved.invoice_number} tersimpan. Permintaan pengiriman diterima Meta; status WhatsApp akan mengikuti webhook.`);
       }else if(printAfter){
         toast(`Nota ${saved.invoice_number} tersimpan dan siap dicetak.`);
       }else{
@@ -599,6 +601,25 @@
   $("detailModal").addEventListener("click",e=>{if(e.target===$("detailModal"))closeModal();});
   function closeModal(){hide("detailModal");}
 
+  function whatsappStatusLabel(status){
+    const value=String(status||"").toLowerCase();
+    const labels={
+      processing:"Sedang diproses",
+      accepted:"Diterima Meta",
+      sent:"Terkirim",
+      delivered:"Tersampaikan",
+      read:"Dibaca",
+      failed:"Gagal"
+    };
+    return labels[value]||"Belum dikirim";
+  }
+
+  function whatsappStatusBadge(status){
+    const value=String(status||"").toLowerCase();
+    const klass=value==="read"||value==="delivered"?"paid":value==="failed"?"unpaid":"partial";
+    return `<span class="badge ${klass}">${esc(whatsappStatusLabel(value))}</span>`;
+  }
+
   function openDetail(id){
     const inv=state.invoices.find(x=>x.id===id);if(!inv)return;
     $("detailContent").innerHTML=`
@@ -607,6 +628,7 @@
           <div class="detail-row"><span>Nomor</span><strong>${esc(inv.invoice_number)}</strong></div>
           <div class="detail-row"><span>Tanggal</span><strong>${formatDate(inv.work_date)} ${esc((inv.work_time||"").slice(0,5))}</strong></div>
           <div class="detail-row"><span>Status</span><div>${badge(inv.status)}</div></div>
+          <div class="detail-row"><span>Status WhatsApp</span><div>${whatsappStatusBadge(inv.whatsapp_status)}</div></div>
         </div>
         <div class="detail-box"><h4>Pelanggan</h4>
           <div class="detail-row"><span>Nama</span><strong>${esc(inv.customer_name)}</strong></div>
@@ -1002,6 +1024,11 @@
   }
 
   async function invokeAutomaticInvoice(inv){
+    const invoiceId=String(inv?.id||"").trim();
+    if(!invoiceId){
+      throw new Error("ID invoice belum tersedia. Simpan nota terlebih dahulu sebelum mengirim WhatsApp.");
+    }
+
     const phone=normalizeWhatsAppNumber(inv.customer_phone);
     if(!/^62\d{8,13}$/.test(phone)){
       throw new Error("Nomor WhatsApp pelanggan pada nota belum valid.");
@@ -1026,6 +1053,7 @@
     }
 
     const form=new FormData();
+    form.append("invoice_id",invoiceId);
     form.append("phone",phone);
     form.append("customer_name",String(inv.customer_name||"").trim());
     form.append("invoice_number",String(inv.invoice_number||"").trim());
@@ -1051,9 +1079,10 @@
     try{
       loading(true);
       const result=await invokeAutomaticInvoice(inv);
+      await refreshAll();
       toast(
         result?.message||
-        `Invoice ${inv.invoice_number} berhasil dikirim ke WhatsApp pelanggan.`
+        `Permintaan pengiriman invoice ${inv.invoice_number} diterima Meta. Status akan diperbarui melalui webhook.`
       );
       return true;
     }catch(error){

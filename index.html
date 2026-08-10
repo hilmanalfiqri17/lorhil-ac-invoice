@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=48">
+  <link rel="stylesheet" href="style.css?v=49">
   <title>LORHIL AC Online V47</title>
 </head>
-<body data-app-version="47">
+<body data-app-version="49">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -109,22 +109,22 @@
 
           <div class="stats dashboard-stats">
             <article class="stat-card blue">
-              <div class="stat-icon"><img src="assets/dashboard-icons/clipboard-list.svg" alt="" aria-hidden="true"></div>
+              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
               <div class="stat-copy"><span>Pekerjaan Hari Ini</span><strong id="statToday">0</strong><small>Total pekerjaan</small></div>
               <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C14 31 20 18 30 22 S47 30 56 18 70 6 80 19 91 31 98 10"/></svg>
             </article>
             <article class="stat-card green">
-              <div class="stat-icon"><img src="assets/dashboard-icons/calendar-days.svg" alt="" aria-hidden="true"></div>
+              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg></div>
               <div class="stat-copy"><span>Pekerjaan Kemarin</span><strong id="statYesterday">0</strong><small>Total pekerjaan</small></div>
               <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C12 30 20 21 29 25 S43 34 53 23 65 13 76 20 90 7 98 15"/></svg>
             </article>
             <article class="stat-card violet">
-              <div class="stat-icon"><img src="assets/dashboard-icons/wallet-cards.svg" alt="" aria-hidden="true"></div>
+              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11h3.75a2 2 0 0 1 1.6.8l.45.6a4 4 0 0 0 6.4 0l.45-.6a2 2 0 0 1 1.6-.8H21"/><path d="M3 7h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
               <div class="stat-copy"><span>Pembayaran Hari Ini</span><strong id="statRevenue">Rp0</strong><small>Total penerimaan</small></div>
               <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 35 C14 28 20 31 31 22 S45 27 56 18 70 24 80 12 92 8 98 17"/></svg>
             </article>
             <article class="stat-card orange">
-              <div class="stat-icon"><img src="assets/dashboard-icons/clock.svg" alt="" aria-hidden="true"></div>
+              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
               <div class="stat-copy"><span>Belum Lunas / DP</span><strong id="statUnpaid">0</strong><small>Nota tertunda</small></div>
               <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C16 20 24 15 35 20 S53 31 63 18 75 5 85 17 92 27 98 10"/></svg>
             </article>
@@ -135,10 +135,14 @@
               <div class="panel-head analytics-head">
                 <div>
                   <h3><span class="section-icon">▣</span> Grafik Penerimaan</h3>
-                  <p>Penerimaan 10 hari terakhir</p>
+                  <p id="revenuePeriodText">Penerimaan 10 hari terakhir</p>
                   <div class="metric-line"><strong id="revenueTotal">Rp0</strong><span id="revenueChange" class="metric-change neutral">0%</span></div>
                 </div>
-                <div class="panel-select">10 Hari Terakhir⌄</div>
+                <div class="period-nav" aria-label="Navigasi periode grafik penerimaan">
+                  <button id="revenuePrevBtn" class="period-nav-btn" type="button" title="Lihat 10 hari sebelumnya">‹</button>
+                  <div id="revenueRangeLabel" class="panel-select period-label">10 Hari Terakhir</div>
+                  <button id="revenueNextBtn" class="period-nav-btn" type="button" title="Lihat 10 hari berikutnya">›</button>
+                </div>
               </div>
               <div class="canvas-wrap"><canvas id="revenueChart"></canvas></div>
             </article>
@@ -149,7 +153,11 @@
                   <h3><span class="section-icon">▣</span> Trend Nota</h3>
                   <div class="metric-line"><strong id="trendTotal">0</strong><span class="metric-caption">Total nota</span></div>
                 </div>
-                <div class="panel-select">6 Bulan⌄</div>
+                <div class="period-nav" aria-label="Navigasi periode trend nota">
+                  <button id="trendPrevBtn" class="period-nav-btn" type="button" title="Lihat 6 bulan sebelumnya">‹</button>
+                  <div id="trendRangeLabel" class="panel-select period-label">6 Bulan Terakhir</div>
+                  <button id="trendNextBtn" class="period-nav-btn" type="button" title="Lihat 6 bulan berikutnya">›</button>
+                </div>
               </div>
               <div class="chart-legend"><span><i class="legend-dot blue-dot"></i>Nota Selesai</span><span><i class="legend-dot orange-dot"></i>Nota Pending</span></div>
               <div class="canvas-wrap trend-canvas"><canvas id="trendChart"></canvas></div>
@@ -340,6 +348,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=49"></script>
 </body>
 </html>

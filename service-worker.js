@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v48";
+const CACHE = "lorhil-ac-online-v49";
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -14,9 +14,6 @@ const OPTIONAL_ASSETS = [
   "assets/logo.png",
   "assets/signature.png",
   "assets/stamp.png",
-  "assets/dashboard-icons/clipboard-list.svg",
-  "assets/dashboard-icons/calendar-days.svg",
-  "assets/dashboard-icons/wallet-cards.svg",
   "assets/dashboard-icons/clock.svg"
 ];
 

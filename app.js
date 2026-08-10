@@ -49,7 +49,8 @@
   const state = {
     session:null, invoices:[], settings:null, technicians:[],
     invoiceTechnicians:[], page:"dashboard",
-    dashboardPeriod:"today", realtime:null
+    dashboardPeriod:"today", realtime:null,
+    revenuePeriodOffset:0, trendPeriodOffset:0
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -80,7 +81,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=48",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=49",{
             updateViaCache:"none"
           });
 
@@ -90,13 +91,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v48")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v49")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v48";
+            const reloadKey="lorhil-sw-reloaded-v49";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -280,6 +281,24 @@
 
   if($("dashboardSeeAll")) $("dashboardSeeAll").addEventListener("click",()=>showPage("history"));
 
+  // V49: navigasi periode analytics. Offset dihitung per blok agar data lama bisa dilihat.
+  if($("revenuePrevBtn")) $("revenuePrevBtn").addEventListener("click",()=>{
+    state.revenuePeriodOffset += 10;
+    renderDashboardAnalytics();
+  });
+  if($("revenueNextBtn")) $("revenueNextBtn").addEventListener("click",()=>{
+    state.revenuePeriodOffset = Math.max(0,state.revenuePeriodOffset-10);
+    renderDashboardAnalytics();
+  });
+  if($("trendPrevBtn")) $("trendPrevBtn").addEventListener("click",()=>{
+    state.trendPeriodOffset += 6;
+    renderDashboardAnalytics();
+  });
+  if($("trendNextBtn")) $("trendNextBtn").addEventListener("click",()=>{
+    state.trendPeriodOffset = Math.max(0,state.trendPeriodOffset-6);
+    renderDashboardAnalytics();
+  });
+
   let dashboardResizeTimer=null;
   window.addEventListener("resize",()=>{
     clearTimeout(dashboardResizeTimer);
@@ -393,23 +412,44 @@
     });
   }
 
-  function monthBuckets(count=6){
+  function monthBuckets(count=6,offset=0){
     const buckets=[];
     const now=new Date();
     for(let i=count-1;i>=0;i--){
-      const date=new Date(now.getFullYear(),now.getMonth()-i,1);
+      const date=new Date(now.getFullYear(),now.getMonth()-offset-i,1);
       const year=date.getFullYear(),month=date.getMonth();
       const invoices=state.invoices.filter(inv=>{
         const d=invoiceDateObject(inv.work_date);
         return d && d.getFullYear()===year && d.getMonth()===month;
       });
       buckets.push({
+        date,
         label:new Intl.DateTimeFormat("id-ID",{month:"short"}).format(date).replace(".",""),
         done:invoices.filter(inv=>inv.status==="Lunas").length,
         pending:invoices.filter(inv=>inv.status!=="Lunas").length
       });
     }
     return buckets;
+  }
+
+  function analyticsDateRangeLabel(dates){
+    if(!dates?.length) return "-";
+    const first=dates[0],last=dates[dates.length-1];
+    const sameYear=first.getFullYear()===last.getFullYear();
+    const sameMonth=sameYear && first.getMonth()===last.getMonth();
+    if(sameMonth){
+      const monthYear=new Intl.DateTimeFormat("id-ID",{month:"short",year:"numeric"}).format(last).replace(".","");
+      return `${first.getDate()}–${last.getDate()} ${monthYear}`;
+    }
+    const left=new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short"}).format(first).replace(".","");
+    const right=new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(last).replace(".","");
+    return `${left} – ${right}`;
+  }
+
+  function analyticsMonthRangeLabel(buckets){
+    if(!buckets?.length) return "-";
+    const fmt=new Intl.DateTimeFormat("id-ID",{month:"short",year:"numeric"});
+    return `${fmt.format(buckets[0].date).replace(".","")} – ${fmt.format(buckets[buckets.length-1].date).replace(".","")}`;
   }
 
   function drawTrendChart(buckets){
@@ -471,8 +511,9 @@
   }
 
   function renderDashboardAnalytics(){
-    const recentDates=lastDates(10);
-    const previousDates=lastDates(10,10);
+    const revenueOffset=Math.max(0,safeNumber(state.revenuePeriodOffset));
+    const recentDates=lastDates(10,revenueOffset);
+    const previousDates=lastDates(10,revenueOffset+10);
     const recentValues=recentDates.map(date=>paidOnDate(dateKey(date)));
     const previousValues=previousDates.map(date=>paidOnDate(dateKey(date)));
     const recentTotal=recentValues.reduce((sum,value)=>sum+value,0);
@@ -487,10 +528,17 @@
       $("revenueChange").textContent=`${prefix}${Math.abs(change).toLocaleString("id-ID",{maximumFractionDigits:1})}% dari 10 hari sebelumnya`;
       $("revenueChange").className=`metric-change ${change>0?"positive":change<0?"negative":"neutral"}`;
     }
+    if($("revenueRangeLabel")) $("revenueRangeLabel").textContent=revenueOffset===0?"10 Hari Terakhir":analyticsDateRangeLabel(recentDates);
+    if($("revenuePeriodText")) $("revenuePeriodText").textContent=`Penerimaan ${analyticsDateRangeLabel(recentDates)}`;
+    if($("revenueNextBtn")) $("revenueNextBtn").disabled=revenueOffset===0;
     drawRevenueChart(recentDates.map(shortDateLabel),recentValues);
 
-    const buckets=monthBuckets(6);
-    if($("trendTotal")) $("trendTotal").textContent=state.invoices.length;
+    const trendOffset=Math.max(0,safeNumber(state.trendPeriodOffset));
+    const buckets=monthBuckets(6,trendOffset);
+    const trendWindowTotal=buckets.reduce((sum,item)=>sum+item.done+item.pending,0);
+    if($("trendTotal")) $("trendTotal").textContent=trendWindowTotal;
+    if($("trendRangeLabel")) $("trendRangeLabel").textContent=trendOffset===0?"6 Bulan Terakhir":analyticsMonthRangeLabel(buckets);
+    if($("trendNextBtn")) $("trendNextBtn").disabled=trendOffset===0;
     drawTrendChart(buckets);
 
     const paidCount=state.invoices.filter(inv=>inv.status==="Lunas").length;

@@ -48,3 +48,93 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#7cb0ff;box-sh
 .period-nav-btn:disabled{opacity:.35;cursor:not-allowed;background:#f7f9fc}
 .period-label{min-width:112px;text-align:center;white-space:nowrap;user-select:none}
 @media(max-width:680px){.analytics-head{align-items:flex-start}.period-nav{width:100%;justify-content:flex-end}.period-label{min-width:130px}}
+
+/* =========================================================
+   V51 - MOBILE RESPONSIVE FIX
+   Menjaga semua kontrol analytics tetap berada di dalam card
+   dan mencegah halaman melebar/terpotong pada layar HP.
+   ========================================================= */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app,.main-shell,.content,.page,.analytics-grid,.analytics-side,.panel,.chart-panel,.canvas-wrap{min-width:0;max-width:100%}
+.canvas-wrap{overflow:hidden}
+.canvas-wrap canvas{display:block;max-width:100%}
+
+@media(max-width:680px){
+  .content{width:100%;max-width:100%;padding:12px 10px 26px}
+  .panel{width:100%;max-width:100%;padding:14px 13px;border-radius:15px}
+  .analytics-grid{width:100%;grid-template-columns:minmax(0,1fr);gap:12px}
+  .analytics-side{width:100%;grid-template-columns:minmax(0,1fr);gap:12px}
+  .chart-panel{width:100%;min-height:0;overflow:hidden}
+
+  /* Header grafik menjadi dua baris: judul di atas, navigator di bawah. */
+  .panel-head.analytics-head{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    align-items:stretch;
+    gap:10px;
+    width:100%;
+  }
+  .analytics-head>div:first-child{min-width:0;width:100%}
+  .analytics-head h3{font-size:16px;line-height:1.25;white-space:normal}
+  .analytics-head p{line-height:1.35}
+
+  .period-nav{
+    width:100%;
+    max-width:100%;
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr) 40px;
+    align-items:center;
+    gap:8px;
+    justify-content:stretch;
+  }
+  .period-nav-btn{
+    width:40px;
+    min-width:40px;
+    height:40px;
+    border-radius:10px;
+    font-size:19px;
+  }
+  .period-label{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    height:40px;
+    padding:0 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:11px;
+  }
+
+  .metric-line{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:start;
+    column-gap:9px;
+    row-gap:3px;
+    width:100%;
+    margin-top:8px;
+  }
+  .metric-line>strong{font-size:24px;line-height:1.15;white-space:nowrap}
+  .metric-change{line-height:1.3;overflow-wrap:anywhere;padding-top:4px}
+
+  .canvas-wrap{width:100%;height:205px;margin-top:9px}
+  .trend-panel .canvas-wrap{height:195px}
+  .chart-legend{flex-wrap:wrap;gap:8px 14px;line-height:1.35}
+
+  /* Hindari anak grid/flex membuat card lebih lebar dari viewport. */
+  .stat-card,.panel-head,.metric-line,.payment-summary,.tech-ranking,.dashboard-history{min-width:0}
+}
+
+@media(max-width:390px){
+  .content{padding-left:8px;padding-right:8px}
+  .panel{padding-left:11px;padding-right:11px}
+  .metric-line{grid-template-columns:1fr}
+  .metric-line>strong{font-size:22px}
+  .metric-change{padding-top:0}
+  .canvas-wrap{height:190px}
+  .trend-panel .canvas-wrap{height:185px}
+}

@@ -81,7 +81,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=50",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=51",{
             updateViaCache:"none"
           });
 
@@ -97,7 +97,7 @@
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v50";
+            const reloadKey="lorhil-sw-reloaded-v51";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -406,7 +406,11 @@
     }
 
     ctx.textAlign="center";ctx.textBaseline="top";ctx.fillStyle="#71809a";
+    // Pada layar HP, semua 10 titik tetap ditampilkan tetapi label tanggal
+    // diselang-seling agar tidak bertabrakan atau terpotong di sisi kanan.
+    const compactLabels=width<520 && labels.length>6;
     labels.forEach((label,index)=>{
+      if(compactLabels && index!==0 && index!==labels.length-1 && index%2!==0) return;
       const x=pad.left+(labels.length===1?chartW/2:(chartW/(labels.length-1))*index);
       ctx.fillText(label,x,height-19);
     });

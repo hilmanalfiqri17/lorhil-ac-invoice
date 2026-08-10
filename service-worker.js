@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v47";
+const CACHE = "lorhil-ac-online-v48";
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -13,7 +13,11 @@ const OPTIONAL_ASSETS = [
   "assets/icon-512.png",
   "assets/logo.png",
   "assets/signature.png",
-  "assets/stamp.png"
+  "assets/stamp.png",
+  "assets/dashboard-icons/clipboard-list.svg",
+  "assets/dashboard-icons/calendar-days.svg",
+  "assets/dashboard-icons/wallet-cards.svg",
+  "assets/dashboard-icons/clock.svg"
 ];
 
 self.addEventListener("install", event => {

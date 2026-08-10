@@ -3,8 +3,8 @@
   "short_name": "LORHIL AC",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f4f7f9",
-  "theme_color": "#0b78a5",
+  "background_color": "#f7f9fc",
+  "theme_color": "#071b46",
   "icons": [
     {
       "src": "assets/icon-192.png",

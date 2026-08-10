@@ -3,225 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b78a5">
+  <meta name="theme-color" content="#071b46">
   <meta name="description" content="Invoice dan riwayat pekerjaan online LORHIL AC">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=38">
-  <title>LORHIL AC Online V44</title>
-
-  <style>
-    .invoice-actions{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      margin-top:20px;
-      padding-top:18px;
-      border-top:1px solid #d9e4ea;
-    }
-
-    .invoice-actions-main{
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .invoice-primary-action{
-      min-width:150px;
-    }
-
-    .invoice-reset-action{
-      background:transparent;
-      border:1px solid transparent;
-      color:#5d6f7a;
-      box-shadow:none;
-    }
-
-    .invoice-reset-action:hover{
-      background:#f2f6f8;
-      border-color:#d9e4ea;
-    }
-
-    .invoice-action-menu{
-      position:relative;
-    }
-
-    .invoice-action-menu > summary{
-      list-style:none;
-      cursor:pointer;
-      user-select:none;
-      white-space:nowrap;
-    }
-
-    .invoice-action-menu > summary::-webkit-details-marker{
-      display:none;
-    }
-
-    .invoice-action-menu[open] > summary{
-      background:#e9f2f6;
-    }
-
-    .invoice-action-menu-list{
-      position:absolute;
-      right:0;
-      bottom:calc(100% + 8px);
-      z-index:20;
-      min-width:220px;
-      padding:8px;
-      border:1px solid #d9e4ea;
-      border-radius:12px;
-      background:#fff;
-      box-shadow:0 12px 30px rgba(16,42,54,.16);
-    }
-
-    .invoice-action-menu-list button{
-      display:block;
-      width:100%;
-      padding:11px 12px;
-      border:0;
-      border-radius:8px;
-      background:transparent;
-      color:#163746;
-      font:inherit;
-      font-weight:700;
-      text-align:left;
-      cursor:pointer;
-    }
-
-    .invoice-action-menu-list button:hover{
-      background:#eef6f9;
-    }
-
-    .invoice-action-menu-list small{
-      display:block;
-      margin-top:3px;
-      color:#6b7e88;
-      font-size:12px;
-      font-weight:400;
-    }
-
-    .stats.dashboard-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
-    .technician-choice-grid{display:flex;flex-wrap:wrap;gap:10px;}
-    .technician-choice{display:flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid #d9e4ea;border-radius:10px;background:#fff;cursor:pointer;font-weight:700;color:#163746;}
-    .technician-choice input{width:auto;margin:0;}
-    .item-table .qty{min-width:78px;}
-    .item-table .price{min-width:135px;}
-    .item-table th:nth-child(4),
-    .item-table th:nth-child(5),
-    .item-table td:nth-child(4),
-    .item-table td:nth-child(5){text-align:right;}
-    .item-table .line-total{white-space:nowrap;}
-    .empty.compact{padding:12px;text-align:left;}
-    .technician-form-row{
-      display:grid;
-      grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;
-      gap:12px;
-      align-items:end;
-    }
-    .technician-table-wrap{
-      margin-top:18px;
-      width:100%;
-      overflow-x:auto;
-    }
-    .technician-table{
-      width:100%;
-      min-width:600px;
-    }
-    .technician-table th:last-child,
-    .technician-table td:last-child{
-      width:130px;
-      white-space:nowrap;
-    }
-    @media (max-width:1100px){
-      .stats.dashboard-stats{grid-template-columns:repeat(3,minmax(0,1fr));}
-      
-    }
-
-    @media (max-width:720px){
-      .technician-form-row{
-        grid-template-columns:1fr;
-      }
-
-      .technician-form-row .btn{
-        width:100%;
-      }
-
-      .technician-table{
-        min-width:560px;
-      }
-
-      .invoice-actions{
-        align-items:stretch;
-        flex-direction:column-reverse;
-      }
-
-      .invoice-actions-main{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-      }
-
-      .invoice-primary-action{
-        grid-column:1 / -1;
-        width:100%;
-      }
-
-      .invoice-action-menu,
-      .invoice-action-menu > summary{
-        width:100%;
-      }
-
-      .invoice-action-menu > summary{
-        box-sizing:border-box;
-        text-align:center;
-      }
-
-      .invoice-action-menu-list{
-        right:0;
-        left:0;
-        min-width:0;
-      }
-
-      .invoice-reset-action{
-        width:100%;
-      }
-      .stats.dashboard-stats{grid-template-columns:1fr 1fr;}
-      .technician-form-row{grid-template-columns:1fr;}
-    }
-  </style>
+  <link rel="stylesheet" href="style.css?v=47">
+  <title>LORHIL AC Online V47</title>
 </head>
-<body data-app-version="44">
+<body data-app-version="47">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
-      <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
+      <div class="auth-brand">
+        <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
+        <div>
+          <strong>LORHIL AC</strong>
+          <span>Online Invoice</span>
+        </div>
+      </div>
       <h1>Konfigurasi Belum Selesai</h1>
       <p>Aplikasi belum terhubung ke Supabase.</p>
-      <div class="notice">
-        Buka file <strong>config.js</strong>, lalu isi Project URL dan Publishable/Anon Key dari Supabase. Jangan menggunakan service role key.
-      </div>
+      <div class="notice">Buka <strong>config.js</strong>, lalu isi Project URL dan Publishable/Anon Key. Jangan menggunakan service role key di frontend.</div>
     </div>
   </section>
 
   <section id="loginScreen" class="center-screen hidden">
-    <form id="loginForm" class="auth-card">
-      <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
-      <h1>LORHIL AC</h1>
-      <p>Invoice & Riwayat Pekerjaan Online</p>
-
+    <form id="loginForm" class="auth-card login-card">
+      <div class="auth-brand">
+        <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
+        <div>
+          <strong>LORHIL AC</strong>
+          <span>Online Invoice</span>
+        </div>
+      </div>
+      <div class="auth-heading">
+        <h1>Selamat Datang</h1>
+        <p>Masuk untuk mengelola nota, pelanggan, teknisi, dan pembayaran.</p>
+      </div>
       <label>Email</label>
       <input id="loginEmail" type="email" autocomplete="username" required placeholder="admin@contoh.com">
-
       <label>Password</label>
       <div class="password-wrap">
         <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Masukkan password">
-        <button type="button" id="togglePassword" class="icon-btn">👁</button>
+        <button type="button" id="togglePassword" class="icon-btn" aria-label="Tampilkan password">👁</button>
       </div>
-
       <div id="loginError" class="error"></div>
-      <button type="submit" class="btn primary full">Masuk</button>
+      <button type="submit" class="btn primary full">Masuk ke Dashboard</button>
       <p class="micro">Gunakan akun yang dibuat pada Supabase Authentication.</p>
     </form>
   </section>
@@ -230,81 +57,148 @@
     <aside id="sidebar" class="sidebar">
       <div class="brand">
         <img src="assets/logo.png" alt="Logo LORHIL AC">
-        <div><strong id="brandName">LORHIL AC</strong><small>Online Invoice</small></div>
+        <div>
+          <strong id="brandName">LORHIL AC</strong>
+          <small>Online Invoice</small>
+        </div>
       </div>
 
       <nav>
-        <button class="nav-btn active" data-page="dashboard">▣ Dashboard</button>
-        <button class="nav-btn" data-page="invoice">＋ Buat Nota</button>
-        <button class="nav-btn" data-page="history">▤ Riwayat Nota</button>
-        <button class="nav-btn" data-page="customers">♙ Pelanggan</button>
-        <button class="nav-btn" data-page="technicians">◉ Teknisi</button>
-        <button class="nav-btn" data-page="settings">⚙ Pengaturan</button>
-        <button class="nav-btn" data-page="backup">⇩ Backup</button>
+        <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="nav-btn" data-page="invoice"><span class="nav-icon">⊕</span><span>Buat Nota</span></button>
+        <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
+        <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
+        <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
+        <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
+        <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
       </nav>
 
-      <button id="logoutBtn" class="nav-btn logout">↪ Keluar</button>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="nav-btn logout"><span class="nav-icon">↪</span><span>Keluar</span></button>
+      </div>
     </aside>
 
-    <main>
+    <main class="main-shell">
       <header class="topbar">
-        <button id="menuBtn" class="btn secondary menu-toggle">☰</button>
-        <div>
-          <h1 id="pageTitle">Dashboard</h1>
-          <p id="todayText"></p>
+        <div class="topbar-title-wrap">
+          <button id="menuBtn" class="topbar-menu" type="button" aria-label="Buka menu">☰</button>
+          <div>
+            <h1 id="pageTitle">Dashboard</h1>
+            <p id="todayText"></p>
+          </div>
         </div>
-        <div class="top-actions">
-          <button id="refreshBtn" class="btn secondary">↻ Segarkan</button>
-          <button class="btn primary go-invoice">＋ Nota</button>
+
+        <div class="topbar-tools">
+          <label class="global-search-wrap" for="globalSearch">
+            <span>⌕</span>
+            <input id="globalSearch" type="search" placeholder="Cari pelanggan, nota, atau nomor..." autocomplete="off">
+          </label>
+          <button id="refreshBtn" class="btn secondary refresh-btn" type="button">↻ <span>Segarkan</span></button>
+          <button class="btn primary go-invoice" type="button">＋ <span>Nota Baru</span></button>
+          <div class="profile-pill" title="LORHIL AC">
+            <span id="userAvatarText">LA</span>
+            <i></i>
+          </div>
         </div>
       </header>
 
       <div class="content">
-        <section id="page-dashboard" class="page active">
-          <div class="page-head">
-            <div><h2>Ringkasan Pekerjaan</h2><p>Data tersimpan dan tersinkron secara online.</p></div>
-            <button class="btn primary go-invoice">＋ Buat Nota Baru</button>
-          </div>
+        <section id="page-dashboard" class="page active dashboard-page">
+          <input id="dashboardSearch" type="hidden" value="">
+          <select id="dashboardStatus" class="hidden" aria-hidden="true"><option value="all">Semua</option></select>
 
           <div class="stats dashboard-stats">
-            <article><span>Pekerjaan Hari Ini</span><strong id="statToday">0</strong></article>
-            <article><span>Pekerjaan Kemarin</span><strong id="statYesterday">0</strong></article>
-            <article><span>Pembayaran Hari Ini</span><strong id="statRevenue">Rp0</strong></article>
-            <article><span>Belum Lunas / DP</span><strong id="statUnpaid">0</strong></article>
+            <article class="stat-card blue">
+              <div class="stat-icon">▣</div>
+              <div class="stat-copy"><span>Pekerjaan Hari Ini</span><strong id="statToday">0</strong><small>Total pekerjaan</small></div>
+              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C14 31 20 18 30 22 S47 30 56 18 70 6 80 19 91 31 98 10"/></svg>
+            </article>
+            <article class="stat-card green">
+              <div class="stat-icon">▣</div>
+              <div class="stat-copy"><span>Pekerjaan Kemarin</span><strong id="statYesterday">0</strong><small>Total pekerjaan</small></div>
+              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C12 30 20 21 29 25 S43 34 53 23 65 13 76 20 90 7 98 15"/></svg>
+            </article>
+            <article class="stat-card violet">
+              <div class="stat-icon">▱</div>
+              <div class="stat-copy"><span>Pembayaran Hari Ini</span><strong id="statRevenue">Rp0</strong><small>Total penerimaan</small></div>
+              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 35 C14 28 20 31 31 22 S45 27 56 18 70 24 80 12 92 8 98 17"/></svg>
+            </article>
+            <article class="stat-card orange">
+              <div class="stat-icon">◷</div>
+              <div class="stat-copy"><span>Belum Lunas / DP</span><strong id="statUnpaid">0</strong><small>Nota tertunda</small></div>
+              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C16 20 24 15 35 20 S53 31 63 18 75 5 85 17 92 27 98 10"/></svg>
+            </article>
           </div>
 
-          <div class="panel">
-            <div class="panel-head"><div><h3>Riwayat Nota</h3><p>Pilih periode dan status pembayaran.</p></div></div>
-            <div class="filters">
-              <button class="chip dashboard-period active" data-period="today">Hari Ini</button>
-              <button class="chip dashboard-period" data-period="yesterday">Kemarin</button>
-              <button class="chip dashboard-period" data-period="7days">7 Hari</button>
-              <button class="chip dashboard-period" data-period="all">Semua</button>
-              <select id="dashboardStatus">
-                <option value="all">Semua Status</option>
-                <option value="paid">Sudah Dibayar</option>
-                <option value="unpaid">Belum Dibayar / DP</option>
-              </select>
-              <input id="dashboardSearch" class="search" placeholder="Cari pelanggan, nomor, atau keterangan">
+          <div class="analytics-grid">
+            <article class="panel chart-panel revenue-panel">
+              <div class="panel-head analytics-head">
+                <div>
+                  <h3><span class="section-icon">▣</span> Grafik Penerimaan</h3>
+                  <p>Penerimaan 10 hari terakhir</p>
+                  <div class="metric-line"><strong id="revenueTotal">Rp0</strong><span id="revenueChange" class="metric-change neutral">0%</span></div>
+                </div>
+                <div class="panel-select">10 Hari Terakhir⌄</div>
+              </div>
+              <div class="canvas-wrap"><canvas id="revenueChart"></canvas></div>
+            </article>
+
+            <article class="panel chart-panel trend-panel">
+              <div class="panel-head analytics-head compact-head">
+                <div>
+                  <h3><span class="section-icon">▣</span> Trend Nota</h3>
+                  <div class="metric-line"><strong id="trendTotal">0</strong><span class="metric-caption">Total nota</span></div>
+                </div>
+                <div class="panel-select">6 Bulan⌄</div>
+              </div>
+              <div class="chart-legend"><span><i class="legend-dot blue-dot"></i>Nota Selesai</span><span><i class="legend-dot orange-dot"></i>Nota Pending</span></div>
+              <div class="canvas-wrap trend-canvas"><canvas id="trendChart"></canvas></div>
+            </article>
+
+            <div class="analytics-side">
+              <article class="panel payment-panel">
+                <div class="panel-head"><div><h3><span class="section-icon">▣</span> Status Pembayaran</h3></div></div>
+                <div class="payment-summary">
+                  <div id="paymentDonut" class="payment-donut"><div><strong id="paymentTotalCount">0</strong><span>Total Nota</span></div></div>
+                  <div class="payment-legend">
+                    <div><span><i class="legend-dot paid-dot"></i>Lunas</span><strong id="paymentPaidPercent">0%</strong><small id="paymentPaidCount">0 nota</small></div>
+                    <div><span><i class="legend-dot open-dot"></i>Belum Lunas / DP</span><strong id="paymentOpenPercent">0%</strong><small id="paymentOpenCount">0 nota</small></div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel tech-panel">
+                <div class="panel-head"><div><h3>Top Teknisi <small>(Berdasarkan Pekerjaan)</small></h3></div></div>
+                <div id="techRanking" class="tech-ranking"></div>
+              </article>
             </div>
-            <div class="table-wrap">
-              <table>
+          </div>
+
+          <article class="panel dashboard-history-panel">
+            <div class="panel-head history-panel-head">
+              <div><h3><span class="section-icon">▤</span> Riwayat Nota</h3><p>Daftar nota terbaru dan status pembayaran.</p></div>
+              <button id="dashboardSeeAll" class="btn outline" type="button">Lihat Semua&nbsp; →</button>
+            </div>
+            <div class="table-wrap dashboard-table-wrap">
+              <table class="dashboard-table">
                 <thead><tr><th>Tanggal</th><th>No. Nota</th><th>Pelanggan</th><th>Keterangan</th><th>Teknisi</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
                 <tbody id="dashboardBody"></tbody>
               </table>
             </div>
-          </div>
+            <div class="dashboard-table-foot"><span id="dashboardTableCount">Menampilkan 0 data</span></div>
+          </article>
         </section>
 
         <section id="page-invoice" class="page">
-          <div class="page-head"><div><h2 id="invoiceHeading">Buat Nota Baru</h2><p>Nomor nota dibuat aman oleh database saat disimpan.</p></div></div>
-
+          <div class="page-head">
+            <div><h2 id="invoiceHeading">Buat Nota Baru</h2><p>Lengkapi data pekerjaan dan simpan invoice secara online.</p></div>
+          </div>
           <form id="invoiceForm">
             <input id="invoiceId" type="hidden">
             <input id="invoiceNumber" type="hidden">
 
-            <div class="panel">
-              <div class="panel-head"><div><h3>Informasi Pekerjaan</h3></div></div>
+            <div class="panel form-panel">
+              <div class="panel-head"><div><h3>Informasi Pekerjaan</h3><p>Identitas dan waktu pekerjaan.</p></div></div>
               <div class="form-grid">
                 <div class="field"><label>Nomor Nota</label><div id="numberPreview" class="readonly">Otomatis setelah disimpan</div></div>
                 <div class="field"><label>Tanggal *</label><input id="workDate" type="date" required></div>
@@ -313,8 +207,8 @@
               </div>
             </div>
 
-            <div class="panel">
-              <div class="panel-head"><div><h3>Data Pelanggan</h3></div></div>
+            <div class="panel form-panel">
+              <div class="panel-head"><div><h3>Data Pelanggan</h3><p>Informasi pelanggan dan lokasi pekerjaan.</p></div></div>
               <div class="form-grid">
                 <div class="field"><label>Nama Pelanggan *</label><input id="customerName" list="customerList" required placeholder="Nama pelanggan"><datalist id="customerList"></datalist></div>
                 <div class="field"><label>WhatsApp</label><input id="customerPhone" placeholder="08xxxxxxxxxx"></div>
@@ -322,35 +216,22 @@
               </div>
             </div>
 
-            <div class="panel">
-              <div class="panel-head">
-                <div><h3>Tim Lapangan</h3><p>Pilih nama teknisi yang mengerjakan pekerjaan ini.</p></div>
-              </div>
+            <div class="panel form-panel">
+              <div class="panel-head"><div><h3>Tim Lapangan</h3><p>Pilih teknisi yang mengerjakan nota ini.</p></div></div>
               <div id="technicianChoices" class="technician-choice-grid"></div>
             </div>
 
-            <div class="panel">
+            <div class="panel form-panel">
               <div class="panel-head">
-                <div><h3>Rincian Pekerjaan</h3><p>Isi keterangan pekerjaan, jumlah unit, dan harga jasa.</p></div>
+                <div><h3>Rincian Pekerjaan</h3><p>Isi pekerjaan, jumlah unit, dan harga jasa.</p></div>
                 <button type="button" id="addItemBtn" class="btn outline">＋ Tambah Baris</button>
               </div>
-
               <div class="table-wrap">
                 <table class="item-table">
-                  <thead>
-                    <tr>
-                      <th>No.</th>
-                      <th>Keterangan Pekerjaan</th>
-                      <th>Qty</th>
-                      <th>Harga Jasa</th>
-                      <th>Total Jasa</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th>No.</th><th>Keterangan Pekerjaan</th><th>Qty</th><th>Harga Jasa</th><th>Total Jasa</th><th>Aksi</th></tr></thead>
                   <tbody id="itemsBody"></tbody>
                 </table>
               </div>
-
               <div class="summary-grid">
                 <div class="field"><label>Catatan Pekerjaan</label><textarea id="notes" placeholder="Catatan kondisi AC, garansi, dan lainnya"></textarea></div>
                 <div class="totals">
@@ -361,25 +242,16 @@
                   <div><span>Sisa Tagihan</span><strong id="balanceText">Rp0</strong></div>
                 </div>
               </div>
-
               <div class="actions invoice-actions">
-                <button type="button" id="resetInvoiceBtn" class="btn invoice-reset-action">Kosongkan Form</button>
-
+                <button type="button" id="resetInvoiceBtn" class="btn ghost invoice-reset-action">Kosongkan Form</button>
                 <div class="invoice-actions-main">
                   <button type="submit" class="btn primary invoice-primary-action">Simpan Nota</button>
                   <button type="button" id="saveWhatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
-
                   <details id="invoiceActionMenu" class="invoice-action-menu">
                     <summary class="btn secondary">Opsi PDF ▾</summary>
                     <div class="invoice-action-menu-list">
-                      <button type="button" id="savePrintBtn">
-                        Simpan & Cetak
-                        <small>Simpan nota lalu buka dialog cetak.</small>
-                      </button>
-                      <button type="button" id="saveDownloadBtn">
-                        Download PDF
-                        <small>Simpan nota lalu unduh file PDF.</small>
-                      </button>
+                      <button type="button" id="savePrintBtn">Simpan & Cetak<small>Simpan nota lalu buka dialog cetak.</small></button>
+                      <button type="button" id="saveDownloadBtn">Download PDF<small>Simpan nota lalu unduh file PDF.</small></button>
                     </div>
                   </details>
                 </div>
@@ -389,22 +261,13 @@
         </section>
 
         <section id="page-history" class="page">
-          <div class="page-head"><div><h2>Riwayat Nota</h2><p>Semua perangkat membaca data yang sama.</p></div><button class="btn primary go-invoice">＋ Nota</button></div>
+          <div class="page-head"><div><h2>Riwayat Nota</h2><p>Semua perangkat membaca data yang sama.</p></div><button class="btn primary go-invoice">＋ Nota Baru</button></div>
           <div class="panel">
             <div class="filters">
-              <select id="historyPeriod">
-                <option value="all">Semua Tanggal</option>
-                <option value="today">Hari Ini</option>
-                <option value="yesterday">Kemarin</option>
-                <option value="7days">7 Hari</option>
-              </select>
+              <select id="historyPeriod"><option value="all">Semua Tanggal</option><option value="today">Hari Ini</option><option value="yesterday">Kemarin</option><option value="7days">7 Hari</option></select>
               <input id="historyDate" type="date">
-              <select id="historyStatus">
-                <option value="all">Semua Status</option>
-                <option value="paid">Sudah Dibayar</option>
-                <option value="unpaid">Belum Dibayar / DP</option>
-              </select>
-              <input id="historySearch" class="search" placeholder="Cari pelanggan, nomor, atau keterangan">
+              <select id="historyStatus"><option value="all">Semua Status</option><option value="paid">Sudah Dibayar</option><option value="unpaid">Belum Dibayar / DP</option></select>
+              <label class="table-search"><span>⌕</span><input id="historySearch" class="search" placeholder="Cari pelanggan, nomor, atau keterangan"></label>
             </div>
             <div class="table-wrap">
               <table>
@@ -418,64 +281,26 @@
         <section id="page-customers" class="page">
           <div class="page-head"><div><h2>Data Pelanggan</h2><p>Disusun otomatis dari riwayat nota online.</p></div></div>
           <div class="panel">
-            <div class="filters"><input id="customerSearch" class="search" placeholder="Cari nama, WhatsApp, atau alamat"></div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Nama</th><th>WhatsApp</th><th>Alamat Terakhir</th><th>Pekerjaan</th><th>Terakhir</th><th>Total Transaksi</th></tr></thead>
-                <tbody id="customersBody"></tbody>
-              </table>
-            </div>
+            <div class="filters"><label class="table-search wide"><span>⌕</span><input id="customerSearch" class="search" placeholder="Cari nama, WhatsApp, atau alamat"></label></div>
+            <div class="table-wrap"><table><thead><tr><th>Nama</th><th>WhatsApp</th><th>Alamat Terakhir</th><th>Pekerjaan</th><th>Terakhir</th><th>Total Transaksi</th></tr></thead><tbody id="customersBody"></tbody></table></div>
           </div>
         </section>
 
         <section id="page-technicians" class="page">
-          <div class="page-head">
-            <div>
-              <h2>Teknisi</h2>
-              <p>Kelola nama teknisi yang bekerja di lapangan.</p>
-            </div>
-          </div>
-
+          <div class="page-head"><div><h2>Teknisi</h2><p>Kelola teknisi yang bekerja di lapangan.</p></div></div>
           <div class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>Daftar Teknisi</h3>
-                <p>Nama teknisi dapat dipilih saat membuat atau mengedit nota.</p>
-              </div>
-            </div>
-
+            <div class="panel-head"><div><h3>Daftar Teknisi</h3><p>Nama teknisi dapat dipilih saat membuat atau mengedit nota.</p></div></div>
             <form id="technicianForm" class="technician-form-row">
-              <div class="field">
-                <label>Nama Teknisi *</label>
-                <input id="technicianName" required placeholder="Contoh: Andi">
-              </div>
-
-              <div class="field">
-                <label>WhatsApp</label>
-                <input id="technicianPhone" placeholder="08xxxxxxxxxx">
-              </div>
-
+              <div class="field"><label>Nama Teknisi *</label><input id="technicianName" required placeholder="Contoh: Andi"></div>
+              <div class="field"><label>WhatsApp</label><input id="technicianPhone" placeholder="08xxxxxxxxxx"></div>
               <button class="btn primary" type="submit">Tambah Teknisi</button>
             </form>
-
-            <div class="table-wrap technician-table-wrap">
-              <table class="technician-table">
-                <thead>
-                  <tr>
-                    <th>Nama Teknisi</th>
-                    <th>WhatsApp</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="technicianAdminBody"></tbody>
-              </table>
-            </div>
+            <div class="table-wrap technician-table-wrap"><table class="technician-table"><thead><tr><th>Nama Teknisi</th><th>WhatsApp</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="technicianAdminBody"></tbody></table></div>
           </div>
         </section>
 
         <section id="page-settings" class="page">
-          <div class="page-head"><div><h2>Pengaturan Toko</h2><p>Pengaturan ikut tersinkron di semua perangkat.</p></div></div>
+          <div class="page-head"><div><h2>Pengaturan Toko</h2><p>Pengaturan tersinkron di semua perangkat.</p></div></div>
           <form id="settingsForm" class="panel settings-form">
             <div class="form-grid">
               <div class="field"><label>Nama Toko *</label><input id="storeName" required></div>
@@ -486,23 +311,25 @@
               <div class="field"><label>Nama Penandatangan</label><input id="signerName"></div>
               <div class="field"><label>Jabatan</label><input id="signerRole"></div>
             </div>
-            <button class="btn primary" type="submit">Simpan Pengaturan</button>
+            <div class="actions"><button class="btn primary" type="submit">Simpan Pengaturan</button></div>
           </form>
         </section>
 
         <section id="page-backup" class="page">
-          <div class="page-head"><div><h2>Backup Data</h2><p>Database online tetap dapat dicadangkan ke file JSON.</p></div></div>
-          <div class="panel">
-            <button id="downloadBackupBtn" class="btn primary">⇩ Download Backup JSON</button>
-            <div class="notice">Backup berisi invoice, item, dan pengaturan milik akun yang sedang login.</div>
+          <div class="page-head"><div><h2>Backup Data</h2><p>Cadangkan database online ke file JSON.</p></div></div>
+          <div class="panel backup-panel">
+            <div class="backup-icon">⇩</div>
+            <div><h3>Backup Database</h3><p>Backup berisi invoice, item, teknisi, relasi teknisi, dan pengaturan akun yang sedang login.</p></div>
+            <button id="downloadBackupBtn" class="btn primary">Download Backup JSON</button>
           </div>
         </section>
       </div>
     </main>
   </div>
+
   <div id="detailModal" class="modal hidden">
     <div class="modal-card">
-      <div class="modal-head"><h3>Detail Pekerjaan</h3><button id="closeModalBtn" class="icon-btn">×</button></div>
+      <div class="modal-head"><h3>Detail Pekerjaan</h3><button id="closeModalBtn" class="icon-btn" type="button">×</button></div>
       <div id="detailContent" class="modal-body"></div>
     </div>
   </div>
@@ -513,6 +340,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=44"></script>
+  <script src="app.js?v=47"></script>
 </body>
 </html>

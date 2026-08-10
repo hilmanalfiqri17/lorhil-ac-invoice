@@ -80,7 +80,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=44",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=47",{
             updateViaCache:"none"
           });
 
@@ -90,13 +90,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v43")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v47")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v44";
+            const reloadKey="lorhil-sw-reloaded-v47";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -215,8 +215,13 @@
   }
 
   function applyBrand(){
-    $("brandName").textContent=state.settings?.store_name||"LORHIL AC";
-    document.title=`${state.settings?.store_name||"LORHIL AC"} Online`;
+    const storeName=state.settings?.store_name||"LORHIL AC";
+    $("brandName").textContent=storeName;
+    document.title=`${storeName} Online`;
+    if($("userAvatarText")){
+      const initials=storeName.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join("").toUpperCase();
+      $("userAvatarText").textContent=initials||"LA";
+    }
   }
 
   function invoiceText(inv){
@@ -252,21 +257,273 @@
     document.querySelectorAll(".dashboard-period").forEach(x=>x.classList.toggle("active",x===btn));
     renderDashboard();
   }));
-  ["dashboardStatus","dashboardSearch"].forEach(id=>$(id).addEventListener(id==="dashboardSearch"?"input":"change",renderDashboard));
-  ["historyPeriod","historyDate","historyStatus"].forEach(id=>$(id).addEventListener("change",renderHistory));
-  $("historySearch").addEventListener("input",renderHistory);
-  $("customerSearch").addEventListener("input",renderCustomers);
+
+  ["historyPeriod","historyDate","historyStatus"].forEach(id=>{
+    if($(id)) $(id).addEventListener("change",renderHistory);
+  });
+  if($("historySearch")) $("historySearch").addEventListener("input",renderHistory);
+  if($("customerSearch")) $("customerSearch").addEventListener("input",renderCustomers);
+
+  if($("globalSearch")){
+    $("globalSearch").addEventListener("input",()=>{
+      if($("dashboardSearch")) $("dashboardSearch").value=$("globalSearch").value;
+      if(state.page==="dashboard") renderDashboard();
+    });
+    $("globalSearch").addEventListener("keydown",event=>{
+      if(event.key!=="Enter") return;
+      event.preventDefault();
+      if($("historySearch")) $("historySearch").value=$("globalSearch").value;
+      showPage("history");
+      renderHistory();
+    });
+  }
+
+  if($("dashboardSeeAll")) $("dashboardSeeAll").addEventListener("click",()=>showPage("history"));
+
+  let dashboardResizeTimer=null;
+  window.addEventListener("resize",()=>{
+    clearTimeout(dashboardResizeTimer);
+    dashboardResizeTimer=setTimeout(()=>{
+      if(state.page==="dashboard") renderDashboardAnalytics();
+    },120);
+  });
+
+  function invoiceDateObject(value){
+    if(!value) return null;
+    const parts=value.split("-").map(Number);
+    if(parts.length!==3) return null;
+    return new Date(parts[0],parts[1]-1,parts[2]);
+  }
+
+  function dateKey(date){
+    const y=date.getFullYear();
+    const m=String(date.getMonth()+1).padStart(2,"0");
+    const d=String(date.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function lastDates(count,offset=0){
+    const result=[];
+    const base=new Date();
+    base.setHours(0,0,0,0);
+    for(let i=count-1;i>=0;i--){
+      const date=new Date(base);
+      date.setDate(base.getDate()-offset-i);
+      result.push(date);
+    }
+    return result;
+  }
+
+  function paidOnDate(key){
+    return state.invoices
+      .filter(inv=>inv.work_date===key)
+      .reduce((sum,inv)=>sum+safeNumber(inv.paid),0);
+  }
+
+  function compactMoney(value){
+    const number=safeNumber(value);
+    if(number>=1_000_000) return `${(number/1_000_000).toLocaleString("id-ID",{maximumFractionDigits:1})}jt`;
+    if(number>=1_000) return `${Math.round(number/1_000)}rb`;
+    return String(Math.round(number));
+  }
+
+  function shortDateLabel(date){
+    return new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short"}).format(date).replace(".","");
+  }
+
+  function prepareCanvas(canvas){
+    if(!canvas) return null;
+    const rect=canvas.getBoundingClientRect();
+    if(rect.width<20 || rect.height<20) return null;
+    const ratio=Math.max(1,window.devicePixelRatio||1);
+    canvas.width=Math.round(rect.width*ratio);
+    canvas.height=Math.round(rect.height*ratio);
+    const ctx=canvas.getContext("2d");
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    return {ctx,width:rect.width,height:rect.height};
+  }
+
+  function drawRevenueChart(labels,values){
+    const prepared=prepareCanvas($("revenueChart"));
+    if(!prepared) return;
+    const {ctx,width,height}=prepared;
+    const pad={left:43,right:12,top:12,bottom:28};
+    const chartW=Math.max(10,width-pad.left-pad.right);
+    const chartH=Math.max(10,height-pad.top-pad.bottom);
+    const maxValue=Math.max(...values,1);
+    const topValue=maxValue*1.15;
+
+    ctx.clearRect(0,0,width,height);
+    ctx.font='10px "Segoe UI", Arial';
+    ctx.fillStyle="#75839a";
+    ctx.strokeStyle="#e8edf4";
+    ctx.lineWidth=1;
+    ctx.textAlign="right";
+    ctx.textBaseline="middle";
+
+    for(let i=0;i<=4;i++){
+      const y=pad.top+(chartH/4)*i;
+      const value=topValue-(topValue/4)*i;
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke();
+      ctx.fillText(compactMoney(value),pad.left-8,y);
+    }
+
+    const points=values.map((value,index)=>({
+      x:pad.left+(labels.length===1?chartW/2:(chartW/(labels.length-1))*index),
+      y:pad.top+chartH-(safeNumber(value)/topValue)*chartH
+    }));
+
+    if(points.length){
+      const gradient=ctx.createLinearGradient(0,pad.top,0,pad.top+chartH);
+      gradient.addColorStop(0,"rgba(11,97,232,.24)");
+      gradient.addColorStop(1,"rgba(11,97,232,.015)");
+      ctx.beginPath();ctx.moveTo(points[0].x,pad.top+chartH);
+      points.forEach((point,index)=>index===0?ctx.lineTo(point.x,point.y):ctx.lineTo(point.x,point.y));
+      ctx.lineTo(points[points.length-1].x,pad.top+chartH);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
+
+      ctx.beginPath();points.forEach((point,index)=>index===0?ctx.moveTo(point.x,point.y):ctx.lineTo(point.x,point.y));
+      ctx.strokeStyle="#0b61e8";ctx.lineWidth=2;ctx.stroke();
+      points.forEach(point=>{ctx.beginPath();ctx.arc(point.x,point.y,3.2,0,Math.PI*2);ctx.fillStyle="#0b61e8";ctx.fill();ctx.lineWidth=2;ctx.strokeStyle="#fff";ctx.stroke();});
+    }
+
+    ctx.textAlign="center";ctx.textBaseline="top";ctx.fillStyle="#71809a";
+    labels.forEach((label,index)=>{
+      const x=pad.left+(labels.length===1?chartW/2:(chartW/(labels.length-1))*index);
+      ctx.fillText(label,x,height-19);
+    });
+  }
+
+  function monthBuckets(count=6){
+    const buckets=[];
+    const now=new Date();
+    for(let i=count-1;i>=0;i--){
+      const date=new Date(now.getFullYear(),now.getMonth()-i,1);
+      const year=date.getFullYear(),month=date.getMonth();
+      const invoices=state.invoices.filter(inv=>{
+        const d=invoiceDateObject(inv.work_date);
+        return d && d.getFullYear()===year && d.getMonth()===month;
+      });
+      buckets.push({
+        label:new Intl.DateTimeFormat("id-ID",{month:"short"}).format(date).replace(".",""),
+        done:invoices.filter(inv=>inv.status==="Lunas").length,
+        pending:invoices.filter(inv=>inv.status!=="Lunas").length
+      });
+    }
+    return buckets;
+  }
+
+  function drawTrendChart(buckets){
+    const prepared=prepareCanvas($("trendChart"));
+    if(!prepared) return;
+    const {ctx,width,height}=prepared;
+    const pad={left:28,right:8,top:8,bottom:25};
+    const chartW=width-pad.left-pad.right, chartH=height-pad.top-pad.bottom;
+    const maxValue=Math.max(...buckets.flatMap(item=>[item.done,item.pending]),1);
+    const topValue=Math.max(5,Math.ceil(maxValue/5)*5);
+    ctx.clearRect(0,0,width,height);
+    ctx.font='9px "Segoe UI", Arial';ctx.fillStyle="#7b889d";ctx.strokeStyle="#edf1f6";ctx.lineWidth=1;
+    ctx.textAlign="right";ctx.textBaseline="middle";
+    for(let i=0;i<=4;i++){
+      const y=pad.top+(chartH/4)*i;
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke();
+      ctx.fillText(String(Math.round(topValue-(topValue/4)*i)),pad.left-6,y);
+    }
+    const groupW=chartW/Math.max(1,buckets.length);
+    const barW=Math.min(13,groupW*.24);
+    buckets.forEach((item,index)=>{
+      const center=pad.left+groupW*index+groupW/2;
+      const doneH=(item.done/topValue)*chartH;
+      const pendingH=(item.pending/topValue)*chartH;
+      ctx.fillStyle="#0b61e8";ctx.fillRect(center-barW-2,pad.top+chartH-doneH,barW,doneH);
+      ctx.fillStyle="#ff7a1a";ctx.fillRect(center+2,pad.top+chartH-pendingH,barW,pendingH);
+      ctx.fillStyle="#71809a";ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(item.label,center,height-17);
+    });
+  }
+
+  function renderTechnicianRanking(){
+    const target=$("techRanking");
+    if(!target) return;
+    const counts=new Map();
+    state.invoices.forEach(inv=>{
+      (inv.invoice_technicians||[]).forEach(row=>{
+        const tech=row.technician;
+        if(!tech) return;
+        const current=counts.get(tech.id)||{name:tech.name,count:0};
+        current.count++;counts.set(tech.id,current);
+      });
+    });
+    const ranked=[...counts.values()].sort((a,b)=>b.count-a.count).slice(0,3);
+    const total=ranked.reduce((sum,item)=>sum+item.count,0)||1;
+    if(!ranked.length){
+      target.innerHTML='<div class="empty compact">Belum ada aktivitas teknisi.</div>';
+      return;
+    }
+    target.innerHTML=ranked.map(item=>{
+      const pct=(item.count/total)*100;
+      const initials=item.name.split(/\\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join("").toUpperCase();
+      return `<div class="tech-rank-row">
+        <div class="tech-avatar">${esc(initials||"T")}</div>
+        <div class="tech-rank-copy"><strong>${esc(item.name)}</strong><small>${item.count} pekerjaan</small></div>
+        <div class="tech-progress"><i style="width:${pct.toFixed(1)}%"></i></div>
+        <div class="tech-percent">${pct.toFixed(1)}%</div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderDashboardAnalytics(){
+    const recentDates=lastDates(10);
+    const previousDates=lastDates(10,10);
+    const recentValues=recentDates.map(date=>paidOnDate(dateKey(date)));
+    const previousValues=previousDates.map(date=>paidOnDate(dateKey(date)));
+    const recentTotal=recentValues.reduce((sum,value)=>sum+value,0);
+    const previousTotal=previousValues.reduce((sum,value)=>sum+value,0);
+    let change=0;
+    if(previousTotal>0) change=((recentTotal-previousTotal)/previousTotal)*100;
+    else if(recentTotal>0) change=100;
+
+    if($("revenueTotal")) $("revenueTotal").textContent=money(recentTotal);
+    if($("revenueChange")){
+      const prefix=change>0?"↑ ":change<0?"↓ ":"";
+      $("revenueChange").textContent=`${prefix}${Math.abs(change).toLocaleString("id-ID",{maximumFractionDigits:1})}% dari 10 hari sebelumnya`;
+      $("revenueChange").className=`metric-change ${change>0?"positive":change<0?"negative":"neutral"}`;
+    }
+    drawRevenueChart(recentDates.map(shortDateLabel),recentValues);
+
+    const buckets=monthBuckets(6);
+    if($("trendTotal")) $("trendTotal").textContent=state.invoices.length;
+    drawTrendChart(buckets);
+
+    const paidCount=state.invoices.filter(inv=>inv.status==="Lunas").length;
+    const openCount=state.invoices.length-paidCount;
+    const total=Math.max(0,state.invoices.length);
+    const paidPct=total?Math.round((paidCount/total)*100):0;
+    const openPct=total?100-paidPct:0;
+    if($("paymentTotalCount")) $("paymentTotalCount").textContent=total;
+    if($("paymentPaidPercent")) $("paymentPaidPercent").textContent=`${paidPct}%`;
+    if($("paymentOpenPercent")) $("paymentOpenPercent").textContent=`${openPct}%`;
+    if($("paymentPaidCount")) $("paymentPaidCount").textContent=`${paidCount} nota`;
+    if($("paymentOpenCount")) $("paymentOpenCount").textContent=`${openCount} nota`;
+    if($("paymentDonut")){
+      $("paymentDonut").style.background=total
+        ?`conic-gradient(#22a75a 0 ${paidPct}%, #ff7a1a ${paidPct}% 100%)`
+        :"conic-gradient(#e7ecf3 0 100%)";
+    }
+    renderTechnicianRanking();
+  }
 
   function renderDashboard(){
     const todayData=state.invoices.filter(x=>x.work_date===localDate());
-    $("statToday").textContent=todayData.length;
-    $("statYesterday").textContent=state.invoices.filter(x=>x.work_date===yesterday()).length;
-    $("statRevenue").textContent=money(todayData.reduce((s,x)=>s+Number(x.paid||0),0));
-    $("statUnpaid").textContent=state.invoices.filter(x=>x.status!=="Lunas").length;
-    let data=filterPeriod(state.invoices,state.dashboardPeriod);
-    data=filterStatus(data,$("dashboardStatus").value);
-    data=filterSearch(data,$("dashboardSearch").value);
-    renderInvoiceRows($("dashboardBody"),data,false);
+    if($("statToday")) $("statToday").textContent=todayData.length;
+    if($("statYesterday")) $("statYesterday").textContent=state.invoices.filter(x=>x.work_date===yesterday()).length;
+    if($("statRevenue")) $("statRevenue").textContent=money(todayData.reduce((s,x)=>s+safeNumber(x.paid),0));
+    if($("statUnpaid")) $("statUnpaid").textContent=state.invoices.filter(x=>x.status!=="Lunas").length;
+
+    const query=$("dashboardSearch")?.value||"";
+    const filtered=filterSearch(state.invoices,query);
+    const recent=filtered.slice(0,5);
+    renderInvoiceRows($("dashboardBody"),recent,false);
+    if($("dashboardTableCount")) $("dashboardTableCount").textContent=`Menampilkan ${recent.length} dari ${filtered.length} data`;
+    requestAnimationFrame(renderDashboardAnalytics);
   }
 
   function renderHistory(){
@@ -839,7 +1096,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:37,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:47,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

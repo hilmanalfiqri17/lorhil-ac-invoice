@@ -138,3 +138,40 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .canvas-wrap{height:190px}
   .trend-panel .canvas-wrap{height:185px}
 }
+
+
+/* =========================================================
+   V52 - DASHBOARD TEKNISI / ROLE BASED UI
+   ========================================================= */
+body.technician-mode{background:#f4f7fb}
+body.technician-mode .content{padding-bottom:92px}
+.technician-sidebar-nav{display:flex;flex-direction:column;gap:7px;margin-top:20px}
+.tech-welcome-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px;border-radius:20px;background:linear-gradient(135deg,#0a5be7,#123eb7);color:#fff;box-shadow:0 16px 36px rgba(11,97,232,.18);margin-bottom:15px}
+.tech-welcome-card h2{margin:5px 0 5px;font-size:24px}.tech-welcome-card p{margin:0;color:rgba(255,255,255,.8)}.tech-eyebrow{font-size:10px;font-weight:900;letter-spacing:.12em;color:#bcd7ff}.tech-avatar-large{width:64px;height:64px;border-radius:20px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;font-size:24px;font-weight:900;flex:0 0 auto}
+.tech-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}.tech-summary-card{padding:16px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:var(--shadow)}.tech-summary-card span{display:block;font-size:11px;font-weight:800;color:var(--muted)}.tech-summary-card strong{display:block;font-size:28px;margin-top:6px}.tech-summary-card small{color:var(--muted-2)}.tech-summary-card.blue{border-top:3px solid var(--blue)}.tech-summary-card.orange{border-top:3px solid var(--orange)}.tech-summary-card.green{border-top:3px solid var(--green)}
+.tech-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 2px 10px}.tech-section-head h3{margin:0;font-size:17px}.tech-section-head p{margin:4px 0 0;color:var(--muted);font-size:11px}.tech-next-head{margin-top:22px}
+.tech-job-list{display:grid;gap:11px}.tech-job-list.compact .tech-job-card{padding:13px 14px}.tech-job-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:var(--shadow);min-width:0}.tech-job-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}.tech-job-time{font-size:20px;font-weight:900;color:var(--blue)}.tech-job-date{display:block;margin-top:2px;color:var(--muted);font-size:10px}.tech-job-number{font-size:11px;font-weight:900;color:#0b61e8}.tech-job-customer{font-size:15px;font-weight:900;margin:3px 0}.tech-job-description{font-size:12px;color:#46536a;margin-bottom:9px;line-height:1.4}.tech-job-meta{display:grid;gap:6px;margin:9px 0 12px}.tech-job-meta div{display:flex;align-items:flex-start;gap:7px;color:#65738a;font-size:11px;line-height:1.35}.tech-job-actions{display:grid;grid-template-columns:1fr auto;gap:8px}.tech-job-actions .btn{font-size:11px;padding:9px 11px}.tech-job-empty{padding:26px 18px;border:1px dashed #cfd9e8;border-radius:15px;background:#fff;text-align:center;color:var(--muted);font-size:12px}
+.work-badge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}.work-scheduled{background:#e9f3ff;color:#1768d3}.work-travel{background:#fff1df;color:#c56c00}.work-progress{background:#fff0df;color:#d35e00}.work-done{background:#e5f7ec;color:#14884b}.work-cancelled{background:#fdecec;color:#bd3434}
+.tech-filter-row{display:flex;gap:8px;overflow:auto;padding:2px 0 12px;scrollbar-width:none}.tech-filter-row::-webkit-scrollbar{display:none}.tech-job-filter{flex:0 0 auto}.tech-page-head{margin-bottom:10px}
+.tech-profile-card{max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:var(--shadow);text-align:center}.tech-profile-avatar{width:82px;height:82px;margin:0 auto 12px;border-radius:26px;background:linear-gradient(135deg,#0a5be7,#123eb7);color:#fff;display:grid;place-items:center;font-size:30px;font-weight:900}.tech-profile-card h2{margin:0 0 7px}.tech-role-badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:#edf5ff;color:#0b61e8;font-size:10px;font-weight:900}.tech-profile-info{display:grid;gap:0;margin:22px 0;text-align:left;border:1px solid var(--line);border-radius:14px;overflow:hidden}.tech-profile-info>div{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px;border-bottom:1px solid var(--line);font-size:11px}.tech-profile-info>div:last-child{border-bottom:0}.tech-profile-info span{color:var(--muted)}.text-success{color:var(--green)}
+.tech-bottom-nav{display:none}
+.tech-detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}.tech-detail-number{font-size:14px;font-weight:900;color:var(--blue)}.tech-detail-customer{font-size:20px;font-weight:900;margin:4px 0 0}.tech-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.tech-contact-btn{text-decoration:none}.tech-status-panel{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fafbfd}.tech-status-panel h4{margin:0 0 10px}.tech-status-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tech-status-buttons .btn{font-size:10px;padding:9px 7px}.tech-status-note{font-size:10px;color:var(--muted);margin:9px 0 0;line-height:1.4}
+
+@media(max-width:900px){
+  body.technician-mode .sidebar{display:none}
+  body.technician-mode .topbar-menu{display:none}
+  body.technician-mode .topbar{height:74px;padding:0 15px}
+  body.technician-mode .topbar-title-wrap{min-width:0}
+  body.technician-mode .topbar h1{font-size:19px}
+  body.technician-mode .topbar p{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+  body.technician-mode .main-shell{margin-left:0}
+  body.technician-mode .content{padding:13px 12px 92px}
+  .tech-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:80;height:70px;padding:7px max(8px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(18,38,74,.08);display:grid;grid-template-columns:repeat(4,1fr);gap:3px;backdrop-filter:blur(12px)}
+  .tech-bottom-nav.hidden{display:none!important}.tech-bottom-nav .nav-btn{display:grid;place-items:center;gap:1px;padding:5px 2px;border-radius:10px;color:#7b879b;background:transparent;text-align:center}.tech-bottom-nav .nav-btn span{font-size:19px;line-height:1}.tech-bottom-nav .nav-btn small{font-size:9px;font-weight:800}.tech-bottom-nav .nav-btn.active{background:#edf5ff;color:#0b61e8}
+}
+@media(max-width:620px){
+  .tech-welcome-card{padding:18px 16px;border-radius:18px}.tech-welcome-card h2{font-size:20px}.tech-welcome-card p{font-size:11px}.tech-avatar-large{width:54px;height:54px;border-radius:17px;font-size:21px}
+  .tech-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tech-summary-card{padding:12px 10px}.tech-summary-card strong{font-size:24px}.tech-summary-card span,.tech-summary-card small{font-size:9px}
+  .tech-job-card{padding:13px;border-radius:15px}.tech-job-time{font-size:18px}.tech-job-actions{grid-template-columns:1fr 42px}.tech-job-actions .btn.secondary{font-size:0}.tech-job-actions .btn.secondary:after{content:"☎";font-size:16px}
+  .tech-detail-actions,.tech-status-buttons{grid-template-columns:1fr}.tech-profile-card{padding:20px 15px}.tech-profile-info>div{align-items:flex-start;flex-direction:column;gap:5px}
+}

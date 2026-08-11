@@ -48,8 +48,8 @@
   let db = null;
   const state = {
     session:null, invoices:[], settings:null, technicians:[],
-    invoiceTechnicians:[], page:"dashboard",
-    dashboardPeriod:"today", realtime:null,
+    invoiceTechnicians:[], page:"dashboard", accessContext:null,
+    dashboardPeriod:"today", realtime:null, techJobFilter:"today",
     revenuePeriodOffset:0, trendPeriodOffset:0
   };
 
@@ -61,6 +61,50 @@
     clearTimeout(toast.timer); toast.timer=setTimeout(()=>hide("toast"),2600);
   }
   function errorMessage(error){ return error?.message || "Terjadi kesalahan."; }
+  const accessRole = () => state.accessContext?.role || "admin";
+  const isTechnicianAccount = () => accessRole() === "technician";
+  const ownerUid = () => state.accessContext?.owner_user_id || uid();
+
+  async function loadAccessContext(){
+    const fallback={
+      owner_user_id:uid(), auth_user_id:uid(), role:"admin", technician_id:null,
+      display_name:"Admin LORHIL AC", can_send_invoice:true, is_active:true
+    };
+    try{
+      const {data,error}=await db.rpc("get_my_access_context");
+      if(error){
+        console.warn("Konteks role belum tersedia, menggunakan akses admin lama:",error.message);
+        state.accessContext=fallback;
+        return fallback;
+      }
+      const row=Array.isArray(data)?data[0]:data;
+      state.accessContext=row||fallback;
+      return state.accessContext;
+    }catch(error){
+      console.warn("Gagal membaca role akun:",error);
+      state.accessContext=fallback;
+      return fallback;
+    }
+  }
+
+  function initialsFromName(value){
+    return String(value||"T").split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join("").toUpperCase()||"T";
+  }
+
+  function applyAccessUi(){
+    const tech=isTechnicianAccount();
+    document.body.classList.toggle("technician-mode",tech);
+    if($("adminNav")) $("adminNav").classList.toggle("hidden",tech);
+    if($("technicianNav")) $("technicianNav").classList.toggle("hidden",!tech);
+    if($("techBottomNav")) $("techBottomNav").classList.toggle("hidden",!tech);
+    if($("globalSearchWrap")) $("globalSearchWrap").classList.toggle("hidden",tech);
+    if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech);
+    if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":"Online Invoice";
+    if($("userAvatarText")){
+      const label=tech?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
+      $("userAvatarText").textContent=initialsFromName(label||"LA");
+    }
+  }
 
   async function init(){
     if(!configured){
@@ -81,7 +125,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=51",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=52",{
             updateViaCache:"none"
           });
 
@@ -91,13 +135,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v50")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v52")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v51";
+            const reloadKey="lorhil-sw-reloaded-v52";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -119,10 +163,13 @@
     $("todayText").textContent=new Intl.DateTimeFormat("id-ID",{
       weekday:"long",day:"numeric",month:"long",year:"numeric"
     }).format(new Date());
-    resetInvoice();
+    await loadAccessContext();
+    applyAccessUi();
+    if(!isTechnicianAccount()) resetInvoice();
     await refreshAll();
+    applyAccessUi();
     subscribeRealtime();
-    showPage("dashboard");
+    showPage(isTechnicianAccount()?"tech-dashboard":"dashboard");
   }
 
   $("loginForm").addEventListener("submit",async e=>{
@@ -138,17 +185,27 @@
     $("loginPassword").type=$("loginPassword").type==="password"?"text":"password";
   });
   $("logoutBtn").addEventListener("click",async()=>{ loading(true); await db.auth.signOut(); loading(false); });
+  if($("techProfileLogoutBtn")) $("techProfileLogoutBtn").addEventListener("click",async()=>{ loading(true); await db.auth.signOut(); loading(false); });
   $("menuBtn").addEventListener("click",()=> $("sidebar").classList.toggle("open"));
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
-  const titles={dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",technicians:"Teknisi",settings:"Pengaturan",backup:"Backup"};
+  const titles={
+    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",customers:"Pelanggan",technicians:"Teknisi",settings:"Pengaturan",backup:"Backup",
+    "tech-dashboard":"Dashboard Teknisi","tech-jobs":"Pekerjaan Saya","tech-history":"Riwayat Pekerjaan","tech-profile":"Profil Teknisi"
+  };
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
-  document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{resetInvoice();showPage("invoice");}));
+  document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{if(isTechnicianAccount())return;resetInvoice();showPage("invoice");}));
+  document.querySelectorAll(".tech-see-all[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
 
   function showPage(page){
+    const techPages=new Set(["tech-dashboard","tech-jobs","tech-history","tech-profile"]);
+    if(isTechnicianAccount() && !techPages.has(page)) page="tech-dashboard";
+    if(!isTechnicianAccount() && techPages.has(page)) page="dashboard";
+    const target=$(`page-${page}`);
+    if(!target) return;
     state.page=page;
     document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
-    $(`page-${page}`).classList.add("active");
+    target.classList.add("active");
     document.querySelectorAll(".nav-btn[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));
     $("pageTitle").textContent=titles[page]||"LORHIL AC";
     $("sidebar").classList.remove("open");
@@ -158,6 +215,10 @@
     if(page==="technicians") renderTechnicians();
     if(page==="settings") renderSettings();
     if(page==="invoice"){ refreshCustomerList(); renderTechnicianChoices(); }
+    if(page==="tech-dashboard") renderTechDashboard();
+    if(page==="tech-jobs") renderTechJobs();
+    if(page==="tech-history") renderTechHistory();
+    if(page==="tech-profile") renderTechProfile();
   }
 
   async function refreshAll(){
@@ -189,14 +250,24 @@
         return inv;
       });
 
-      state.settings=settingsResult.data || await createDefaultSettings();
+      state.settings=settingsResult.data || (isTechnicianAccount()
+        ? {store_name:"LORHIL AC",phone:"",address:"",payment_info:"",footer_note:"",signer_name:"Hendri",signer_role:"Pemilik LORHIL AC"}
+        : await createDefaultSettings());
       applyBrand();
-      renderDashboard();
-      renderHistory();
-      renderCustomers();
-      renderTechnicians();
-      refreshCustomerList();
-      renderTechnicianChoices();
+      applyAccessUi();
+      if(isTechnicianAccount()){
+        renderTechDashboard();
+        renderTechJobs();
+        renderTechHistory();
+        renderTechProfile();
+      }else{
+        renderDashboard();
+        renderHistory();
+        renderCustomers();
+        renderTechnicians();
+        refreshCustomerList();
+        renderTechnicianChoices();
+      }
     }catch(error){
       alert(errorMessage(error));
     }finally{
@@ -220,8 +291,8 @@
     $("brandName").textContent=storeName;
     document.title=`${storeName} Online`;
     if($("userAvatarText")){
-      const initials=storeName.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join("").toUpperCase();
-      $("userAvatarText").textContent=initials||"LA";
+      const avatarLabel=isTechnicianAccount()?state.accessContext?.display_name:storeName;
+      $("userAvatarText").textContent=initialsFromName(avatarLabel||"LA");
     }
   }
 
@@ -1134,6 +1205,191 @@
     event.target.reset();await refreshAll();toast("Teknisi berhasil ditambahkan.");
   });
 
+
+  function datePlusDays(days){
+    const d=new Date();
+    d.setDate(d.getDate()+Number(days||0));
+    return localDate(d);
+  }
+
+  function myAssignment(inv){
+    const techId=state.accessContext?.technician_id;
+    if(!techId) return null;
+    return (inv?.invoice_technicians||[]).find(row=>row.technician_id===techId)||null;
+  }
+
+  function effectiveWorkStatus(inv){
+    const assignment=myAssignment(inv);
+    if(!assignment) return "Terjadwal";
+    const raw=assignment.work_status||"Terjadwal";
+    if(raw==="Terjadwal" && !assignment.work_status_updated_at && inv.work_date<localDate()) return "Selesai";
+    return raw;
+  }
+
+  function workStatusBadge(status){
+    const map={
+      "Terjadwal":"work-scheduled",
+      "Dalam Perjalanan":"work-travel",
+      "Dikerjakan":"work-progress",
+      "Selesai":"work-done",
+      "Dibatalkan":"work-cancelled"
+    };
+    return `<span class="work-badge ${map[status]||"work-scheduled"}">${esc(status||"Terjadwal")}</span>`;
+  }
+
+  function techAssignedInvoices(){
+    if(!isTechnicianAccount()) return [];
+    return [...state.invoices].filter(inv=>!!myAssignment(inv)).sort((a,b)=>{
+      const ad=`${a.work_date||""} ${a.work_time||""}`;
+      const bd=`${b.work_date||""} ${b.work_time||""}`;
+      return ad.localeCompare(bd);
+    });
+  }
+
+  function techJobCard(inv){
+    const status=effectiveWorkStatus(inv);
+    const phone=normalizeWhatsAppNumber(inv.customer_phone);
+    return `<article class="tech-job-card">
+      <div class="tech-job-card-head">
+        <div>
+          <strong class="tech-job-time">${esc((inv.work_time||"-").slice(0,5))}</strong>
+          <span class="tech-job-date">${formatDate(inv.work_date)}</span>
+        </div>
+        ${workStatusBadge(status)}
+      </div>
+      <div class="tech-job-number">${esc(inv.invoice_number||"Pekerjaan")}</div>
+      <div class="tech-job-customer">${esc(inv.customer_name||"-")}</div>
+      <div class="tech-job-description">${esc(invoiceText(inv)||"Pekerjaan lapangan")}</div>
+      <div class="tech-job-meta">
+        <div><span>⌖</span><span>${esc(inv.customer_address||"Lokasi belum diisi")}</span></div>
+        <div><span>☎</span><span>${esc(inv.customer_phone||"Nomor belum diisi")}</span></div>
+      </div>
+      <div class="tech-job-actions">
+        <button class="btn primary tech-detail-btn" data-id="${inv.id}" type="button">Lihat Pekerjaan</button>
+        ${phone?`<a class="btn secondary tech-contact-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">Hubungi</a>`:`<button class="btn secondary" type="button" disabled>Hubungi</button>`}
+      </div>
+    </article>`;
+  }
+
+  function bindTechJobButtons(container){
+    if(!container) return;
+    container.querySelectorAll(".tech-detail-btn").forEach(btn=>btn.addEventListener("click",()=>openTechJobDetail(btn.dataset.id)));
+  }
+
+  function renderTechJobList(container,data,emptyText){
+    if(!container) return;
+    container.innerHTML=data.length?data.map(techJobCard).join(""):`<div class="tech-job-empty">${esc(emptyText||"Belum ada pekerjaan.")}</div>`;
+    bindTechJobButtons(container);
+  }
+
+  function renderTechDashboard(){
+    if(!isTechnicianAccount() || !$("techTodayJobs")) return;
+    const all=techAssignedInvoices();
+    const today=localDate();
+    const todayJobs=all.filter(inv=>inv.work_date===today);
+    const active=all.filter(inv=>["Dalam Perjalanan","Dikerjakan"].includes(effectiveWorkStatus(inv)));
+    const doneToday=todayJobs.filter(inv=>effectiveWorkStatus(inv)==="Selesai");
+    const upcoming=all.filter(inv=>inv.work_date>today && effectiveWorkStatus(inv)!=="Dibatalkan").slice(0,3);
+    const name=state.accessContext?.display_name||"Teknisi";
+    if($("techWelcomeName")) $("techWelcomeName").textContent=name;
+    if($("techAvatarLarge")) $("techAvatarLarge").textContent=initialsFromName(name);
+    if($("techTodayCount")) $("techTodayCount").textContent=todayJobs.length;
+    if($("techActiveCount")) $("techActiveCount").textContent=active.length;
+    if($("techDoneCount")) $("techDoneCount").textContent=doneToday.length;
+    if($("techTodayLabel")) $("techTodayLabel").textContent=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date());
+    renderTechJobList($("techTodayJobs"),todayJobs,"Belum ada pekerjaan yang ditugaskan untuk hari ini.");
+    renderTechJobList($("techUpcomingJobs"),upcoming,"Belum ada pekerjaan berikutnya.");
+  }
+
+  function renderTechJobs(){
+    if(!isTechnicianAccount() || !$("techJobsList")) return;
+    let data=techAssignedInvoices();
+    const today=localDate(), tomorrow=datePlusDays(1);
+    if(state.techJobFilter==="today") data=data.filter(inv=>inv.work_date===today);
+    else if(state.techJobFilter==="tomorrow") data=data.filter(inv=>inv.work_date===tomorrow);
+    else if(state.techJobFilter==="active") data=data.filter(inv=>!["Selesai","Dibatalkan"].includes(effectiveWorkStatus(inv)) && inv.work_date>=today);
+    renderTechJobList($("techJobsList"),data,"Tidak ada pekerjaan pada filter ini.");
+  }
+
+  function renderTechHistory(){
+    if(!isTechnicianAccount() || !$("techHistoryList")) return;
+    const today=localDate();
+    const data=techAssignedInvoices().filter(inv=>effectiveWorkStatus(inv)==="Selesai" || inv.work_date<today).sort((a,b)=>`${b.work_date} ${b.work_time||""}`.localeCompare(`${a.work_date} ${a.work_time||""}`));
+    renderTechJobList($("techHistoryList"),data,"Riwayat pekerjaan masih kosong.");
+  }
+
+  function renderTechProfile(){
+    if(!isTechnicianAccount() || !$("techProfileName")) return;
+    const name=state.accessContext?.display_name||"Teknisi";
+    const email=state.session?.user?.email||"-";
+    if($("techProfileName")) $("techProfileName").textContent=name;
+    if($("techProfileEmail")) $("techProfileEmail").textContent=email;
+    if($("techProfileAvatar")) $("techProfileAvatar").textContent=initialsFromName(name);
+    if($("techInvoicePermission")) $("techInvoicePermission").textContent=state.accessContext?.can_send_invoice?"Diizinkan (server tahap berikutnya)":"Belum diaktifkan";
+  }
+
+  document.querySelectorAll(".tech-job-filter").forEach(btn=>btn.addEventListener("click",()=>{
+    state.techJobFilter=btn.dataset.techFilter||"today";
+    document.querySelectorAll(".tech-job-filter").forEach(item=>item.classList.toggle("active",item===btn));
+    renderTechJobs();
+  }));
+
+  async function updateTechWorkStatus(invoiceId,status){
+    try{
+      loading(true);
+      const {error}=await db.rpc("update_my_work_status",{p_invoice_id:invoiceId,p_status:status});
+      if(error) throw error;
+      await refreshAll();
+      closeModal();
+      toast(`Status pekerjaan diubah menjadi ${status}.`);
+    }catch(error){
+      alert(errorMessage(error));
+    }finally{
+      loading(false);
+    }
+  }
+
+  function openTechJobDetail(id){
+    const inv=state.invoices.find(item=>item.id===id);
+    if(!inv || !isTechnicianAccount()) return;
+    const status=effectiveWorkStatus(inv);
+    const phone=normalizeWhatsAppNumber(inv.customer_phone);
+    const mapsUrl=inv.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(inv.customer_address)}`:"";
+    const items=(inv.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order);
+    $("detailContent").innerHTML=`
+      <div class="tech-detail-header">
+        <div><div class="tech-detail-number">${esc(inv.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(inv.customer_name||"-")}</div></div>
+        ${workStatusBadge(status)}
+      </div>
+      <div class="detail-box">
+        <div class="detail-row"><span>Waktu</span><strong>${formatDate(inv.work_date)} • ${esc((inv.work_time||"-").slice(0,5))}</strong></div>
+        <div class="detail-row"><span>Pekerjaan</span><strong>${esc(invoiceText(inv)||"-")}</strong></div>
+        <div class="detail-row"><span>Lokasi</span><strong>${esc(inv.customer_address||"-")}</strong></div>
+        <div class="detail-row"><span>WhatsApp</span><strong>${esc(inv.customer_phone||"-")}</strong></div>
+        <div class="detail-row"><span>Catatan</span><strong>${esc(inv.notes||"-")}</strong></div>
+      </div>
+      <div class="tech-detail-actions">
+        ${phone?`<a class="btn success tech-contact-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">☎ Hubungi Pelanggan</a>`:`<button class="btn secondary" disabled>Nomor belum tersedia</button>`}
+        ${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">⌖ Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}
+      </div>
+      <div class="tech-status-panel">
+        <h4>Status Pekerjaan</h4>
+        <div class="tech-status-buttons">
+          <button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button>
+          <button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button>
+          <button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button>
+        </div>
+        <p class="tech-status-note">Perubahan status tersimpan ke Supabase dan dapat dipantau dari sistem admin pada tahap integrasi berikutnya.</p>
+      </div>
+      <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${items.length?items.map((item,index)=>`<div class="detail-row"><span>${index+1}.</span><strong>${esc(item.description)} • ${safeNumber(item.quantity)} unit</strong></div>`).join(""):'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}</div>`;
+    $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{
+      const next=btn.dataset.status;
+      if(next==="Selesai" && !confirm("Tandai pekerjaan ini sebagai selesai?")) return;
+      updateTechWorkStatus(inv.id,next);
+    }));
+    show("detailModal");
+  }
+
   function renderSettings(){
     const s=state.settings||{};
     $("storeName").value=s.store_name||"LORHIL AC";$("storePhone").value=s.phone||"";$("storeAddress").value=s.address||"";
@@ -1148,17 +1404,18 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:47,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:52,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
 
   function subscribeRealtime(){
     if(state.realtime) db.removeChannel(state.realtime);
-    state.realtime=db.channel(`lorhil-${uid()}`)
-      .on("postgres_changes",{event:"*",schema:"public",table:"invoices",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
-      .on("postgres_changes",{event:"*",schema:"public",table:"technicians",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
-      .on("postgres_changes",{event:"*",schema:"public",table:"invoice_technicians",filter:`user_id=eq.${uid()}`},async()=>{await refreshAll();})
+    const owner=ownerUid();
+    state.realtime=db.channel(`lorhil-${owner}-${uid()}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"invoices",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
+      .on("postgres_changes",{event:"*",schema:"public",table:"technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
+      .on("postgres_changes",{event:"*",schema:"public",table:"invoice_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .subscribe();
   }
 

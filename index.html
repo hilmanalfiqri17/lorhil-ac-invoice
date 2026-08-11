@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=51">
-  <title>LORHIL AC Online V51</title>
+  <link rel="stylesheet" href="style.css?v=52">
+  <title>LORHIL AC Online V52</title>
 </head>
-<body data-app-version="51">
+<body data-app-version="52">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -38,7 +38,7 @@
       </div>
       <div class="auth-heading">
         <h1>Selamat Datang</h1>
-        <p>Masuk untuk mengelola nota, pelanggan, teknisi, dan pembayaran.</p>
+        <p>Masuk ke sistem LORHIL AC sesuai akun dan hak akses Anda.</p>
       </div>
       <label>Email</label>
       <input id="loginEmail" type="email" autocomplete="username" required placeholder="admin@contoh.com">
@@ -59,11 +59,11 @@
         <img src="assets/logo.png" alt="Logo LORHIL AC">
         <div>
           <strong id="brandName">LORHIL AC</strong>
-          <small>Online Invoice</small>
+          <small id="brandSubtitle">Online Invoice</small>
         </div>
       </div>
 
-      <nav>
+      <nav id="adminNav">
         <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
         <button class="nav-btn" data-page="invoice"><span class="nav-icon">⊕</span><span>Buat Nota</span></button>
         <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
@@ -71,6 +71,13 @@
         <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
         <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
         <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
+      </nav>
+
+      <nav id="technicianNav" class="hidden technician-sidebar-nav">
+        <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon">▣</span><span>Pekerjaan</span></button>
+        <button class="nav-btn" data-page="tech-history"><span class="nav-icon">↺</span><span>Riwayat</span></button>
+        <button class="nav-btn" data-page="tech-profile"><span class="nav-icon">♙</span><span>Profil</span></button>
       </nav>
 
       <div class="sidebar-footer">
@@ -89,12 +96,12 @@
         </div>
 
         <div class="topbar-tools">
-          <label class="global-search-wrap" for="globalSearch">
+          <label id="globalSearchWrap" class="global-search-wrap" for="globalSearch">
             <span>⌕</span>
             <input id="globalSearch" type="search" placeholder="Cari pelanggan, nota, atau nomor..." autocomplete="off">
           </label>
           <button id="refreshBtn" class="btn secondary refresh-btn" type="button">↻ <span>Segarkan</span></button>
-          <button class="btn primary go-invoice" type="button">＋ <span>Nota Baru</span></button>
+          <button id="newInvoiceTopBtn" class="btn primary go-invoice" type="button">＋ <span>Nota Baru</span></button>
           <div class="profile-pill" title="LORHIL AC">
             <span id="userAvatarText">LA</span>
             <i></i>
@@ -307,6 +314,59 @@
           </div>
         </section>
 
+        <section id="page-tech-dashboard" class="page technician-page">
+          <div class="tech-welcome-card">
+            <div>
+              <span class="tech-eyebrow">TEKNISI LAPANGAN</span>
+              <h2>Halo, <span id="techWelcomeName">Teknisi</span> 👋</h2>
+              <p id="techWelcomeText">Berikut pekerjaan yang ditugaskan kepada Anda.</p>
+            </div>
+            <div class="tech-avatar-large" id="techAvatarLarge">T</div>
+          </div>
+
+          <div class="tech-summary-grid">
+            <article class="tech-summary-card blue"><span>Hari Ini</span><strong id="techTodayCount">0</strong><small>Pekerjaan</small></article>
+            <article class="tech-summary-card orange"><span>Berjalan</span><strong id="techActiveCount">0</strong><small>Dalam proses</small></article>
+            <article class="tech-summary-card green"><span>Selesai</span><strong id="techDoneCount">0</strong><small>Hari ini</small></article>
+          </div>
+
+          <div class="tech-section-head"><div><h3>Pekerjaan Hari Ini</h3><p id="techTodayLabel"></p></div><button class="btn outline tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
+          <div id="techTodayJobs" class="tech-job-list"></div>
+
+          <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Berikutnya</h3><p>Tugas terdekat setelah hari ini.</p></div></div>
+          <div id="techUpcomingJobs" class="tech-job-list compact"></div>
+        </section>
+
+        <section id="page-tech-jobs" class="page technician-page">
+          <div class="page-head tech-page-head"><div><h2>Pekerjaan Saya</h2><p>Hanya pekerjaan yang ditugaskan kepada akun Anda.</p></div></div>
+          <div class="tech-filter-row">
+            <button class="chip tech-job-filter active" data-tech-filter="today" type="button">Hari Ini</button>
+            <button class="chip tech-job-filter" data-tech-filter="tomorrow" type="button">Besok</button>
+            <button class="chip tech-job-filter" data-tech-filter="active" type="button">Aktif</button>
+            <button class="chip tech-job-filter" data-tech-filter="all" type="button">Semua</button>
+          </div>
+          <div id="techJobsList" class="tech-job-list"></div>
+        </section>
+
+        <section id="page-tech-history" class="page technician-page">
+          <div class="page-head tech-page-head"><div><h2>Riwayat Pekerjaan</h2><p>Riwayat tugas yang sudah selesai atau tanggalnya telah lewat.</p></div></div>
+          <div id="techHistoryList" class="tech-job-list"></div>
+        </section>
+
+        <section id="page-tech-profile" class="page technician-page">
+          <div class="tech-profile-card">
+            <div class="tech-profile-avatar" id="techProfileAvatar">T</div>
+            <h2 id="techProfileName">Teknisi</h2>
+            <span class="tech-role-badge">Teknisi LORHIL AC</span>
+            <div class="tech-profile-info">
+              <div><span>Email Login</span><strong id="techProfileEmail">-</strong></div>
+              <div><span>Akses Invoice Bot</span><strong id="techInvoicePermission">Belum diaktifkan</strong></div>
+              <div><span>Status Akun</span><strong class="text-success">Aktif</strong></div>
+            </div>
+            <button id="techProfileLogoutBtn" class="btn danger full" type="button">Keluar dari Akun</button>
+          </div>
+        </section>
+
         <section id="page-settings" class="page">
           <div class="page-head"><div><h2>Pengaturan Toko</h2><p>Pengaturan tersinkron di semua perangkat.</p></div></div>
           <form id="settingsForm" class="panel settings-form">
@@ -335,6 +395,13 @@
     </main>
   </div>
 
+  <nav id="techBottomNav" class="tech-bottom-nav hidden" aria-label="Navigasi teknisi">
+    <button class="nav-btn active" data-page="tech-dashboard" type="button"><span>⌂</span><small>Dashboard</small></button>
+    <button class="nav-btn" data-page="tech-jobs" type="button"><span>▣</span><small>Pekerjaan</small></button>
+    <button class="nav-btn" data-page="tech-history" type="button"><span>↺</span><small>Riwayat</small></button>
+    <button class="nav-btn" data-page="tech-profile" type="button"><span>♙</span><small>Profil</small></button>
+  </nav>
+
   <div id="detailModal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-head"><h3>Detail Pekerjaan</h3><button id="closeModalBtn" class="icon-btn" type="button">×</button></div>
@@ -348,6 +415,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=51"></script>
+  <script src="app.js?v=52"></script>
 </body>
 </html>

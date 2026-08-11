@@ -148,7 +148,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=61",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=62",{
             updateViaCache:"none"
           });
 
@@ -1865,26 +1865,83 @@
     return [...schedules,...invoices].sort((a,b)=>`${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`));
   }
 
-  function techJobCard(job){
+  function techJobDateParts(value){
+    if(!value) return {weekday:"-",date:"-"};
+    const date=new Date(`${value}T00:00:00`);
+    if(Number.isNaN(date.getTime())) return {weekday:"-",date:formatDate(value)};
+    return {
+      weekday:new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(date).toUpperCase().replace(".",""),
+      date:new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short"}).format(date).toUpperCase().replace(".","")
+    };
+  }
+
+  function techStatusAction(job){
+    if(job.status==="Terjadwal") return {label:"Berangkat",next:"Dalam Perjalanan",icon:"➤"};
+    if(job.status==="Dalam Perjalanan") return {label:"Mulai",next:"Dikerjakan",icon:"▶"};
+    if(job.status==="Dikerjakan") return {label:"Selesaikan",next:"Selesai",icon:"✓"};
+    return null;
+  }
+
+  function techStatusCardClass(status){
+    if(status==="Dalam Perjalanan") return "status-travel";
+    if(status==="Dikerjakan") return "status-working";
+    if(status==="Selesai") return "status-done";
+    if(status==="Dibatalkan") return "status-cancelled";
+    return "status-scheduled";
+  }
+
+  function techJobCard(job,variant="work"){
     const phone=normalizeWhatsAppNumber(job.customer_phone);
-    return `<article class="tech-job-card ${job.source}-source">
-      <div class="tech-job-card-head"><div><strong class="tech-job-time">${esc((job.work_time||"-").slice(0,5))}</strong><span class="tech-job-date">${formatDate(job.work_date)}</span></div>${workStatusBadge(job.status)}</div>
-      <div class="tech-job-number">${job.source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}<span class="tech-job-source">${job.source==="schedule"?"Jadwal":"Nota"}</span></div>
-      <div class="tech-job-customer">${esc(job.customer_name||"-")}</div>
-      <div class="tech-job-description">${esc(job.description||"Pekerjaan lapangan")}</div>
-      <div class="tech-job-meta"><div><span>⌖</span><span>${esc(job.customer_address||"Lokasi belum diisi")}</span></div><div><span>☎</span><span>${esc(job.customer_phone||"Nomor belum diisi")}</span></div></div>
-      <div class="tech-job-actions"><button class="btn primary tech-detail-btn" data-source="${job.source}" data-id="${job.id}" type="button">Lihat Pekerjaan</button>${phone?`<a class="btn secondary tech-contact-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">Hubungi</a>`:`<button class="btn secondary" type="button" disabled>Hubungi</button>`}</div>
+    const mapsUrl=job.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.customer_address)}`:"";
+    const action=techStatusAction(job);
+    const time=esc((job.work_time||"-").slice(0,5));
+    const day=techJobDateParts(job.work_date);
+    const sourceLabel=job.source==="schedule"?"Jadwal":"Nota";
+    const main=`<div class="tech-job-main">
+      <div class="tech-job-main-title"><strong>${esc(job.customer_name||"-")}</strong>${phone?'<span class="tech-mini-wa">◉</span>':""}</div>
+      <span class="tech-job-service">${esc(job.description||"Pekerjaan lapangan")}</span>
+      <div class="tech-job-location"><span>⌖</span><span>${esc(job.customer_address||"Lokasi belum diisi")}</span></div>
+      <span class="tech-job-source">${sourceLabel}</span>
+    </div>`;
+    const status=`<div class="tech-job-status-area">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small>${job.work_time?`<strong>${time} WIB</strong>`:""}</div>`;
+    const detailBtn=`<button class="btn outline tech-detail-btn" data-source="${job.source}" data-id="${job.id}" type="button">▣ Detail</button>`;
+    const waBtn=phone?`<a class="btn outline tech-wa-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">◉ WhatsApp</a>`:`<button class="btn outline" type="button" disabled>WhatsApp</button>`;
+    const mapBtn=mapsUrl?`<a class="btn outline tech-map-btn" href="${mapsUrl}" target="_blank" rel="noopener">⌖ Buka Maps</a>`:`<button class="btn outline" type="button" disabled>Buka Maps</button>`;
+    const actionBtn=action?`<button class="btn primary tech-quick-status" data-source="${job.source}" data-id="${job.id}" data-status="${action.next}" type="button">${action.icon} ${action.label}</button>`:"";
+    const actions=`<div class="tech-job-row-actions">${detailBtn}${variant!=="dashboard"?waBtn:""}${variant!=="dashboard"?mapBtn:""}${actionBtn}</div>`;
+
+    if(variant==="upcoming"){
+      return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
+        <div class="tech-upcoming-day"><strong>${esc(day.weekday)}</strong><span>${esc(day.date)}</span></div>
+        <div class="tech-upcoming-time">${time}<small>WIB</small></div>
+        ${main}
+        <div class="tech-job-location"><span>⌖</span><span>${esc(job.customer_address||"Lokasi belum diisi")}</span></div>
+        ${status}
+        ${actions}
+      </article>`;
+    }
+
+    return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
+      <div class="tech-job-time-block"><strong class="tech-job-time">${time}</strong><small>WIB</small></div>
+      ${main}
+      ${status}
+      ${actions}
     </article>`;
   }
 
   function bindTechJobButtons(container){
     if(!container)return;
     container.querySelectorAll(".tech-detail-btn").forEach(btn=>btn.addEventListener("click",()=>openTechJobDetail(btn.dataset.source,btn.dataset.id)));
+    container.querySelectorAll(".tech-quick-status").forEach(btn=>btn.addEventListener("click",()=>{
+      const next=btn.dataset.status;
+      if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?")) return;
+      updateTechJobStatus(btn.dataset.source,btn.dataset.id,next);
+    }));
   }
 
-  function renderTechJobList(container,data,emptyText){
+  function renderTechJobList(container,data,emptyText,variant="work"){
     if(!container)return;
-    container.innerHTML=data.length?data.map(techJobCard).join(""):`<div class="tech-job-empty">${esc(emptyText||"Belum ada pekerjaan.")}</div>`;
+    container.innerHTML=data.length?data.map(job=>techJobCard(job,variant)).join(""):`<div class="tech-job-empty">${esc(emptyText||"Belum ada pekerjaan.")}</div>`;
     bindTechJobButtons(container);
   }
 
@@ -1894,32 +1951,66 @@
     const todayJobs=all.filter(job=>job.work_date===today && job.status!=="Dibatalkan");
     const active=all.filter(job=>["Dalam Perjalanan","Dikerjakan"].includes(job.status));
     const doneToday=todayJobs.filter(job=>job.status==="Selesai");
-    const upcoming=all.filter(job=>job.work_date>today && job.status!=="Dibatalkan").slice(0,3);
+    const upcoming=all.filter(job=>job.work_date>today && !["Dibatalkan","Selesai"].includes(job.status));
+    const nextJob=upcoming[0]||null;
     const name=state.accessContext?.display_name||"Teknisi";
     if($("techWelcomeName")) $("techWelcomeName").textContent=name;
     if($("techAvatarLarge")) $("techAvatarLarge").textContent=initialsFromName(name);
     if($("techTodayCount")) $("techTodayCount").textContent=todayJobs.length;
     if($("techActiveCount")) $("techActiveCount").textContent=active.length;
     if($("techDoneCount")) $("techDoneCount").textContent=doneToday.length;
+    if($("techNextTime")) $("techNextTime").textContent=nextJob?(nextJob.work_time||"-").slice(0,5):"-";
+    if($("techNextDate")) $("techNextDate").textContent=nextJob?`${formatDate(nextJob.work_date)}`:"Belum ada jadwal";
+    if($("techTodayBadge")) $("techTodayBadge").textContent=todayJobs.length;
+    if($("techUpcomingBadge")) $("techUpcomingBadge").textContent=upcoming.length;
     if($("techTodayLabel")) $("techTodayLabel").textContent=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date());
-    renderTechJobList($("techTodayJobs"),todayJobs,"Belum ada pekerjaan yang ditugaskan untuk hari ini.");
-    renderTechJobList($("techUpcomingJobs"),upcoming,"Belum ada pekerjaan berikutnya.");
+    renderTechJobList($("techTodayJobs"),todayJobs,"Belum ada pekerjaan yang ditugaskan untuk hari ini.","dashboard");
+    renderTechJobList($("techUpcomingJobs"),upcoming.slice(0,4),"Belum ada pekerjaan berikutnya.","upcoming");
   }
 
   function renderTechJobs(){
     if(!isTechnicianAccount()||!$("techJobsList"))return;
-    let data=techUnifiedJobs();const today=localDate(),tomorrow=datePlusDays(1);
-    if(state.techJobFilter==="today") data=data.filter(job=>job.work_date===today);
-    else if(state.techJobFilter==="tomorrow") data=data.filter(job=>job.work_date===tomorrow);
-    else if(state.techJobFilter==="active") data=data.filter(job=>!["Selesai","Dibatalkan"].includes(job.status)&&job.work_date>=today);
-    renderTechJobList($("techJobsList"),data,"Tidak ada pekerjaan pada filter ini.");
+    const all=techUnifiedJobs(),today=localDate(),tomorrow=datePlusDays(1);
+    const activeAll=all.filter(job=>!["Selesai","Dibatalkan"].includes(job.status)&&job.work_date>=today);
+    const travel=all.filter(job=>job.status==="Dalam Perjalanan");
+    const working=all.filter(job=>job.status==="Dikerjakan");
+    const doneToday=all.filter(job=>job.work_date===today&&job.status==="Selesai");
+    if($("techJobsTotalCount")) $("techJobsTotalCount").textContent=all.filter(job=>job.status!=="Dibatalkan").length;
+    if($("techTravelCount")) $("techTravelCount").textContent=travel.length;
+    if($("techWorkingCount")) $("techWorkingCount").textContent=working.length;
+    if($("techJobsDoneCount")) $("techJobsDoneCount").textContent=doneToday.length;
+    if($("techJobsPageDate")) $("techJobsPageDate").textContent=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date());
+
+    let primary=[],upcoming=[],title="Pekerjaan Aktif Hari Ini";
+    if(state.techJobFilter==="today"){
+      primary=all.filter(job=>job.work_date===today && !["Selesai","Dibatalkan"].includes(job.status));
+      upcoming=all.filter(job=>job.work_date>today && !["Selesai","Dibatalkan"].includes(job.status)).slice(0,6);
+      title="Pekerjaan Aktif Hari Ini";
+    }else if(state.techJobFilter==="tomorrow"){
+      primary=all.filter(job=>job.work_date===tomorrow && job.status!=="Dibatalkan");
+      upcoming=all.filter(job=>job.work_date>tomorrow && !["Selesai","Dibatalkan"].includes(job.status)).slice(0,6);
+      title="Pekerjaan Besok";
+    }else if(state.techJobFilter==="active"){
+      primary=activeAll;
+      title="Semua Pekerjaan Aktif";
+    }else{
+      primary=all.filter(job=>job.status!=="Dibatalkan");
+      title="Semua Pekerjaan";
+    }
+
+    if($("techJobsPrimaryTitle")) $("techJobsPrimaryTitle").firstChild.textContent=`${title} `;
+    if($("techJobsPrimaryBadge")) $("techJobsPrimaryBadge").textContent=primary.length;
+    if($("techJobsUpcomingBadge")) $("techJobsUpcomingBadge").textContent=upcoming.length;
+    if($("techJobsUpcomingSection")) $("techJobsUpcomingSection").classList.toggle("hidden",!upcoming.length||["active","all"].includes(state.techJobFilter));
+    renderTechJobList($("techJobsList"),primary,"Tidak ada pekerjaan pada filter ini.","work");
+    renderTechJobList($("techJobsUpcomingList"),upcoming,"Belum ada pekerjaan mendatang.","upcoming");
   }
 
   function renderTechHistory(){
     if(!isTechnicianAccount()||!$("techHistoryList"))return;
     const today=localDate();
     const data=techUnifiedJobs().filter(job=>job.status==="Selesai"||job.work_date<today).sort((a,b)=>`${b.work_date} ${b.work_time||""}`.localeCompare(`${a.work_date} ${a.work_time||""}`));
-    renderTechJobList($("techHistoryList"),data,"Riwayat pekerjaan masih kosong.");
+    renderTechJobList($("techHistoryList"),data,"Riwayat pekerjaan masih kosong.","work");
   }
 
   function renderTechProfile(){
@@ -1932,6 +2023,11 @@
   }
 
   document.querySelectorAll(".tech-job-filter").forEach(btn=>btn.addEventListener("click",()=>{state.techJobFilter=btn.dataset.techFilter||"today";document.querySelectorAll(".tech-job-filter").forEach(item=>item.classList.toggle("active",item===btn));renderTechJobs();}));
+  document.querySelectorAll("[data-tech-filter-jump]").forEach(btn=>btn.addEventListener("click",()=>{
+    const filter=btn.dataset.techFilterJump||"all";state.techJobFilter=filter;
+    document.querySelectorAll(".tech-job-filter").forEach(item=>item.classList.toggle("active",item.dataset.techFilter===filter));
+    renderTechJobs();
+  }));
 
   function scheduleLabelToRaw(status){return ({"Terjadwal":"scheduled","Dalam Perjalanan":"on_the_way","Dikerjakan":"working","Selesai":"completed","Dibatalkan":"cancelled"})[status]||"scheduled";}
 
@@ -1982,7 +2078,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:59,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:62,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=61">
-  <title>LORHIL AC Online V61</title>
+  <link rel="stylesheet" href="style.css?v=62">
+  <title>LORHIL AC Online V62</title>
 </head>
-<body data-app-version="59">
+<body data-app-version="62">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -522,38 +522,75 @@
           </div>
         </section>
 
-        <section id="page-tech-dashboard" class="page technician-page">
-          <div class="tech-welcome-card">
-            <div>
+        <section id="page-tech-dashboard" class="page technician-page tech-dashboard-page">
+          <div class="tech-welcome-card tech-welcome-pro">
+            <div class="tech-welcome-copy">
               <span class="tech-eyebrow">TEKNISI LAPANGAN</span>
-              <h2>Halo, <span id="techWelcomeName">Teknisi</span> 👋</h2>
-              <p id="techWelcomeText">Berikut pekerjaan yang ditugaskan kepada Anda.</p>
+              <h2>Halo, <span id="techWelcomeName">Teknisi</span>! 👋</h2>
+              <p id="techWelcomeText">Semangat hari ini! Selesaikan setiap pekerjaan dengan terbaik.</p>
             </div>
-            <div class="tech-avatar-large" id="techAvatarLarge">T</div>
+            <div class="tech-hero-illustration" aria-hidden="true">
+              <svg viewBox="0 0 180 120" role="img">
+                <defs><linearGradient id="techShirt" x1="0" x2="1"><stop offset="0" stop-color="#0c3d91"/><stop offset="1" stop-color="#071f54"/></linearGradient></defs>
+                <circle cx="93" cy="38" r="20" fill="#f3b07b"/>
+                <path d="M72 36c4-19 37-22 43-2-12-3-31-3-43 2Z" fill="#082d75"/>
+                <path d="M79 22c9-8 27-7 34 2l-2 7c-12-4-25-4-37 0l5-9Z" fill="#0a54cf"/>
+                <path d="M70 63c8-11 39-13 49-1l13 44H58l12-43Z" fill="url(#techShirt)"/>
+                <path d="M91 58h10v48H91Z" fill="#0b5fdd" opacity=".7"/>
+                <rect x="101" y="75" width="17" height="12" rx="2" fill="#061a43" opacity=".65"/>
+                <path d="M55 72 30 91l8 11 26-15Z" fill="#f3b07b"/>
+                <rect x="23" y="72" width="25" height="36" rx="5" transform="rotate(-12 23 72)" fill="#0a1d43"/>
+                <path d="M124 69 148 91l-9 10-24-18Z" fill="#f3b07b"/>
+                <circle cx="86" cy="39" r="2" fill="#18233c"/><circle cx="101" cy="39" r="2" fill="#18233c"/>
+                <path d="M90 49c4 3 8 3 12 0" fill="none" stroke="#8e4e38" stroke-width="2" stroke-linecap="round"/>
+                <text x="102" y="68" font-size="7" font-family="Arial" fill="#fff" font-weight="700">LORHIL AC</text>
+              </svg>
+            </div>
+            <div class="tech-safety-note">
+              <span class="tech-safety-icon">✓</span>
+              <div><strong>Utamakan keselamatan kerja</strong><small>Gunakan APD dan periksa kondisi unit sebelum memulai pekerjaan.</small></div>
+            </div>
           </div>
 
-          <div class="tech-summary-grid">
-            <article class="tech-summary-card blue"><span>Hari Ini</span><strong id="techTodayCount">0</strong><small>Pekerjaan</small></article>
-            <article class="tech-summary-card orange"><span>Berjalan</span><strong id="techActiveCount">0</strong><small>Dalam proses</small></article>
-            <article class="tech-summary-card green"><span>Selesai</span><strong id="techDoneCount">0</strong><small>Hari ini</small></article>
+          <div class="tech-summary-grid tech-summary-grid-four">
+            <article class="tech-summary-card blue"><span class="tech-summary-icon">▣</span><div><small>HARI INI</small><strong id="techTodayCount">0</strong><p>Pekerjaan</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card orange"><span class="tech-summary-icon">↻</span><div><small>BERJALAN</small><strong id="techActiveCount">0</strong><p>Dalam proses</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card green"><span class="tech-summary-icon">✓</span><div><small>SELESAI</small><strong id="techDoneCount">0</strong><p>Hari ini</p><button class="tech-summary-link" data-page="tech-history" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card purple"><span class="tech-summary-icon">◷</span><div><small>JADWAL BERIKUTNYA</small><strong id="techNextTime">-</strong><p id="techNextDate">Belum ada jadwal</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat detail →</button></div></article>
           </div>
 
-          <div class="tech-section-head"><div><h3>Pekerjaan Hari Ini</h3><p id="techTodayLabel"></p></div><button class="btn outline tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
-          <div id="techTodayJobs" class="tech-job-list"></div>
+          <div class="tech-section-head"><div><h3>Pekerjaan Hari Ini <span id="techTodayBadge" class="tech-count-badge">0</span></h3><p id="techTodayLabel"></p></div><button class="tech-text-link tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
+          <div id="techTodayJobs" class="tech-job-list tech-dashboard-job-list"></div>
 
-          <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Berikutnya</h3><p>Tugas terdekat setelah hari ini.</p></div></div>
-          <div id="techUpcomingJobs" class="tech-job-list compact"></div>
+          <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Berikutnya <span id="techUpcomingBadge" class="tech-count-badge purple">0</span></h3><p>Tugas terdekat setelah hari ini.</p></div><button class="tech-text-link tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
+          <div id="techUpcomingJobs" class="tech-job-list compact tech-upcoming-list"></div>
         </section>
 
-        <section id="page-tech-jobs" class="page technician-page">
-          <div class="page-head tech-page-head"><div><h2>Pekerjaan Saya</h2><p>Hanya pekerjaan yang ditugaskan kepada akun Anda.</p></div></div>
-          <div class="tech-filter-row">
+        <section id="page-tech-jobs" class="page technician-page tech-jobs-page">
+          <div class="page-head tech-page-head"><div><h2>Pekerjaan Saya</h2><p id="techJobsPageDate">Daftar pekerjaan yang ditugaskan kepada akun Anda.</p></div></div>
+          <div class="tech-filter-row tech-filter-row-pro">
             <button class="chip tech-job-filter active" data-tech-filter="today" type="button">Hari Ini</button>
             <button class="chip tech-job-filter" data-tech-filter="tomorrow" type="button">Besok</button>
             <button class="chip tech-job-filter" data-tech-filter="active" type="button">Aktif</button>
             <button class="chip tech-job-filter" data-tech-filter="all" type="button">Semua</button>
           </div>
-          <div id="techJobsList" class="tech-job-list"></div>
+
+          <div class="tech-work-stats">
+            <article class="blue"><span class="tech-work-stat-icon">▣</span><div><small>TOTAL TUGAS</small><strong id="techJobsTotalCount">0</strong><p>Semua pekerjaan</p></div></article>
+            <article class="orange"><span class="tech-work-stat-icon">➤</span><div><small>DALAM PERJALANAN</small><strong id="techTravelCount">0</strong><p>Menuju lokasi</p></div></article>
+            <article class="green"><span class="tech-work-stat-icon">⌕</span><div><small>DIKERJAKAN</small><strong id="techWorkingCount">0</strong><p>Sedang dikerjakan</p></div></article>
+            <article class="purple"><span class="tech-work-stat-icon">✓</span><div><small>SELESAI</small><strong id="techJobsDoneCount">0</strong><p>Hari ini</p></div></article>
+          </div>
+
+          <div id="techJobsPrimarySection">
+            <div class="tech-section-head"><div><h3 id="techJobsPrimaryTitle">Pekerjaan Aktif Hari Ini <span id="techJobsPrimaryBadge" class="tech-count-badge">0</span></h3></div><button class="tech-text-link" data-tech-filter-jump="all" type="button">Lihat Semua</button></div>
+            <div id="techJobsList" class="tech-job-list tech-work-list"></div>
+          </div>
+
+          <div id="techJobsUpcomingSection">
+            <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Mendatang <span id="techJobsUpcomingBadge" class="tech-count-badge purple">0</span></h3></div><button class="tech-text-link" data-tech-filter-jump="all" type="button">Lihat Semua</button></div>
+            <div id="techJobsUpcomingList" class="tech-job-list compact tech-upcoming-list"></div>
+          </div>
         </section>
 
         <section id="page-tech-history" class="page technician-page">
@@ -623,6 +660,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=61"></script>
+  <script src="app.js?v=62"></script>
 </body>
 </html>

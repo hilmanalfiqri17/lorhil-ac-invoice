@@ -165,7 +165,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=65",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=66",{
             updateViaCache:"none"
           });
 
@@ -1928,13 +1928,14 @@
     const actions=`<div class="tech-job-row-actions">${detailBtn}${variant!=="dashboard"?waBtn:""}${variant!=="dashboard"?mapBtn:""}${actionBtn}</div>`;
 
     if(variant==="upcoming"){
+      const upcomingStatus=`<div class="tech-job-status-area tech-upcoming-status">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small></div>`;
+      const upcomingActions=`<div class="tech-job-row-actions tech-upcoming-actions">${detailBtn}</div>`;
       return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
         <div class="tech-upcoming-day"><strong>${esc(day.weekday)}</strong><span>${esc(day.date)}</span></div>
         <div class="tech-upcoming-time">${time}<small>WIB</small></div>
         ${main}
-        <div class="tech-job-location"><span class="tech-location-icon">${techIcon("pin")}</span><span>${esc(job.customer_address||"Lokasi belum diisi")}</span></div>
-        ${status}
-        ${actions}
+        ${upcomingStatus}
+        ${upcomingActions}
       </article>`;
     }
 

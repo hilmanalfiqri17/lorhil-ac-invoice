@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=54">
+  <link rel="stylesheet" href="style.css?v=57">
   <title>LORHIL AC Online V53</title>
 </head>
-<body data-app-version="55">
+<body data-app-version="57">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -70,16 +70,9 @@
         <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
         <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
         <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
+        <button class="nav-btn" data-page="monitoring"><span class="nav-icon">◉</span><span>Monitoring Teknisi</span></button>
         <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
         <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
-      </nav>
-
-      <nav id="supervisorNav" class="hidden supervisor-sidebar-nav">
-        <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
-        <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
-        <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
-        <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
-        <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Monitoring Teknisi</span></button>
       </nav>
 
       <nav id="technicianNav" class="hidden technician-sidebar-nav">
@@ -122,15 +115,6 @@
         <section id="page-dashboard" class="page active dashboard-page">
           <input id="dashboardSearch" type="hidden" value="">
           <select id="dashboardStatus" class="hidden" aria-hidden="true"><option value="all">Semua</option></select>
-
-          <div id="supervisorWelcomeCard" class="supervisor-welcome-card hidden">
-            <div>
-              <span class="supervisor-eyebrow">SUPERVISOR OPERASIONAL</span>
-              <h2>Halo, <span id="supervisorWelcomeName">Hendri</span> 👋</h2>
-              <p>Pantau seluruh pekerjaan tim, atur jadwal teknisi, dan cek perkembangan nota tanpa akses pengaturan sensitif.</p>
-            </div>
-            <span class="supervisor-role-pill">Supervisor</span>
-          </div>
 
           <div class="stats dashboard-stats">
             <article class="stat-card blue">
@@ -378,7 +362,7 @@
         <section id="page-technicians" class="page">
           <div class="page-head"><div><h2>Teknisi & Akun Tim</h2><p>Kelola teknisi lapangan dan akses login anggota LORHIL AC.</p></div></div>
 
-          <div id="technicianDirectoryPanel" class="panel">
+          <div class="panel">
             <div class="panel-head"><div><h3>Daftar Teknisi</h3><p>Nama teknisi dapat dipilih saat membuat atau mengedit nota.</p></div></div>
             <form id="technicianForm" class="technician-form-row">
               <div class="field"><label>Nama Teknisi *</label><input id="technicianName" required placeholder="Contoh: Andi"></div>
@@ -449,6 +433,36 @@
               </table>
             </div>
             <div class="notice team-account-note">Menonaktifkan akun tidak menghapus invoice atau riwayat pekerjaan. Jika anggota bekerja kembali, gunakan tombol <strong>Aktifkan</strong>.</div>
+          </div>
+        </section>
+
+        <section id="page-monitoring" class="page">
+          <div class="page-head monitoring-page-head">
+            <div><h2>Monitoring Teknisi</h2><p>Pantau beban kerja dan status tim lapangan dari jadwal yang tersinkron.</p></div>
+            <button id="monitorOpenSchedulesBtn" class="btn primary" type="button">＋ Atur Jadwal</button>
+          </div>
+
+          <div class="monitor-summary-grid">
+            <article class="monitor-summary-card"><span class="monitor-summary-icon blue">●</span><div><small>Teknisi Aktif</small><strong id="monitorActiveTech">0</strong><p>Anggota aktif</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon orange">➜</span><div><small>Dalam Perjalanan</small><strong id="monitorOnWay">0</strong><p>Saat ini</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon purple">◆</span><div><small>Sedang Dikerjakan</small><strong id="monitorWorking">0</strong><p>Saat ini</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon gray">○</span><div><small>Belum Ada Tugas</small><strong id="monitorIdle">0</strong><p>Hari ini</p></div></article>
+          </div>
+
+          <div class="panel monitoring-panel">
+            <div class="panel-head monitoring-head">
+              <div><h3>Kondisi Tim Lapangan</h3><p>Statistik pekerjaan mengikuti periode yang dipilih. Status saat ini selalu membaca pekerjaan hari ini.</p></div>
+              <div class="monitor-period-chips">
+                <button class="chip monitor-period active" data-monitor-period="today" type="button">Hari Ini</button>
+                <button class="chip monitor-period" data-monitor-period="7days" type="button">7 Hari</button>
+                <button class="chip monitor-period" data-monitor-period="month" type="button">Bulan Ini</button>
+              </div>
+            </div>
+            <div class="monitor-toolbar">
+              <label class="table-search wide"><span>⌕</span><input id="monitorSearch" class="search" placeholder="Cari nama teknisi"></label>
+              <select id="monitorAccountStatus"><option value="all">Semua Teknisi</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select>
+            </div>
+            <div id="monitorTechnicianCards" class="monitor-technician-list"></div>
           </div>
         </section>
 
@@ -553,6 +567,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=57"></script>
 </body>
 </html>

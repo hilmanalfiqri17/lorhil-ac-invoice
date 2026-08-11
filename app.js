@@ -115,9 +115,31 @@
     const { data } = await db.auth.getSession();
     state.session = data.session;
 
-    db.auth.onAuthStateChange((_event, session) => {
+    db.auth.onAuthStateChange((event, session) => {
+      const previousUserId=state.session?.user?.id||null;
+      const nextUserId=session?.user?.id||null;
       state.session=session;
-      session ? enterApp() : showLogin();
+
+      // Supabase dapat mengirim event TOKEN_REFRESHED saat tab kembali aktif.
+      // Jangan jalankan enterApp() untuk refresh token karena itu akan
+      // mengembalikan pengguna ke Dashboard dan menutup halaman yang sedang dibuka.
+      if(!session){
+        if(previousUserId || event==="SIGNED_OUT"){
+          if(previousUserId) sessionStorage.removeItem(`lorhil-active-page:${previousUserId}`);
+          showLogin();
+        }
+        return;
+      }
+
+      const isFreshLogin =
+        event==="SIGNED_IN" ||
+        (!previousUserId && !!nextUserId) ||
+        (!!previousUserId && !!nextUserId && previousUserId!==nextUserId);
+
+      if(isFreshLogin){
+        // Jalankan di tick berikutnya agar callback auth tetap ringan.
+        setTimeout(()=>{ enterApp({restorePage:true}); },0);
+      }
     });
 
     if(state.session) await enterApp(); else showLogin();
@@ -125,7 +147,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=57",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=58",{
             updateViaCache:"none"
           });
 
@@ -135,13 +157,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v54")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v58")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v54";
+            const reloadKey="lorhil-sw-reloaded-v58";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -158,7 +180,29 @@
     $("loginError").textContent="";
   }
 
-  async function enterApp(){
+  function pageStorageKey(){
+    return `lorhil-active-page:${uid()||"guest"}`;
+  }
+
+  function defaultPageForRole(){
+    return isTechnicianAccount()?"tech-dashboard":"dashboard";
+  }
+
+  function normalizePageForRole(page){
+    const techPages=new Set(["tech-dashboard","tech-jobs","tech-history","tech-profile"]);
+    if(isTechnicianAccount()) return techPages.has(page)?page:"tech-dashboard";
+    return techPages.has(page)?"dashboard":page;
+  }
+
+  function rememberedPage(){
+    try{
+      return normalizePageForRole(sessionStorage.getItem(pageStorageKey())||defaultPageForRole());
+    }catch(_error){
+      return defaultPageForRole();
+    }
+  }
+
+  async function enterApp(options={}){
     hide("setupScreen"); hide("loginScreen"); show("app");
     $("todayText").textContent=new Intl.DateTimeFormat("id-ID",{
       weekday:"long",day:"numeric",month:"long",year:"numeric"
@@ -176,7 +220,8 @@
     await refreshAll();
     applyAccessUi();
     subscribeRealtime();
-    showPage(isTechnicianAccount()?"tech-dashboard":"dashboard");
+    const targetPage=options.restorePage===false?defaultPageForRole():rememberedPage();
+    showPage(targetPage);
   }
 
   $("loginForm").addEventListener("submit",async e=>{
@@ -205,12 +250,11 @@
   document.querySelectorAll(".tech-see-all[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
 
   function showPage(page){
-    const techPages=new Set(["tech-dashboard","tech-jobs","tech-history","tech-profile"]);
-    if(isTechnicianAccount() && !techPages.has(page)) page="tech-dashboard";
-    if(!isTechnicianAccount() && techPages.has(page)) page="dashboard";
+    page=normalizePageForRole(page);
     const target=$(`page-${page}`);
     if(!target) return;
     state.page=page;
+    try{ sessionStorage.setItem(pageStorageKey(),page); }catch(_error){}
     document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
     target.classList.add("active");
     document.querySelectorAll(".nav-btn[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));

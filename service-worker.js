@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v58";
+const CACHE = "lorhil-ac-online-v59";
 const CORE_ASSETS = [
   "./",
   "index.html",

@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=57">
-  <title>LORHIL AC Online V53</title>
+  <link rel="stylesheet" href="style.css?v=59">
+  <title>LORHIL AC Online V59</title>
 </head>
-<body data-app-version="58">
+<body data-app-version="59">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -71,6 +71,7 @@
         <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
         <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
         <button class="nav-btn" data-page="monitoring"><span class="nav-icon">◉</span><span>Monitoring Teknisi</span></button>
+        <button class="nav-btn" data-page="activity"><span class="nav-icon">≡</span><span>Aktivitas Tim</span></button>
         <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
         <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
       </nav>
@@ -466,6 +467,41 @@
           </div>
         </section>
 
+        <section id="page-activity" class="page">
+          <div class="page-head activity-page-head">
+            <div><h2>Aktivitas Tim</h2><p>Riwayat perubahan jadwal dan nota yang dilakukan Admin maupun teknisi.</p></div>
+            <button id="activityRefreshBtn" class="btn secondary" type="button">↻ Segarkan</button>
+          </div>
+
+          <div class="activity-summary-grid">
+            <article class="activity-summary-card"><span class="activity-summary-icon blue">≡</span><div><small>Aktivitas Hari Ini</small><strong id="activityTodayCount">0</strong><p>Semua aktivitas</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon orange">◷</span><div><small>Aktivitas Jadwal</small><strong id="activityScheduleCount">0</strong><p>Periode dipilih</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon purple">↻</span><div><small>Perubahan Status</small><strong id="activityStatusCount">0</strong><p>Periode dipilih</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon green">▤</span><div><small>Aktivitas Nota</small><strong id="activityInvoiceCount">0</strong><p>Periode dipilih</p></div></article>
+          </div>
+
+          <div class="panel activity-panel">
+            <div class="panel-head activity-head">
+              <div><h3>Riwayat Aktivitas</h3><p>Log baru mulai tercatat setelah SQL Activity Log V59 dijalankan.</p></div>
+            </div>
+            <div class="activity-toolbar">
+              <label class="table-search wide"><span>⌕</span><input id="activitySearch" class="search" placeholder="Cari nama anggota, pelanggan, atau aktivitas"></label>
+              <select id="activityPeriod">
+                <option value="today">Hari Ini</option>
+                <option value="7days" selected>7 Hari Terakhir</option>
+                <option value="30days">30 Hari Terakhir</option>
+                <option value="all">Semua Waktu</option>
+              </select>
+              <select id="activityType">
+                <option value="all">Semua Aktivitas</option>
+                <option value="schedule">Jadwal Pekerjaan</option>
+                <option value="invoice">Nota / Pembayaran</option>
+              </select>
+            </div>
+            <div id="activityList" class="activity-timeline"></div>
+          </div>
+        </section>
+
         <section id="page-tech-dashboard" class="page technician-page">
           <div class="tech-welcome-card">
             <div>
@@ -567,6 +603,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=58"></script>
+  <script src="app.js?v=59"></script>
 </body>
 </html>

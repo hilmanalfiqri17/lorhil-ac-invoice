@@ -50,7 +50,8 @@
     session:null, invoices:[], settings:null, technicians:[],
     invoiceTechnicians:[], schedules:[], scheduleTechnicians:[], page:"dashboard", accessContext:null, monitorPeriod:"today",
     dashboardPeriod:"today", realtime:null, techJobFilter:"today",
-    revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[], invoiceSourceScheduleId:null
+    revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[], invoiceSourceScheduleId:null,
+    activityLogs:[]
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -147,7 +148,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=58",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=59",{
             updateViaCache:"none"
           });
 
@@ -157,7 +158,7 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v58")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v59")
                 .map(key=>caches.delete(key))
             );
           }
@@ -242,7 +243,7 @@
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
   const titles={
-    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",settings:"Pengaturan",backup:"Backup",
+    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",activity:"Aktivitas Tim",settings:"Pengaturan",backup:"Backup",
     "tech-dashboard":"Dashboard Teknisi","tech-jobs":"Pekerjaan Saya","tech-history":"Riwayat Pekerjaan","tech-profile":"Profil Teknisi"
   };
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
@@ -266,6 +267,7 @@
     if(page==="customers") renderCustomers();
     if(page==="technicians") renderTechnicians();
     if(page==="monitoring") renderMonitoringTechnicians();
+    if(page==="activity") renderActivityLog();
     if(page==="settings") renderSettings();
     if(page==="invoice"){ refreshCustomerList(); renderTechnicianChoices(); }
     if(page==="tech-dashboard") renderTechDashboard();
@@ -278,13 +280,17 @@
     if(!uid()) return;
     loading(true);
     try{
-      const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult,scheduleResult,scheduleTechnicianResult]=await Promise.all([
+      const activityQuery=isTechnicianAccount()
+        ? Promise.resolve({data:[],error:null})
+        : db.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(300);
+      const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult,scheduleResult,scheduleTechnicianResult,activityResult]=await Promise.all([
         db.from("invoices").select("*, invoice_items(*)").order("work_date",{ascending:false}).order("work_time",{ascending:false}),
         db.from("store_settings").select("*").maybeSingle(),
         db.from("technicians").select("*").order("name",{ascending:true}),
         db.from("invoice_technicians").select("*"),
         db.from("work_schedules").select("*").order("work_date",{ascending:true}).order("work_time",{ascending:true}),
-        db.from("schedule_technicians").select("*")
+        db.from("schedule_technicians").select("*"),
+        activityQuery
       ]);
 
       if(invoiceResult.error) throw invoiceResult.error;
@@ -293,7 +299,9 @@
       if(invoiceTechnicianResult.error) throw new Error("Relasi teknisi pada nota belum siap. Jalankan supabase-setup-v36.sql melalui Supabase SQL Editor. " + invoiceTechnicianResult.error.message);
       if(scheduleResult.error) throw new Error("Modul Jadwal belum siap. Pastikan SQL V52 Jadwal dan patch akses V54 sudah dijalankan. " + scheduleResult.error.message);
       if(scheduleTechnicianResult.error) throw new Error("Relasi teknisi jadwal belum siap. Pastikan patch akses Jadwal V54 sudah dijalankan. " + scheduleTechnicianResult.error.message);
+      if(activityResult.error) throw new Error("Activity Log belum siap. Jalankan SQL V59 Activity Log terlebih dahulu. " + activityResult.error.message);
 
+      state.activityLogs=activityResult.data||[];
       state.technicians=technicianResult.data||[];
       state.invoiceTechnicians=invoiceTechnicianResult.data||[];
       state.scheduleTechnicians=scheduleTechnicianResult.data||[];
@@ -332,6 +340,7 @@
         renderCustomers();
         renderTechnicians();
         renderMonitoringTechnicians();
+        renderActivityLog();
         refreshCustomerList();
         renderScheduleCustomerList();
         renderTechnicianChoices();
@@ -1971,21 +1980,119 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:57,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:59,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
+  });
+
+
+  function activityDate(value){
+    const date=new Date(value);
+    if(Number.isNaN(date.getTime())) return "-";
+    return new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(date);
+  }
+
+  function activityRoleLabel(role){
+    if(role==="technician") return "Teknisi";
+    if(role==="supervisor") return "Supervisor";
+    if(role==="admin") return "Admin";
+    return "Sistem";
+  }
+
+  function activityVisual(row){
+    const action=String(row?.action||"");
+    if(action==="schedule_status_changed") return {cls:"status",icon:"↻"};
+    if(action==="technician_assigned"||action==="technician_unassigned") return {cls:"assignment",icon:"♙"};
+    if(action.includes("deleted")) return {cls:"delete",icon:"×"};
+    if(row?.entity_type==="schedule") return {cls:"schedule",icon:"◷"};
+    if(row?.entity_type==="invoice") return {cls:"invoice",icon:"▤"};
+    return {cls:"other",icon:"•"};
+  }
+
+  function activityWithinPeriod(row,period){
+    if(period==="all") return true;
+    const created=new Date(row.created_at);
+    if(Number.isNaN(created.getTime())) return false;
+    const now=new Date();
+    if(period==="today") return created.toDateString()===now.toDateString();
+    const start=new Date(now); start.setHours(0,0,0,0);
+    if(period==="7days") start.setDate(start.getDate()-6);
+    if(period==="30days") start.setDate(start.getDate()-29);
+    return created>=start;
+  }
+
+  function filteredActivityRows(){
+    const period=$("activityPeriod")?.value||"7days";
+    const type=$("activityType")?.value||"all";
+    const query=String($("activitySearch")?.value||"").trim().toLowerCase();
+    return [...(state.activityLogs||[])].filter(row=>{
+      if(!activityWithinPeriod(row,period)) return false;
+      if(type!=="all" && row.entity_type!==type) return false;
+      if(query){
+        const haystack=[row.actor_name,row.actor_role,row.entity_label,row.description,row.action].map(v=>String(v||"").toLowerCase()).join(" ");
+        if(!haystack.includes(query)) return false;
+      }
+      return true;
+    }).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  }
+
+  function renderActivityLog(){
+    if(!$("activityList") || isTechnicianAccount()) return;
+    const rows=filteredActivityRows();
+    const today=(state.activityLogs||[]).filter(row=>activityWithinPeriod(row,"today"));
+    const period=$("activityPeriod")?.value||"7days";
+    const periodRows=(state.activityLogs||[]).filter(row=>activityWithinPeriod(row,period));
+
+    if($("activityTodayCount")) $("activityTodayCount").textContent=today.length;
+    if($("activityScheduleCount")) $("activityScheduleCount").textContent=periodRows.filter(row=>row.entity_type==="schedule").length;
+    if($("activityStatusCount")) $("activityStatusCount").textContent=periodRows.filter(row=>row.action==="schedule_status_changed").length;
+    if($("activityInvoiceCount")) $("activityInvoiceCount").textContent=periodRows.filter(row=>row.entity_type==="invoice").length;
+
+    if(!rows.length){
+      $("activityList").innerHTML='<div class="activity-empty">Belum ada aktivitas pada filter yang dipilih.</div>';
+      return;
+    }
+
+    $("activityList").innerHTML=rows.map(row=>{
+      const visual=activityVisual(row);
+      const label=row.entity_type==="invoice"?"Nota":"Jadwal";
+      return `<article class="activity-item">
+        <div class="activity-dot ${visual.cls}">${visual.icon}</div>
+        <div class="activity-card">
+          <div class="activity-card-top">
+            <strong>${esc(row.actor_name||"Sistem")}</strong>
+            <span class="activity-role">${esc(activityRoleLabel(row.actor_role))}</span>
+            <time>${esc(activityDate(row.created_at))}</time>
+          </div>
+          <p>${esc(row.description||"Aktivitas diperbarui.")}</p>
+          <small>${esc(label)}${row.entity_label?` • ${esc(row.entity_label)}`:""}</small>
+        </div>
+      </article>`;
+    }).join("");
+  }
+
+  ["activityPeriod","activityType"].forEach(id=>{
+    if($(id)) $(id).addEventListener("change",renderActivityLog);
+  });
+  if($("activitySearch")) $("activitySearch").addEventListener("input",renderActivityLog);
+  if($("activityRefreshBtn")) $("activityRefreshBtn").addEventListener("click",async()=>{
+    await refreshAll();
+    toast("Aktivitas berhasil disegarkan.");
   });
 
   function subscribeRealtime(){
     if(state.realtime) db.removeChannel(state.realtime);
     const owner=ownerUid();
-    state.realtime=db.channel(`lorhil-${owner}-${uid()}`)
+    let channel=db.channel(`lorhil-${owner}-${uid()}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"invoices",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"invoice_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"work_schedules",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
-      .on("postgres_changes",{event:"*",schema:"public",table:"schedule_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
-      .subscribe();
+      .on("postgres_changes",{event:"*",schema:"public",table:"schedule_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();});
+    if(!isTechnicianAccount()){
+      channel=channel.on("postgres_changes",{event:"INSERT",schema:"public",table:"activity_logs",filter:`owner_user_id=eq.${owner}`},async()=>{await refreshAll();});
+    }
+    state.realtime=channel.subscribe();
   }
 
   function normalizeWhatsAppNumber(value){

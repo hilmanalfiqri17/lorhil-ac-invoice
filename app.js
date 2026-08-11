@@ -148,7 +148,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=60",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=59",{
             updateViaCache:"none"
           });
 
@@ -158,13 +158,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v60")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v59")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v60";
+            const reloadKey="lorhil-sw-reloaded-v58";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -243,7 +243,7 @@
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
   const titles={
-    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",receivables:"Piutang & Jatuh Tempo",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",activity:"Aktivitas Tim",settings:"Pengaturan",backup:"Backup",
+    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",activity:"Aktivitas Tim",settings:"Pengaturan",backup:"Backup",
     "tech-dashboard":"Dashboard Teknisi","tech-jobs":"Pekerjaan Saya","tech-history":"Riwayat Pekerjaan","tech-profile":"Profil Teknisi"
   };
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
@@ -263,7 +263,6 @@
     $("sidebar").classList.remove("open");
     if(page==="dashboard") renderDashboard();
     if(page==="history") renderHistory();
-    if(page==="receivables") renderReceivables();
     if(page==="schedules") renderSchedules();
     if(page==="customers") renderCustomers();
     if(page==="technicians") renderTechnicians();
@@ -337,7 +336,6 @@
       }else{
         renderDashboard();
         renderHistory();
-        renderReceivables();
         renderSchedules();
         renderCustomers();
         renderTechnicians();
@@ -732,8 +730,6 @@
     requestAnimationFrame(renderDashboardAnalytics);
   }
 
-  if($("statUnpaid")) { const card=$("statUnpaid").closest(".stat-card"); if(card){ card.classList.add("clickable-stat"); card.addEventListener("click",openReceivables); } }
-
   function renderHistory(){
     let data=filterPeriod(state.invoices,$("historyPeriod").value,$("historyDate").value);
     data=filterStatus(data,$("historyStatus").value);
@@ -764,75 +760,6 @@
     body.querySelectorAll(".detail-btn")
       .forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.id)));
   }
-
-  function dateDiffDays(fromDate,toDate){
-    const parse=value=>{const [y,m,d]=String(value||"").split("-").map(Number);return y&&m&&d?new Date(y,m-1,d):null;};
-    const a=parse(fromDate),b=parse(toDate);if(!a||!b)return null;
-    return Math.round((b-a)/86400000);
-  }
-
-  function dueCondition(inv){
-    if(inv.status==="Lunas" || safeNumber(inv.balance)<=0) return {key:"paid",label:"Lunas",cls:"paid"};
-    if(!inv.payment_due_date) return {key:"no_due",label:"Belum diatur",cls:"neutral"};
-    const diff=dateDiffDays(localDate(),inv.payment_due_date);
-    if(diff<0) return {key:"overdue",label:`Terlambat ${Math.abs(diff)} hari`,cls:"overdue"};
-    if(diff===0) return {key:"today",label:"Hari ini",cls:"today"};
-    if(diff<=7) return {key:"7days",label:`${diff} hari lagi`,cls:"upcoming"};
-    return {key:"future",label:`${diff} hari lagi`,cls:"future"};
-  }
-
-  function openReceivables(){ showPage("receivables"); }
-
-  function renderReceivables(){
-    if(!$("receivableBody") || isTechnicianAccount()) return;
-    const open=state.invoices.filter(inv=>inv.status!=="Lunas" && safeNumber(inv.balance)>0);
-    const totalBalance=open.reduce((sum,inv)=>sum+safeNumber(inv.balance),0);
-    const overdue=open.filter(inv=>dueCondition(inv).key==="overdue");
-    const today=open.filter(inv=>dueCondition(inv).key==="today");
-    const upcoming=open.filter(inv=>dueCondition(inv).key==="7days");
-    if($("receivableBalanceTotal")) $("receivableBalanceTotal").textContent=money(totalBalance);
-    if($("receivableOverdueCount")) $("receivableOverdueCount").textContent=overdue.length;
-    if($("receivableTodayCount")) $("receivableTodayCount").textContent=today.length;
-    if($("receivableUpcomingCount")) $("receivableUpcomingCount").textContent=upcoming.length;
-
-    const filter=$("receivableFilter")?.value||"all";
-    const q=($("receivableSearch")?.value||"").trim().toLowerCase();
-    let rows=open.filter(inv=>{
-      const condition=dueCondition(inv);
-      const filterOk=filter==="all" || condition.key===filter;
-      const searchOk=!q || `${inv.invoice_number} ${inv.customer_name} ${inv.customer_phone||""}`.toLowerCase().includes(q);
-      return filterOk&&searchOk;
-    });
-    rows.sort((a,b)=>{
-      if(!a.payment_due_date&&!b.payment_due_date) return b.work_date.localeCompare(a.work_date);
-      if(!a.payment_due_date) return 1;
-      if(!b.payment_due_date) return -1;
-      return a.payment_due_date.localeCompare(b.payment_due_date);
-    });
-
-    if(!rows.length){
-      $("receivableBody").innerHTML='<tr><td colspan="8" class="empty">Tidak ada piutang pada filter ini.</td></tr>';
-      return;
-    }
-    $("receivableBody").innerHTML=rows.map(inv=>{
-      const condition=dueCondition(inv);
-      return `<tr>
-        <td><strong>${inv.payment_due_date?formatDate(inv.payment_due_date):"-"}</strong></td>
-        <td><strong>${esc(inv.invoice_number)}</strong></td>
-        <td><div class="receivable-customer"><strong>${esc(inv.customer_name)}</strong><small>${esc(inv.customer_phone||"-")}</small></div></td>
-        <td>${money(inv.total)}</td>
-        <td>${money(inv.paid)}</td>
-        <td><strong class="receivable-balance">${money(inv.balance)}</strong></td>
-        <td><span class="due-badge ${condition.cls}">${esc(condition.label)}</span></td>
-        <td><button class="btn primary receivable-detail-btn" data-id="${inv.id}" type="button">Lihat Detail</button></td>
-      </tr>`;
-    }).join("");
-    $("receivableBody").querySelectorAll(".receivable-detail-btn").forEach(btn=>btn.addEventListener("click",()=>openDetail(btn.dataset.id)));
-  }
-
-  ["receivableFilter"].forEach(id=>{if($(id)) $(id).addEventListener("change",renderReceivables);});
-  if($("receivableSearch")) $("receivableSearch").addEventListener("input",renderReceivables);
-  if($("receivablesRefreshBtn")) $("receivablesRefreshBtn").addEventListener("click",async()=>{await refreshAll();toast("Data piutang berhasil disegarkan.");});
 
   function customerGroups(){
     const map=new Map();
@@ -966,7 +893,7 @@
     state.invoiceSourceScheduleId=null;
     $("invoiceForm").reset();$("invoiceId").value="";$("invoiceNumber").value="";
     $("numberPreview").textContent="Otomatis setelah disimpan";$("invoiceHeading").textContent="Buat Nota Baru";
-    $("workDate").value=localDate();$("workTime").value=localTime();$("discount").value=0;$("paid").value=0;if($("paymentDueDate")) $("paymentDueDate").value="";
+    $("workDate").value=localDate();$("workTime").value=localTime();$("discount").value=0;$("paid").value=0;
     $("itemsBody").innerHTML="";addItem();renderTechnicianChoices([]);calculate();closeInvoiceActionMenu();
   }
   function formData(){
@@ -1038,11 +965,6 @@
       }
 
       await saveInvoiceTechnicians(savedRaw,selectedTechnicians);
-      const dueDateValue=$("paymentDueDate")?.value||null;
-      const dueDateToSave=data.status==="Lunas"?null:dueDateValue;
-      const {error:dueDateError}=await db.rpc("update_invoice_due_date",{p_invoice_id:savedRaw.id,p_payment_due_date:dueDateToSave});
-      if(dueDateError) throw new Error("Nota tersimpan tetapi jatuh tempo belum dapat disimpan. Pastikan SQL V60 sudah dijalankan. "+dueDateError.message);
-      savedRaw.payment_due_date=dueDateToSave;
       if(state.invoiceSourceScheduleId){
         const sourceScheduleId=state.invoiceSourceScheduleId;
         const {error:scheduleLinkError}=await db.from("work_schedules")
@@ -1140,7 +1062,7 @@
     $("invoiceId").value=inv.id;$("invoiceNumber").value=inv.invoice_number;$("numberPreview").textContent=inv.invoice_number;
     $("workDate").value=inv.work_date;$("workTime").value=(inv.work_time||"").slice(0,5);
     $("customerName").value=inv.customer_name;$("customerPhone").value=inv.customer_phone||"";$("customerAddress").value=inv.customer_address||"";
-    $("discount").value=inv.discount||0;$("paid").value=inv.paid||0;$("notes").value=inv.notes||"";if($("paymentDueDate")) $("paymentDueDate").value=inv.payment_due_date||"";
+    $("discount").value=inv.discount||0;$("paid").value=inv.paid||0;$("notes").value=inv.notes||"";
     $("itemsBody").innerHTML="";(inv.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order).forEach(addItem);
     renderTechnicianChoices((inv.invoice_technicians||[]).map(row=>row.technician_id));calculate();
   }
@@ -1176,7 +1098,6 @@
           <div class="detail-row"><span>Nomor</span><strong>${esc(inv.invoice_number)}</strong></div>
           <div class="detail-row"><span>Tanggal</span><strong>${formatDate(inv.work_date)} ${esc((inv.work_time||"").slice(0,5))}</strong></div>
           <div class="detail-row"><span>Status</span><div>${badge(inv.status)}</div></div>
-          <div class="detail-row"><span>Jatuh Tempo</span><strong>${inv.payment_due_date?formatDate(inv.payment_due_date):"Belum diatur"}</strong></div>
           <div class="detail-row"><span>Status WhatsApp</span><div>${whatsappStatusBadge(inv.whatsapp_status)}</div></div>
         </div>
         <div class="detail-box"><h4>Pelanggan</h4>
@@ -1200,9 +1121,8 @@
       </div>
       <div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
         <div class="form-grid"><div class="field"><label>Jumlah yang Sudah Dibayar</label><input id="detailPaid" type="number" min="0" max="${inv.total}" value="${inv.paid}"></div>
-        <div class="field"><label>Jatuh Tempo</label><input id="detailDueDate" type="date" value="${esc(inv.payment_due_date||"")}"></div>
         <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
-        <div class="actions" style="justify-content:flex-end"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran & Jatuh Tempo</button></div>
+        <div class="actions" style="justify-content:flex-end"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button></div>
       </div>
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
         <button id="printBtn" class="btn primary">Cetak Nota</button>
@@ -1219,14 +1139,11 @@
     const paidInput=$("detailPaid");
     const savePaymentBtn=$("savePaymentBtn");
     const initialPaid=Number(inv.paid)||0;
-    const initialDueDate=inv.payment_due_date||"";
-    const updatePaymentButtonState=()=>{
+    paidInput.addEventListener("input",()=>{
       const paid=Math.min(inv.total,Math.max(0,Number(paidInput.value)||0));
       $("detailStatus").textContent=statusFrom(inv.total,paid);
-      savePaymentBtn.disabled=paid===initialPaid && ($("detailDueDate")?.value||"")===initialDueDate;
-    };
-    paidInput.addEventListener("input",updatePaymentButtonState);
-    if($("detailDueDate")) $("detailDueDate").addEventListener("change",updatePaymentButtonState);
+      savePaymentBtn.disabled=paid===initialPaid;
+    });
     savePaymentBtn.disabled=true;
     savePaymentBtn.addEventListener("click",()=>updatePayment(inv.id,false));
     $("printBtn").addEventListener("click",()=>printInvoice(inv));
@@ -1242,16 +1159,11 @@
       loading(true);const paid=Math.max(0,Number($("detailPaid").value)||0);
       const {data,error}=await db.rpc("update_invoice_payment",{p_invoice_id:id,p_paid:paid});
       if(error)throw error;
-      const currentInvoice=state.invoices.find(item=>item.id===id);
-      const totalForStatus=safeNumber(data?.total ?? currentInvoice?.total);
-      const dueDate=statusFrom(totalForStatus,paid)==="Lunas"?null:($("detailDueDate")?.value||null);
-      const {error:dueError}=await db.rpc("update_invoice_due_date",{p_invoice_id:id,p_payment_due_date:dueDate});
-      if(dueError) throw new Error("Pembayaran tersimpan tetapi jatuh tempo belum dapat diperbarui. "+dueError.message);
       await refreshAll();
       const inv=state.invoices.find(x=>x.id===id)||data;
       closeModal();
       if(printAfter) printInvoice(inv);
-      toast("Pembayaran dan jatuh tempo berhasil diperbarui.");
+      toast("Pembayaran berhasil diperbarui.");
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
   async function deleteInvoice(id,number){

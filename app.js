@@ -165,7 +165,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=67",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=68",{
             updateViaCache:"none"
           });
 
@@ -1556,40 +1556,79 @@
         source:"schedule",id:schedule.id,work_date:schedule.work_date,work_time:schedule.work_time||"",
         customer_name:schedule.customer_name||"-",description:schedule.job_description||"Pekerjaan lapangan",
         status:scheduleStatusLabel(schedule.status),raw_status:schedule.status||"scheduled",invoice_id:schedule.invoice_id||null,
-        status_updated_at:schedule.updated_at||null
+        status_updated_at:schedule.status_updated_at||schedule.updated_at||null,
+        work_started_at:schedule.work_started_at||null,
+        work_completed_at:schedule.work_completed_at||null
       });
     });
     state.invoiceTechnicians.filter(row=>row.technician_id===technicianId && !linkedInvoiceIds.has(row.invoice_id)).forEach(row=>{
       const inv=state.invoices.find(item=>item.id===row.invoice_id);if(!inv)return;
       const status=row.work_status||"Terjadwal";
-      jobs.push({source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name||"-",description:invoiceText(inv)||"Pekerjaan lapangan",status,raw_status:status,invoice_id:inv.id,status_updated_at:row.work_status_updated_at||inv.updated_at||null});
+      jobs.push({source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name||"-",description:invoiceText(inv)||"Pekerjaan lapangan",status,raw_status:status,invoice_id:inv.id,status_updated_at:row.work_status_updated_at||inv.updated_at||null,
+        work_started_at:row.work_started_at||null,work_completed_at:row.work_completed_at||null});
     });
     return jobs.sort((a,b)=>`${a.work_date} ${a.work_time||""}`.localeCompare(`${b.work_date} ${b.work_time||""}`));
+  }
+
+  function monitorTimestampLocalDate(value){
+    if(!value) return "";
+    const date=new Date(value);
+    if(Number.isNaN(date.getTime())) return "";
+    const y=date.getFullYear();
+    const m=String(date.getMonth()+1).padStart(2,"0");
+    const d=String(date.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function monitorStatusEventDate(job){
+    if(job?.status==="Selesai"){
+      return monitorTimestampLocalDate(job.work_completed_at||job.status_updated_at)||job.work_date||"";
+    }
+    return monitorTimestampLocalDate(job?.status_updated_at)||job?.work_date||"";
+  }
+
+  function monitorStatusUpdatedMs(job){
+    return Date.parse(job?.work_completed_at||job?.status_updated_at||"")||0;
   }
 
   function monitorCurrentJob(jobs){
     const today=localDate();
 
-    // Status aktif adalah kondisi teknisi SAAT INI, sehingga tidak boleh dibatasi
-    // hanya oleh tanggal jadwal. Contoh: teknisi memulai tugas besok lebih awal.
-    // Monitoring admin harus langsung menunjukkan "Dikerjakan".
+    // 1) Status aktif selalu menang, meskipun jadwal aslinya besok/kemarin.
     const active=jobs.filter(job=>["Dikerjakan","Dalam Perjalanan"].includes(job.status));
     if(active.length){
       const priority={"Dikerjakan":2,"Dalam Perjalanan":1};
-      return active.sort((a,b)=>{
+      return active.slice().sort((a,b)=>{
         const byStatus=(priority[b.status]||0)-(priority[a.status]||0);
         if(byStatus) return byStatus;
-        const aUpdated=Date.parse(a.status_updated_at||"")||0;
-        const bUpdated=Date.parse(b.status_updated_at||"")||0;
-        if(aUpdated!==bUpdated) return bUpdated-aUpdated;
+        const byUpdated=monitorStatusUpdatedMs(b)-monitorStatusUpdatedMs(a);
+        if(byUpdated) return byUpdated;
         return `${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`);
       })[0];
     }
 
-    // Jika tidak ada pekerjaan aktif, baru tampilkan pekerjaan hari ini.
-    const todays=jobs.filter(job=>job.work_date===today && job.status!=="Dibatalkan");
-    const priority={"Terjadwal":2,"Selesai":1};
-    return todays.sort((a,b)=>(priority[b.status]||0)-(priority[a.status]||0)||String(a.work_time||"").localeCompare(String(b.work_time||"")))[0]||null;
+    // 2) Setelah tombol Tandai Selesai ditekan, status Selesai tetap terlihat
+    //    sebagai kondisi terbaru pada hari penyelesaiannya, walau jadwal aslinya beda tanggal.
+    const completedToday=jobs.filter(job=>job.status==="Selesai"&&monitorStatusEventDate(job)===today);
+    if(completedToday.length){
+      return completedToday.slice().sort((a,b)=>monitorStatusUpdatedMs(b)-monitorStatusUpdatedMs(a))[0];
+    }
+
+    // 3) Jika tidak ada status aktif/selesai terbaru, tampilkan jadwal hari ini.
+    const todays=jobs.filter(job=>job.work_date===today&&job.status==="Terjadwal");
+    return todays.slice().sort((a,b)=>String(a.work_time||"23:59").localeCompare(String(b.work_time||"23:59")))[0]||null;
+  }
+
+  function monitorPeriodActivityJobs(jobs){
+    const range=monitorDateRange();
+    return jobs.filter(job=>{
+      if(job.status==="Dibatalkan") return false;
+      const workDate=job.work_date||"";
+      const eventDate=monitorStatusEventDate(job);
+      const scheduledInRange=workDate>=range.start&&workDate<=range.end;
+      const statusChangedInRange=eventDate>=range.start&&eventDate<=range.end;
+      return scheduledInRange||statusChangedInRange;
+    });
   }
 
   function monitorNextJob(jobs){
@@ -1634,7 +1673,9 @@
     if($("monitorActiveTech")) $("monitorActiveTech").textContent=activeTechs.length;
     if($("monitorOnWay")) $("monitorOnWay").textContent=currentRows.filter(row=>row.current?.status==="Dalam Perjalanan").length;
     if($("monitorWorking")) $("monitorWorking").textContent=currentRows.filter(row=>row.current?.status==="Dikerjakan").length;
-    if($("monitorIdle")) $("monitorIdle").textContent=currentRows.filter(row=>!row.current).length;
+    const today=localDate();
+    const completedTodayCount=todayData.reduce((total,row)=>total+row.jobs.filter(job=>job.status==="Selesai"&&monitorStatusEventDate(job)===today).length,0);
+    if($("monitorCompletedToday")) $("monitorCompletedToday").textContent=completedTodayCount;
 
     const q=($("monitorSearch")?.value||"").trim().toLowerCase();
     const statusFilter=$("monitorAccountStatus")?.value||"all";
@@ -1647,12 +1688,13 @@
 
     $("monitorTechnicianCards").innerHTML=techs.length?techs.map(tech=>{
       const jobs=monitorJobsForTechnician(tech.id);
-      const period=monitorPeriodJobs(jobs);
+      const period=monitorPeriodActivityJobs(jobs);
       const current=monitorCurrentJob(jobs);
       const next=monitorNextJob(jobs);
-      const completed=period.filter(job=>job.status==="Selesai").length;
-      const inProgress=period.filter(job=>["Dalam Perjalanan","Dikerjakan"].includes(job.status)).length;
-      const completion=period.length?Math.round(completed/period.length*100):0;
+      const range=monitorDateRange();
+      const completed=jobs.filter(job=>job.status==="Selesai"&&monitorStatusEventDate(job)>=range.start&&monitorStatusEventDate(job)<=range.end).length;
+      const inProgress=jobs.filter(job=>["Dalam Perjalanan","Dikerjakan"].includes(job.status)&&monitorStatusEventDate(job)>=range.start&&monitorStatusEventDate(job)<=range.end).length;
+      const completion=period.length?Math.min(100,Math.round(completed/period.length*100)):0;
       const info=monitorStatusInfo(current);
       return `<article class="monitor-tech-card ${tech.is_active===false?"inactive":""}">
         <div class="monitor-tech-main">
@@ -2213,6 +2255,18 @@
   if($("activityRefreshBtn")) $("activityRefreshBtn").addEventListener("click",async()=>{
     await refreshAll();
     toast("Aktivitas berhasil disegarkan.");
+  });
+
+  // V68: fallback sinkronisasi saat tab kembali aktif.
+  // Realtime tetap utama; refresh ini memastikan status tidak tertinggal jika browser
+  // sempat menahan koneksi ketika tab berada di background.
+  let lastVisibilityRefresh=0;
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState!=="visible"||!state.session) return;
+    const now=Date.now();
+    if(now-lastVisibilityRefresh<1500) return;
+    lastVisibilityRefresh=now;
+    refreshAll().catch(error=>console.warn("Refresh status setelah kembali ke tab gagal",error));
   });
 
   function subscribeRealtime(){

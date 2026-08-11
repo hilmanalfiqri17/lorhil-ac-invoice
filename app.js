@@ -15,7 +15,7 @@
   const techIcon = (name, extraClass="") => {
     const path = TECH_ICON_PATHS[name];
     if(!path) return "";
-    return `<span class="tech-inline-svg asset-mask-icon ${extraClass}" style="--icon:url('${path}')" aria-hidden="true"></span>`;
+    return `<span class="tech-inline-svg asset-mask-icon ${extraClass}" style="--icon:url(${path})" aria-hidden="true"></span>`;
   };
   // Dashboard detail actions: simplified V16
 
@@ -165,7 +165,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=62",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=65",{
             updateViaCache:"none"
           });
 

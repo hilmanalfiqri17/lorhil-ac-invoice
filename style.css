@@ -207,3 +207,36 @@ body.technician-mode .content{padding-bottom:92px}
   .team-account-form{grid-template-columns:1fr;padding:12px}.team-permission-choice{min-height:0}.team-account-submit .btn{width:100%}
   .team-account-list-head{align-items:stretch;flex-direction:column}.team-account-list-head .btn{width:100%}
 }
+
+
+/* ==========================================================
+   V54 - Jadwal Pekerjaan Admin + Sinkron Teknisi
+   ========================================================== */
+.dashboard-schedule-panel{margin-bottom:20px}
+.schedule-dashboard-head{align-items:center}
+.schedule-dashboard-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.schedule-count-badge{display:inline-flex;align-items:center;gap:5px;padding:8px 11px;border-radius:999px;background:#eef6ff;color:#2563eb;font-size:12px;font-weight:800}
+.schedule-count-badge strong{font-size:15px}
+.schedule-mini-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.schedule-mini-card{border:1px solid var(--line);border-radius:13px;padding:14px;background:#fbfdff;min-width:0}
+.schedule-mini-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:9px}
+.schedule-mini-time{font-weight:900;color:#1f3a4a}.schedule-mini-card h4{margin:0 0 6px;font-size:15px}.schedule-mini-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.schedule-mini-tech{margin-top:10px;font-size:12px;font-weight:800;color:#526872;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schedule-mini-empty{grid-column:1/-1;padding:20px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);text-align:center;background:#fafcfd}
+.schedule-form-panel{scroll-margin-top:92px}.schedule-form-actions{justify-content:flex-end}
+.schedule-table{min-width:1080px}.schedule-table td{vertical-align:top}.schedule-actions{display:flex;gap:6px;flex-wrap:wrap}.schedule-actions .btn{padding:7px 9px;font-size:12px}
+.schedule-invoice-link{font-size:12px;font-weight:800;color:var(--success)}
+.schedule-job-cell{max-width:270px;white-space:normal;line-height:1.45}
+.schedule-tech-cell{max-width:210px;white-space:normal;line-height:1.45}
+.schedule-badge{display:inline-flex;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:900;white-space:nowrap}
+.schedule-badge.scheduled{background:#e9f2ff;color:#2563eb}.schedule-badge.on-the-way{background:#fff2d8;color:#a56500}.schedule-badge.working{background:#eee9ff;color:#6d46c7}.schedule-badge.completed{background:#e5f6ed;color:#117442}.schedule-badge.cancelled{background:#fdeae7;color:#a3372c}
+.tech-job-source{display:inline-flex;margin-left:7px;padding:3px 7px;border-radius:999px;background:#edf3f7;color:#607480;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.3px}
+.tech-job-card.schedule-source{border-left:4px solid #2f80ed}.tech-job-card.invoice-source{border-left:4px solid #22a75a}
+.schedule-linked-note{font-size:12px;color:var(--muted);margin-top:8px}
+@media(max-width:1050px){.schedule-mini-list{grid-template-columns:1fr 1fr}}
+@media(max-width:780px){
+  .schedule-dashboard-head{align-items:flex-start;flex-direction:column}.schedule-dashboard-actions{width:100%;justify-content:space-between}
+  .schedule-mini-list{grid-template-columns:1fr}.schedule-mini-card{padding:13px}
+  .schedule-form-grid{grid-template-columns:1fr}.schedule-form-actions{display:grid;grid-template-columns:1fr 1fr}.schedule-form-actions .btn{width:100%}
+  .schedule-filters{display:grid;grid-template-columns:1fr}.schedule-filters>*{width:100%!important;min-width:0!important}
+}

@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=53">
+  <link rel="stylesheet" href="style.css?v=54">
   <title>LORHIL AC Online V53</title>
 </head>
-<body data-app-version="53">
+<body data-app-version="54">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -67,6 +67,7 @@
         <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
         <button class="nav-btn" data-page="invoice"><span class="nav-icon">⊕</span><span>Buat Nota</span></button>
         <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
+        <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
         <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
         <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
         <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
@@ -137,6 +138,20 @@
             </article>
           </div>
 
+          <article class="panel dashboard-schedule-panel">
+            <div class="panel-head schedule-dashboard-head">
+              <div>
+                <h3><span class="section-icon">◷</span> Jadwal Pekerjaan Besok</h3>
+                <p id="dashboardTomorrowLabel">Persiapkan pekerjaan untuk hari berikutnya.</p>
+              </div>
+              <div class="schedule-dashboard-actions">
+                <span class="schedule-count-badge"><strong id="dashboardTomorrowCount">0</strong> jadwal</span>
+                <button id="dashboardScheduleSeeAll" class="btn outline" type="button">Lihat Jadwal&nbsp; →</button>
+              </div>
+            </div>
+            <div id="dashboardTomorrowSchedules" class="schedule-mini-list"></div>
+          </article>
+
           <div class="analytics-grid">
             <article class="panel chart-panel revenue-panel">
               <div class="panel-head analytics-head">
@@ -202,6 +217,48 @@
             </div>
             <div class="dashboard-table-foot"><span id="dashboardTableCount">Menampilkan 0 data</span></div>
           </article>
+        </section>
+
+        <section id="page-schedules" class="page">
+          <div class="page-head">
+            <div><h2>Jadwal Pekerjaan</h2><p>Siapkan pekerjaan hari ini, besok, atau tanggal berikutnya dan tugaskan teknisi.</p></div>
+            <button id="newScheduleBtn" class="btn primary" type="button">＋ Tambah Jadwal</button>
+          </div>
+
+          <form id="scheduleForm" class="panel schedule-form-panel">
+            <input id="scheduleId" type="hidden">
+            <div class="panel-head"><div><h3 id="scheduleFormTitle">Tambah Jadwal Pekerjaan</h3><p>Jadwal tersimpan terpisah dari invoice sampai pekerjaan selesai.</p></div></div>
+            <div class="form-grid schedule-form-grid">
+              <div class="field"><label>Tanggal *</label><input id="scheduleDate" type="date" required></div>
+              <div class="field"><label>Jam</label><input id="scheduleTime" type="time"></div>
+              <div class="field"><label>Status</label><select id="scheduleStatus"><option value="scheduled">Terjadwal</option><option value="on_the_way">Dalam Perjalanan</option><option value="working">Dikerjakan</option><option value="completed">Selesai</option><option value="cancelled">Dibatalkan</option></select></div>
+              <div class="field"><label>Nama Pelanggan *</label><input id="scheduleCustomerName" list="scheduleCustomerList" required placeholder="Nama pelanggan"><datalist id="scheduleCustomerList"></datalist></div>
+              <div class="field"><label>WhatsApp</label><input id="scheduleCustomerPhone" placeholder="08xxxxxxxxxx"></div>
+              <div class="field full"><label>Alamat / Lokasi</label><textarea id="scheduleCustomerAddress" placeholder="Alamat pelanggan atau lokasi pekerjaan"></textarea></div>
+              <div class="field full"><label>Pekerjaan *</label><textarea id="scheduleJobDescription" required placeholder="Contoh: Cuci AC 3 unit, cek AC kamar utama"></textarea></div>
+              <div class="field full"><label>Catatan</label><textarea id="scheduleNotes" placeholder="Catatan untuk teknisi, akses lokasi, patokan, dan lainnya"></textarea></div>
+              <div class="field full"><label>Teknisi yang Ditugaskan *</label><div id="scheduleTechnicianChoices" class="technician-choice-grid"></div></div>
+            </div>
+            <div class="actions schedule-form-actions">
+              <button id="resetScheduleBtn" class="btn secondary" type="button">Kosongkan</button>
+              <button class="btn primary" type="submit">Simpan Jadwal</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <div class="panel-head"><div><h3>Daftar Jadwal</h3><p>Status berubah secara realtime ketika teknisi memperbarui pekerjaan.</p></div></div>
+            <div class="filters schedule-filters">
+              <input id="scheduleFilterDate" type="date">
+              <select id="scheduleFilterStatus"><option value="all">Semua Status</option><option value="scheduled">Terjadwal</option><option value="on_the_way">Dalam Perjalanan</option><option value="working">Dikerjakan</option><option value="completed">Selesai</option><option value="cancelled">Dibatalkan</option></select>
+              <input id="scheduleSearch" class="search" placeholder="Cari pelanggan, pekerjaan, teknisi...">
+            </div>
+            <div class="table-wrap schedule-table-wrap">
+              <table class="schedule-table">
+                <thead><tr><th>Tanggal</th><th>Jam</th><th>Pelanggan</th><th>Pekerjaan</th><th>Teknisi</th><th>Status</th><th>Invoice</th><th>Aksi</th></tr></thead>
+                <tbody id="scheduleBody"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <section id="page-invoice" class="page">
@@ -479,6 +536,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=53"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>

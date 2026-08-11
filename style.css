@@ -302,8 +302,8 @@ body.technician-mode .content{padding-bottom:92px}
 .tech-welcome-pro .tech-eyebrow{font-size:11px;letter-spacing:.13em;color:#d6e5ff}
 .tech-welcome-pro h2{font-size:28px;line-height:1.15;margin:8px 0 7px}
 .tech-welcome-pro p{font-size:14px;color:#e5edff}
-.tech-hero-illustration{position:absolute;z-index:1;left:57%;bottom:-8px;width:190px;height:136px;display:flex;align-items:flex-end;justify-content:center}
-.tech-hero-illustration svg{display:block;width:100%;height:100%;filter:drop-shadow(0 12px 16px rgba(3,29,85,.18))}
+.tech-hero-illustration{position:absolute;z-index:1;left:54%;bottom:-20px;width:225px;height:170px;display:flex;align-items:flex-end;justify-content:center}
+
 .tech-safety-note{position:relative;z-index:2;margin-left:auto;width:290px;min-height:78px;padding:15px 16px;display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.96);color:#1e386d;border:1px solid rgba(255,255,255,.7);border-radius:18px;box-shadow:0 10px 24px rgba(9,36,99,.13)}
 .tech-safety-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:50%;background:#1d63d8;color:#fff;font-size:20px;font-weight:900}
 .tech-safety-note strong{display:block;color:#0f55cf;font-size:12px;margin-bottom:4px}
@@ -358,7 +358,7 @@ body.technician-mode .content{padding-bottom:92px}
 .work-badge{gap:6px;padding:6px 10px;border-radius:999px}.work-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}.work-badge.work-scheduled{background:#eef4ff;color:#1761d6}.work-badge.work-travel{background:#fff2df;color:#ef7b12}.work-badge.work-progress{background:#eaf1ff;color:#1761d6}.work-badge.work-done{background:#e8f7ed;color:#1c9b51}.work-badge.work-cancelled{background:#fdebec;color:#c43b45}
 
 @media(max-width:1180px){
-  .tech-welcome-copy{max-width:45%}.tech-safety-note{width:260px}.tech-hero-illustration{left:50%}
+  .tech-welcome-copy{max-width:45%}.tech-safety-note{width:260px}.tech-hero-illustration{left:48%;width:205px;height:155px}
   .tech-summary-grid-four,.tech-work-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tech-work-stats article:nth-child(2){border-right:0}.tech-work-stats article:nth-child(-n+2){border-bottom:1px solid #e6ebf3}
   .tech-dashboard-job-list .tech-job-card,.tech-work-list .tech-job-card{grid-template-columns:82px minmax(230px,1fr) minmax(140px,.75fr);}.tech-job-row-actions{grid-column:2/-1;justify-content:flex-start}
@@ -367,7 +367,7 @@ body.technician-mode .content{padding-bottom:92px}
 
 @media(max-width:780px){
   .technician-page{padding-bottom:84px}
-  .tech-welcome-pro{min-height:210px;padding:20px 18px 16px;display:block}.tech-welcome-copy{max-width:100%;padding-right:75px}.tech-welcome-pro h2{font-size:22px}.tech-welcome-pro p{font-size:11px;max-width:250px}.tech-hero-illustration{width:130px;height:96px;left:auto;right:4px;bottom:56px;opacity:.95}.tech-safety-note{width:100%;min-height:60px;margin-top:34px;padding:10px 12px;border-radius:14px}.tech-safety-icon{width:34px;height:34px;flex-basis:34px;font-size:16px}.tech-safety-note strong{font-size:10px}.tech-safety-note small{font-size:9px}
+  .tech-welcome-pro{min-height:210px;padding:20px 18px 16px;display:block}.tech-welcome-copy{max-width:100%;padding-right:75px}.tech-welcome-pro h2{font-size:22px}.tech-welcome-pro p{font-size:11px;max-width:250px}.tech-hero-illustration{width:135px;height:135px;left:auto;right:0;bottom:48px;opacity:.95}.tech-safety-note{width:100%;min-height:60px;margin-top:34px;padding:10px 12px;border-radius:14px}.tech-safety-icon{width:34px;height:34px;flex-basis:34px;font-size:16px}.tech-safety-note strong{font-size:10px}.tech-safety-note small{font-size:9px}
   .tech-summary-grid-four{grid-template-columns:1fr 1fr;gap:9px}.tech-summary-grid-four .tech-summary-card{min-height:106px;padding:12px;gap:10px}.tech-summary-icon{width:42px;height:42px;flex-basis:42px;border-radius:12px;font-size:18px!important}.tech-summary-grid-four .tech-summary-card strong{font-size:21px}.tech-summary-grid-four .tech-summary-card small{font-size:8px}.tech-summary-grid-four .tech-summary-card p{font-size:9px}.tech-summary-link{font-size:9px;margin-top:7px}
   .tech-section-head{align-items:center}.tech-section-head h3{font-size:15px}.tech-text-link{font-size:10px}
   .tech-dashboard-job-list,.tech-work-list,.tech-upcoming-list{border:0;background:transparent;box-shadow:none;overflow:visible;gap:10px}
@@ -378,7 +378,44 @@ body.technician-mode .content{padding-bottom:92px}
 }
 
 @media(max-width:430px){
-  .tech-welcome-copy{padding-right:60px}.tech-hero-illustration{width:105px;height:80px;right:-4px;bottom:60px}.tech-welcome-pro p{max-width:210px}
+  .tech-welcome-copy{padding-right:78px}.tech-hero-illustration{width:112px;height:112px;right:-5px;bottom:51px}.tech-welcome-pro p{max-width:210px}
   .tech-summary-grid-four{grid-template-columns:1fr 1fr}.tech-summary-grid-four .tech-summary-card{align-items:flex-start}.tech-summary-icon{width:38px;height:38px;flex-basis:38px;font-size:16px!important}.tech-summary-grid-four .tech-summary-card strong{font-size:19px}
   .tech-work-stats article{gap:8px}.tech-work-stat-icon{width:36px;height:36px;flex-basis:36px}.tech-work-stats strong{font-size:19px}
 }
+
+/* V63 — ikon teknisi asli + banner PNG pengguna */
+.ui-icon,.nav-svg-icon,.button-svg-icon,.tech-card-svg,.tech-inline-svg,.bottom-nav-svg,.tech-safety-svg{display:block;width:1em;height:1em;flex:0 0 auto}
+.nav-icon .nav-svg-icon{width:18px;height:18px;stroke-width:2}
+.refresh-btn{display:inline-flex;align-items:center;gap:8px}.refresh-btn .button-svg-icon{width:16px;height:16px}
+.tech-bottom-nav .bottom-nav-svg{width:20px;height:20px;margin:auto}
+.tech-summary-icon .tech-card-svg,.tech-work-stat-icon .tech-card-svg{width:24px;height:24px;color:#fff;stroke-width:2}
+.tech-safety-icon .tech-safety-svg{width:21px;height:21px;color:#fff;stroke-width:2.2}
+.tech-hero-illustration{overflow:visible;pointer-events:none}
+.tech-hero-illustration img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 18px rgba(3,29,85,.22));user-select:none}
+.tech-inline-svg{width:15px;height:15px;stroke-width:2;vertical-align:-2px}
+.tech-inline-svg.wa-green{color:#12b85a;fill:currentColor}
+.tech-mini-wa{display:inline-flex;align-items:center;justify-content:center;color:#12b85a}.tech-mini-wa .tech-inline-svg{width:16px;height:16px}
+.tech-location-icon{display:inline-flex;align-items:flex-start;color:#7588aa}.tech-location-icon .tech-inline-svg{width:13px;height:13px;margin-top:1px}
+.tech-job-row-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px}.tech-job-row-actions .btn .tech-inline-svg{width:14px;height:14px}
+.tech-job-row-actions .tech-wa-btn .tech-inline-svg{color:#11b65a;fill:currentColor}.tech-job-row-actions .tech-map-btn .tech-inline-svg{color:#0960dc}
+.tech-job-row-actions .tech-quick-status .tech-inline-svg{color:#fff}
+#techProfileLogoutBtn{display:inline-flex;gap:8px;align-items:center;justify-content:center}#techProfileLogoutBtn .button-svg-icon{width:16px;height:16px}
+@media(max-width:780px){
+  .tech-job-row-actions .btn{gap:5px}.tech-job-row-actions .btn .tech-inline-svg{width:15px;height:15px}
+  .tech-hero-illustration img{object-position:center bottom}
+}
+
+/* V64 - external SVG assets for technician UI */
+.asset-mask-icon{display:inline-block;flex:0 0 auto;background-color:currentColor;-webkit-mask-image:var(--icon);mask-image:var(--icon);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+.nav-svg-icon.asset-mask-icon{width:20px;height:20px;color:currentColor}
+.button-svg-icon.asset-mask-icon{width:16px;height:16px;color:currentColor}
+.tech-card-svg.asset-mask-icon{width:24px;height:24px;color:#fff}
+.tech-safety-svg.asset-mask-icon{width:21px;height:21px;color:#fff}
+.tech-inline-svg.asset-mask-icon{width:15px;height:15px;vertical-align:-2px;color:currentColor}
+.tech-inline-svg.asset-mask-icon.wa-green{color:#12b85a}
+.tech-mini-wa .tech-inline-svg.asset-mask-icon{width:16px;height:16px;color:#12b85a}
+.tech-location-icon .tech-inline-svg.asset-mask-icon{width:13px;height:13px;margin-top:1px;color:#7588aa}
+.tech-job-row-actions .btn .tech-inline-svg.asset-mask-icon{width:14px;height:14px}
+.tech-job-row-actions .tech-wa-btn .tech-inline-svg.asset-mask-icon{color:#11b65a}
+.tech-job-row-actions .tech-map-btn .tech-inline-svg.asset-mask-icon{color:#0960dc}
+.tech-job-row-actions .tech-quick-status .tech-inline-svg.asset-mask-icon{color:#fff}

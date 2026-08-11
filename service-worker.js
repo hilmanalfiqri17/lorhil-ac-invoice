@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v62";
+const CACHE = "lorhil-ac-online-v64";
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -14,7 +14,25 @@ const OPTIONAL_ASSETS = [
   "assets/logo.png",
   "assets/signature.png",
   "assets/stamp.png",
-  "assets/dashboard-icons/clock.svg"
+  "assets/dashboard-icons/clock.svg",
+  "assets/technician-icons/house.svg",
+  "assets/technician-icons/clipboard-list.svg",
+  "assets/technician-icons/rotate-ccw-clock.svg",
+  "assets/technician-icons/user-round.svg",
+  "assets/technician-icons/log-out.svg",
+  "assets/technician-icons/refresh-cw.svg",
+  "assets/technician-icons/calendar-days.svg",
+  "assets/technician-icons/car-front.svg",
+  "assets/technician-icons/wrench.svg",
+  "assets/technician-icons/circle-check-big.svg",
+  "assets/technician-icons/calendar-clock.svg",
+  "assets/technician-icons/file-text.svg",
+  "assets/technician-icons/map-pin.svg",
+  "assets/technician-icons/navigation.svg",
+  "assets/technician-icons/play.svg",
+  "assets/technician-icons/shield-check.svg",
+  "assets/technician-icons/whatsapp.svg",
+  "assets/technician/teknisi.png",
 ];
 
 self.addEventListener("install", event => {

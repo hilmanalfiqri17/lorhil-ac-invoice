@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=62">
-  <title>LORHIL AC Online V62</title>
+  <link rel="stylesheet" href="style.css?v=64">
+  <title>LORHIL AC Online V63</title>
 </head>
-<body data-app-version="62">
+<body data-app-version="64">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -97,14 +97,14 @@
       </nav>
 
       <nav id="technicianNav" class="hidden technician-sidebar-nav">
-        <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
-        <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon">▣</span><span>Pekerjaan</span></button>
-        <button class="nav-btn" data-page="tech-history"><span class="nav-icon">↺</span><span>Riwayat</span></button>
-        <button class="nav-btn" data-page="tech-profile"><span class="nav-icon">♙</span><span>Profil</span></button>
+        <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/house.svg\')" aria-hidden="true"></span></span><span>Dashboard</span></button>
+        <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/clipboard-list.svg\')" aria-hidden="true"></span></span><span>Pekerjaan</span></button>
+        <button class="nav-btn" data-page="tech-history"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/rotate-ccw-clock.svg\')" aria-hidden="true"></span></span><span>Riwayat</span></button>
+        <button class="nav-btn" data-page="tech-profile"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/user-round.svg\')" aria-hidden="true"></span></span><span>Profil</span></button>
       </nav>
 
       <div class="sidebar-footer">
-        <button id="logoutBtn" class="nav-btn logout"><span class="nav-icon">↪</span><span>Keluar</span></button>
+        <button id="logoutBtn" class="nav-btn logout"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/log-out.svg\')" aria-hidden="true"></span></span><span>Keluar</span></button>
       </div>
     </aside>
 
@@ -123,7 +123,7 @@
             <span>⌕</span>
             <input id="globalSearch" type="search" placeholder="Cari pelanggan, nota, atau nomor..." autocomplete="off">
           </label>
-          <button id="refreshBtn" class="btn secondary refresh-btn" type="button">↻ <span>Segarkan</span></button>
+          <button id="refreshBtn" class="btn secondary refresh-btn" type="button"><span class="button-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/refresh-cw.svg\')" aria-hidden="true"></span><span>Segarkan</span></button>
           <button id="newInvoiceTopBtn" class="btn primary go-invoice" type="button">＋ <span>Nota Baru</span></button>
           <div class="profile-pill" title="LORHIL AC">
             <span id="userAvatarText">LA</span>
@@ -529,34 +529,18 @@
               <h2>Halo, <span id="techWelcomeName">Teknisi</span>! 👋</h2>
               <p id="techWelcomeText">Semangat hari ini! Selesaikan setiap pekerjaan dengan terbaik.</p>
             </div>
-            <div class="tech-hero-illustration" aria-hidden="true">
-              <svg viewBox="0 0 180 120" role="img">
-                <defs><linearGradient id="techShirt" x1="0" x2="1"><stop offset="0" stop-color="#0c3d91"/><stop offset="1" stop-color="#071f54"/></linearGradient></defs>
-                <circle cx="93" cy="38" r="20" fill="#f3b07b"/>
-                <path d="M72 36c4-19 37-22 43-2-12-3-31-3-43 2Z" fill="#082d75"/>
-                <path d="M79 22c9-8 27-7 34 2l-2 7c-12-4-25-4-37 0l5-9Z" fill="#0a54cf"/>
-                <path d="M70 63c8-11 39-13 49-1l13 44H58l12-43Z" fill="url(#techShirt)"/>
-                <path d="M91 58h10v48H91Z" fill="#0b5fdd" opacity=".7"/>
-                <rect x="101" y="75" width="17" height="12" rx="2" fill="#061a43" opacity=".65"/>
-                <path d="M55 72 30 91l8 11 26-15Z" fill="#f3b07b"/>
-                <rect x="23" y="72" width="25" height="36" rx="5" transform="rotate(-12 23 72)" fill="#0a1d43"/>
-                <path d="M124 69 148 91l-9 10-24-18Z" fill="#f3b07b"/>
-                <circle cx="86" cy="39" r="2" fill="#18233c"/><circle cx="101" cy="39" r="2" fill="#18233c"/>
-                <path d="M90 49c4 3 8 3 12 0" fill="none" stroke="#8e4e38" stroke-width="2" stroke-linecap="round"/>
-                <text x="102" y="68" font-size="7" font-family="Arial" fill="#fff" font-weight="700">LORHIL AC</text>
-              </svg>
-            </div>
+            <div class="tech-hero-illustration"><img src="assets/technician/teknisi.png" alt="Ilustrasi teknisi LORHIL AC" loading="eager"></div>
             <div class="tech-safety-note">
-              <span class="tech-safety-icon">✓</span>
+              <span class="tech-safety-icon"><span class="tech-safety-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/shield-check.svg\')" aria-hidden="true"></span></span>
               <div><strong>Utamakan keselamatan kerja</strong><small>Gunakan APD dan periksa kondisi unit sebelum memulai pekerjaan.</small></div>
             </div>
           </div>
 
           <div class="tech-summary-grid tech-summary-grid-four">
-            <article class="tech-summary-card blue"><span class="tech-summary-icon">▣</span><div><small>HARI INI</small><strong id="techTodayCount">0</strong><p>Pekerjaan</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
-            <article class="tech-summary-card orange"><span class="tech-summary-icon">↻</span><div><small>BERJALAN</small><strong id="techActiveCount">0</strong><p>Dalam proses</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
-            <article class="tech-summary-card green"><span class="tech-summary-icon">✓</span><div><small>SELESAI</small><strong id="techDoneCount">0</strong><p>Hari ini</p><button class="tech-summary-link" data-page="tech-history" type="button">Lihat semua →</button></div></article>
-            <article class="tech-summary-card purple"><span class="tech-summary-icon">◷</span><div><small>JADWAL BERIKUTNYA</small><strong id="techNextTime">-</strong><p id="techNextDate">Belum ada jadwal</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat detail →</button></div></article>
+            <article class="tech-summary-card blue"><span class="tech-summary-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/calendar-days.svg\')" aria-hidden="true"></span></span><div><small>HARI INI</small><strong id="techTodayCount">0</strong><p>Pekerjaan</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card orange"><span class="tech-summary-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/car-front.svg\')" aria-hidden="true"></span></span><div><small>BERJALAN</small><strong id="techActiveCount">0</strong><p>Dalam proses</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card green"><span class="tech-summary-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/circle-check-big.svg\')" aria-hidden="true"></span></span><div><small>SELESAI</small><strong id="techDoneCount">0</strong><p>Hari ini</p><button class="tech-summary-link" data-page="tech-history" type="button">Lihat semua →</button></div></article>
+            <article class="tech-summary-card purple"><span class="tech-summary-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/calendar-clock.svg\')" aria-hidden="true"></span></span><div><small>JADWAL BERIKUTNYA</small><strong id="techNextTime">-</strong><p id="techNextDate">Belum ada jadwal</p><button class="tech-summary-link" data-page="tech-jobs" type="button">Lihat detail →</button></div></article>
           </div>
 
           <div class="tech-section-head"><div><h3>Pekerjaan Hari Ini <span id="techTodayBadge" class="tech-count-badge">0</span></h3><p id="techTodayLabel"></p></div><button class="tech-text-link tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
@@ -576,10 +560,10 @@
           </div>
 
           <div class="tech-work-stats">
-            <article class="blue"><span class="tech-work-stat-icon">▣</span><div><small>TOTAL TUGAS</small><strong id="techJobsTotalCount">0</strong><p>Semua pekerjaan</p></div></article>
-            <article class="orange"><span class="tech-work-stat-icon">➤</span><div><small>DALAM PERJALANAN</small><strong id="techTravelCount">0</strong><p>Menuju lokasi</p></div></article>
-            <article class="green"><span class="tech-work-stat-icon">⌕</span><div><small>DIKERJAKAN</small><strong id="techWorkingCount">0</strong><p>Sedang dikerjakan</p></div></article>
-            <article class="purple"><span class="tech-work-stat-icon">✓</span><div><small>SELESAI</small><strong id="techJobsDoneCount">0</strong><p>Hari ini</p></div></article>
+            <article class="blue"><span class="tech-work-stat-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/calendar-days.svg\')" aria-hidden="true"></span></span><div><small>TOTAL TUGAS</small><strong id="techJobsTotalCount">0</strong><p>Semua pekerjaan</p></div></article>
+            <article class="orange"><span class="tech-work-stat-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/car-front.svg\')" aria-hidden="true"></span></span><div><small>DALAM PERJALANAN</small><strong id="techTravelCount">0</strong><p>Menuju lokasi</p></div></article>
+            <article class="green"><span class="tech-work-stat-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/wrench.svg\')" aria-hidden="true"></span></span><div><small>DIKERJAKAN</small><strong id="techWorkingCount">0</strong><p>Sedang dikerjakan</p></div></article>
+            <article class="purple"><span class="tech-work-stat-icon"><span class="tech-card-svg asset-mask-icon" style="--icon:url(\'assets/technician-icons/circle-check-big.svg\')" aria-hidden="true"></span></span><div><small>SELESAI</small><strong id="techJobsDoneCount">0</strong><p>Hari ini</p></div></article>
           </div>
 
           <div id="techJobsPrimarySection">
@@ -608,7 +592,7 @@
               <div><span>Akses Invoice Bot</span><strong id="techInvoicePermission">Belum diaktifkan</strong></div>
               <div><span>Status Akun</span><strong class="text-success">Aktif</strong></div>
             </div>
-            <button id="techProfileLogoutBtn" class="btn danger full" type="button">Keluar dari Akun</button>
+            <button id="techProfileLogoutBtn" class="btn danger full" type="button"><span class="button-svg-icon asset-mask-icon" style="--icon:url(\'assets/technician-icons/log-out.svg\')" aria-hidden="true"></span>Keluar dari Akun</button>
           </div>
         </section>
 
@@ -641,10 +625,10 @@
   </div>
 
   <nav id="techBottomNav" class="tech-bottom-nav hidden" aria-label="Navigasi teknisi">
-    <button class="nav-btn active" data-page="tech-dashboard" type="button"><span>⌂</span><small>Dashboard</small></button>
-    <button class="nav-btn" data-page="tech-jobs" type="button"><span>▣</span><small>Pekerjaan</small></button>
-    <button class="nav-btn" data-page="tech-history" type="button"><span>↺</span><small>Riwayat</small></button>
-    <button class="nav-btn" data-page="tech-profile" type="button"><span>♙</span><small>Profil</small></button>
+    <button class="nav-btn active" data-page="tech-dashboard" type="button"><span><svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house bottom-nav-svg"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><small>Dashboard</small></button>
+    <button class="nav-btn" data-page="tech-jobs" type="button"><span><svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list-icon lucide-clipboard-list bottom-nav-svg"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><small>Pekerjaan</small></button>
+    <button class="nav-btn" data-page="tech-history" type="button"><span><svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw-clock-icon lucide-rotate-ccw-clock bottom-nav-svg"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span><small>Riwayat</small></button>
+    <button class="nav-btn" data-page="tech-profile" type="button"><span><svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round bottom-nav-svg"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span><small>Profil</small></button>
   </nav>
 
   <div id="detailModal" class="modal hidden">
@@ -660,6 +644,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=62"></script>
+  <script src="app.js?v=64"></script>
 </body>
 </html>

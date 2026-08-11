@@ -148,7 +148,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=59",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=61",{
             updateViaCache:"none"
           });
 
@@ -158,7 +158,7 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v59")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v61")
                 .map(key=>caches.delete(key))
             );
           }
@@ -259,6 +259,8 @@
     document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
     target.classList.add("active");
     document.querySelectorAll(".nav-btn[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));
+    const systemNavGroup=$("systemNavGroup");
+    if(systemNavGroup && ["monitoring","activity","settings","backup"].includes(page)) systemNavGroup.open=true;
     $("pageTitle").textContent=titles[page]||"LORHIL AC";
     $("sidebar").classList.remove("open");
     if(page==="dashboard") renderDashboard();

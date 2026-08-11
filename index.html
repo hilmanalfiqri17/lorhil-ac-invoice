@@ -8,8 +8,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=59">
-  <title>LORHIL AC Online V59</title>
+  <link rel="stylesheet" href="style.css?v=61">
+  <title>LORHIL AC Online V61</title>
 </head>
 <body data-app-version="59">
   <section id="setupScreen" class="center-screen hidden">
@@ -63,17 +63,37 @@
         </div>
       </div>
 
-      <nav id="adminNav">
-        <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
-        <button class="nav-btn" data-page="invoice"><span class="nav-icon">⊕</span><span>Buat Nota</span></button>
-        <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
-        <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
-        <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
-        <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
-        <button class="nav-btn" data-page="monitoring"><span class="nav-icon">◉</span><span>Monitoring Teknisi</span></button>
-        <button class="nav-btn" data-page="activity"><span class="nav-icon">≡</span><span>Aktivitas Tim</span></button>
-        <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
-        <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
+      <nav id="adminNav" class="admin-nav">
+        <div class="nav-section">
+          <div class="nav-section-label">Utama</div>
+          <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-label">Operasional</div>
+          <button class="nav-btn" data-page="invoice"><span class="nav-icon">⊕</span><span>Buat Nota</span></button>
+          <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
+          <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-label">Pengelolaan</div>
+          <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
+          <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Teknisi</span></button>
+        </div>
+
+        <details id="systemNavGroup" class="nav-system-group">
+          <summary>
+            <span>Sistem</span>
+            <span class="nav-group-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="nav-system-body">
+            <button class="nav-btn" data-page="monitoring"><span class="nav-icon">◉</span><span>Monitoring Teknisi</span></button>
+            <button class="nav-btn" data-page="activity"><span class="nav-icon">≡</span><span>Aktivitas Tim</span></button>
+            <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
+            <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
+          </div>
+        </details>
       </nav>
 
       <nav id="technicianNav" class="hidden technician-sidebar-nav">
@@ -603,6 +623,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=59"></script>
+  <script src="app.js?v=61"></script>
 </body>
 </html>

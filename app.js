@@ -165,7 +165,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=66",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=67",{
             updateViaCache:"none"
           });
 
@@ -1555,21 +1555,40 @@
       jobs.push({
         source:"schedule",id:schedule.id,work_date:schedule.work_date,work_time:schedule.work_time||"",
         customer_name:schedule.customer_name||"-",description:schedule.job_description||"Pekerjaan lapangan",
-        status:scheduleStatusLabel(schedule.status),raw_status:schedule.status||"scheduled",invoice_id:schedule.invoice_id||null
+        status:scheduleStatusLabel(schedule.status),raw_status:schedule.status||"scheduled",invoice_id:schedule.invoice_id||null,
+        status_updated_at:schedule.updated_at||null
       });
     });
     state.invoiceTechnicians.filter(row=>row.technician_id===technicianId && !linkedInvoiceIds.has(row.invoice_id)).forEach(row=>{
       const inv=state.invoices.find(item=>item.id===row.invoice_id);if(!inv)return;
       const status=row.work_status||"Terjadwal";
-      jobs.push({source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name||"-",description:invoiceText(inv)||"Pekerjaan lapangan",status,raw_status:status,invoice_id:inv.id});
+      jobs.push({source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name||"-",description:invoiceText(inv)||"Pekerjaan lapangan",status,raw_status:status,invoice_id:inv.id,status_updated_at:row.work_status_updated_at||inv.updated_at||null});
     });
     return jobs.sort((a,b)=>`${a.work_date} ${a.work_time||""}`.localeCompare(`${b.work_date} ${b.work_time||""}`));
   }
 
   function monitorCurrentJob(jobs){
     const today=localDate();
+
+    // Status aktif adalah kondisi teknisi SAAT INI, sehingga tidak boleh dibatasi
+    // hanya oleh tanggal jadwal. Contoh: teknisi memulai tugas besok lebih awal.
+    // Monitoring admin harus langsung menunjukkan "Dikerjakan".
+    const active=jobs.filter(job=>["Dikerjakan","Dalam Perjalanan"].includes(job.status));
+    if(active.length){
+      const priority={"Dikerjakan":2,"Dalam Perjalanan":1};
+      return active.sort((a,b)=>{
+        const byStatus=(priority[b.status]||0)-(priority[a.status]||0);
+        if(byStatus) return byStatus;
+        const aUpdated=Date.parse(a.status_updated_at||"")||0;
+        const bUpdated=Date.parse(b.status_updated_at||"")||0;
+        if(aUpdated!==bUpdated) return bUpdated-aUpdated;
+        return `${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`);
+      })[0];
+    }
+
+    // Jika tidak ada pekerjaan aktif, baru tampilkan pekerjaan hari ini.
     const todays=jobs.filter(job=>job.work_date===today && job.status!=="Dibatalkan");
-    const priority={"Dikerjakan":4,"Dalam Perjalanan":3,"Terjadwal":2,"Selesai":1};
+    const priority={"Terjadwal":2,"Selesai":1};
     return todays.sort((a,b)=>(priority[b.status]||0)-(priority[a.status]||0)||String(a.work_time||"").localeCompare(String(b.work_time||"")))[0]||null;
   }
 

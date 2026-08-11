@@ -50,7 +50,7 @@
     session:null, invoices:[], settings:null, technicians:[],
     invoiceTechnicians:[], page:"dashboard", accessContext:null,
     dashboardPeriod:"today", realtime:null, techJobFilter:"today",
-    revenuePeriodOffset:0, trendPeriodOffset:0
+    revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[]
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -125,7 +125,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=52",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=53",{
             updateViaCache:"none"
           });
 
@@ -135,13 +135,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v52")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v53")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v52";
+            const reloadKey="lorhil-sw-reloaded-v53";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -164,6 +164,13 @@
       weekday:"long",day:"numeric",month:"long",year:"numeric"
     }).format(new Date());
     await loadAccessContext();
+    if(state.accessContext?.is_active===false){
+      const disabledName=state.accessContext?.display_name||"Akun ini";
+      await db.auth.signOut();
+      hide("app"); show("loginScreen");
+      $("loginError").textContent=`${disabledName} sudah dinonaktifkan. Hubungi admin LORHIL AC.`;
+      return;
+    }
     applyAccessUi();
     if(!isTechnicianAccount()) resetInvoice();
     await refreshAll();
@@ -253,6 +260,7 @@
       state.settings=settingsResult.data || (isTechnicianAccount()
         ? {store_name:"LORHIL AC",phone:"",address:"",payment_info:"",footer_note:"",signer_name:"Hendri",signer_role:"Pemilik LORHIL AC"}
         : await createDefaultSettings());
+      if(accessRole()==="admin") await refreshTeamMembers();
       applyBrand();
       applyAccessUi();
       if(isTechnicianAccount()){
@@ -1096,35 +1104,68 @@
 
   function renderTechnicians(){
     renderTechnicianAdmin();
+    renderTeamAccountOptions();
+    renderTeamMembers();
+    if($("teamAccountPanel")) $("teamAccountPanel").classList.toggle("hidden",accessRole()!=="admin");
+  }
+
+  function teamMemberForTechnician(technicianId){
+    return state.teamMembers.find(member=>member.technician_id===technicianId)||null;
   }
 
   function renderTechnicianAdmin(){
     if(!$("technicianAdminBody")) return;
-    $("technicianAdminBody").innerHTML=state.technicians.length?state.technicians.map(tech=>`<tr>
-      <td><strong>${esc(tech.name)}</strong></td>
-      <td>${esc(tech.phone||"-")}</td>
-      <td>${tech.is_active===false?"Nonaktif":"Aktif"}</td>
-      <td>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn outline edit-tech-btn" data-id="${tech.id}">Edit</button>
-          <button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${tech.is_active===false?"Aktifkan":"Nonaktifkan"}</button>
-          <button class="btn danger delete-tech-btn" data-id="${tech.id}">Hapus</button>
-        </div>
-      </td>
-    </tr>`).join(""):`<tr><td colspan="4" class="empty">Belum ada teknisi.</td></tr>`;
+    $("technicianAdminBody").innerHTML=state.technicians.length?state.technicians.map(tech=>{
+      const member=teamMemberForTechnician(tech.id);
+      const account=member
+        ? `<span class="team-login-badge ${member.is_active?"team-login-active":"team-login-inactive"}">${member.is_active?"Akun Aktif":"Akun Nonaktif"}</span><small style="display:block;margin-top:4px;color:#7b879b">${esc(member.email||"")}</small>`
+        : `<span class="team-login-badge team-login-none">Belum Ada Akun</span>`;
+      return `<tr>
+        <td><strong>${esc(tech.name)}</strong></td>
+        <td>${esc(tech.phone||"-")}</td>
+        <td>${tech.is_active===false?"Nonaktif":"Aktif"}</td>
+        <td>${account}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${!member&&accessRole()==="admin"?`<button class="btn primary create-tech-account-btn" data-id="${tech.id}">Buat Akun</button>`:""}
+            <button class="btn outline edit-tech-btn" data-id="${tech.id}">Edit</button>
+            <button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${(member?member.is_active:tech.is_active!==false)?"Nonaktifkan":"Aktifkan"}</button>
+            <button class="btn danger delete-tech-btn" data-id="${tech.id}">Hapus</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join(""):`<tr><td colspan="5" class="empty">Belum ada teknisi.</td></tr>`;
 
+    $("technicianAdminBody").querySelectorAll(".create-tech-account-btn")
+      .forEach(btn=>btn.addEventListener("click",()=>prefillTeamAccount(btn.dataset.id)));
     $("technicianAdminBody").querySelectorAll(".edit-tech-btn")
       .forEach(btn=>btn.addEventListener("click",()=>editTechnician(btn.dataset.id)));
-
     $("technicianAdminBody").querySelectorAll(".toggle-tech-btn")
       .forEach(btn=>btn.addEventListener("click",()=>toggleTechnician(btn.dataset.id)));
-
     $("technicianAdminBody").querySelectorAll(".delete-tech-btn")
       .forEach(btn=>btn.addEventListener("click",()=>deleteTechnician(btn.dataset.id)));
   }
 
   async function toggleTechnician(id){
     const tech=state.technicians.find(item=>item.id===id);if(!tech)return;
+    const member=teamMemberForTechnician(id);
+
+    if(member && accessRole()==="admin"){
+      const activating=!member.is_active;
+      const verb=activating?"aktifkan kembali":"nonaktifkan";
+      if(!confirm(`${verb.charAt(0).toUpperCase()+verb.slice(1)} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice lama tetap tersimpan.`)) return;
+      loading(true);
+      try{
+        const result=await manageTeamMember({action:activating?"reactivate":"deactivate",member_id:member.id});
+        toast(result?.message||`Akun ${member.display_name} berhasil diperbarui.`);
+        await refreshTeamMembers();
+        await refreshAll();
+      }catch(error){
+        alert(error?.message||error);
+      }finally{loading(false);}
+      return;
+    }
+
     loading(true);
     const {error}=await db.from("technicians").update({is_active:tech.is_active===false}).eq("id",id);
     loading(false);
@@ -1170,6 +1211,12 @@
     const tech=state.technicians.find(item=>item.id===id);
     if(!tech) return;
 
+    const linkedMember=teamMemberForTechnician(id);
+    if(linkedMember){
+      alert(`Teknisi ${tech.name} sudah mempunyai akun login. Nonaktifkan akun tersebut agar riwayat dan hubungan akun tetap aman.`);
+      return;
+    }
+
     const hasHistory=state.invoiceTechnicians.some(row=>row.technician_id===id);
     if(hasHistory){
       alert(
@@ -1203,6 +1250,170 @@
     loading(false);
     if(error){alert(errorMessage(error));return;}
     event.target.reset();await refreshAll();toast("Teknisi berhasil ditambahkan.");
+  });
+
+
+  async function manageTeamMember(payload){
+    const {data,error}=await db.functions.invoke("manage-team-member",{body:payload});
+    if(error){
+      const message=typeof edgeFunctionErrorMessage==="function" ? await edgeFunctionErrorMessage(error) : errorMessage(error);
+      throw new Error(message);
+    }
+    if(!data?.ok) throw new Error(data?.error||"Aksi akun anggota gagal diproses.");
+    return data;
+  }
+
+  async function refreshTeamMembers(){
+    if(accessRole()!=="admin"){
+      state.teamMembers=[];
+      renderTeamMembers();
+      return;
+    }
+    try{
+      const result=await manageTeamMember({action:"list"});
+      state.teamMembers=Array.isArray(result?.members)?result.members:[];
+    }catch(error){
+      console.warn("Daftar akun anggota belum dapat dimuat:",error);
+      state.teamMembers=[];
+    }
+    renderTeamAccountOptions();
+    renderTeamMembers();
+    renderTechnicianAdmin();
+  }
+
+  function renderTeamAccountOptions(){
+    if(!$("teamTechnicianId")) return;
+    const current=$("teamTechnicianId").value;
+    const linkedIds=new Set(state.teamMembers.map(member=>member.technician_id).filter(Boolean));
+    const options=state.technicians
+      .filter(tech=>!linkedIds.has(tech.id) || tech.id===current)
+      .map(tech=>`<option value="${tech.id}">${esc(tech.name)}${tech.is_active===false?" (nonaktif)":""}</option>`)
+      .join("");
+    $("teamTechnicianId").innerHTML=`<option value="">Pilih teknisi</option>${options}`;
+    if(current && [...$("teamTechnicianId").options].some(option=>option.value===current)) $("teamTechnicianId").value=current;
+    updateTeamRoleForm();
+  }
+
+  function updateTeamRoleForm(){
+    if(!$("teamRole")||!$("teamTechnicianId")) return;
+    const supervisor=$("teamRole").value==="supervisor";
+    $("teamTechnicianId").required=!supervisor;
+    const field=$("teamTechnicianId").closest(".field");
+    const label=field?.querySelector("label");
+    if(label) label.textContent=supervisor?"Hubungkan Teknisi (opsional)":"Hubungkan Teknisi *";
+  }
+
+  function prefillTeamAccount(technicianId){
+    if(!$("teamAccountForm")) return;
+    const tech=state.technicians.find(item=>item.id===technicianId);
+    if(!tech) return;
+    $("teamRole").value="technician";
+    renderTeamAccountOptions();
+    $("teamTechnicianId").value=technicianId;
+    $("teamDisplayName").value=tech.name||"";
+    $("teamEmail").focus();
+    $("teamAccountPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  function roleLabel(role){return role==="supervisor"?"Supervisor":"Teknisi";}
+
+  function renderTeamMembers(){
+    if(!$("teamMemberBody")) return;
+    if($("teamMemberCount")) $("teamMemberCount").textContent=`${state.teamMembers.length} akun`;
+    $("teamMemberBody").innerHTML=state.teamMembers.length?state.teamMembers.map(member=>{
+      const tech=state.technicians.find(item=>item.id===member.technician_id);
+      return `<tr>
+        <td><div class="team-member-cell"><strong>${esc(member.display_name||"-")}</strong><small>${esc(tech?.name?`Terhubung: ${tech.name}`:(member.role==="supervisor"?"Akses supervisor":"Belum terhubung teknisi"))}</small></div></td>
+        <td>${esc(member.email||"-")}</td>
+        <td><span class="team-role-badge ${member.role==="supervisor"?"team-role-supervisor":"team-role-technician"}">${roleLabel(member.role)}</span></td>
+        <td><span class="team-permission-badge ${member.can_send_invoice?"team-permission-yes":"team-permission-no"}">${member.can_send_invoice?"Boleh":"Tidak"}</span></td>
+        <td><span class="team-login-badge ${member.is_active?"team-login-active":"team-login-inactive"}">${member.is_active?"Aktif":"Nonaktif"}</span></td>
+        <td><div class="team-member-actions">
+          <button class="btn ${member.is_active?"secondary":"primary"} team-member-toggle" data-id="${member.id}" type="button">${member.is_active?"Nonaktifkan":"Aktifkan"}</button>
+          <button class="btn outline team-member-permission" data-id="${member.id}" type="button">${member.can_send_invoice?"Cabut Invoice":"Izinkan Invoice"}</button>
+          <button class="btn secondary team-member-password" data-id="${member.id}" type="button">Password</button>
+        </div></td>
+      </tr>`;
+    }).join(""):`<tr><td colspan="6" class="empty">Belum ada akun anggota. Buat akun pertama dari form di atas.</td></tr>`;
+
+    $("teamMemberBody").querySelectorAll(".team-member-toggle").forEach(btn=>btn.addEventListener("click",()=>toggleTeamMember(btn.dataset.id)));
+    $("teamMemberBody").querySelectorAll(".team-member-permission").forEach(btn=>btn.addEventListener("click",()=>toggleTeamInvoicePermission(btn.dataset.id)));
+    $("teamMemberBody").querySelectorAll(".team-member-password").forEach(btn=>btn.addEventListener("click",()=>setTeamMemberPassword(btn.dataset.id)));
+  }
+
+  async function toggleTeamMember(memberId){
+    const member=state.teamMembers.find(item=>item.id===memberId);if(!member)return;
+    const activating=!member.is_active;
+    const action=activating?"reactivate":"deactivate";
+    if(!confirm(`${activating?"Aktifkan kembali":"Nonaktifkan"} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice tetap tersimpan.`)) return;
+    loading(true);
+    try{
+      const result=await manageTeamMember({action,member_id:member.id});
+      toast(result.message||"Status akun diperbarui.");
+      await refreshTeamMembers();
+      await refreshAll();
+    }catch(error){alert(error?.message||error);}finally{loading(false);}
+  }
+
+  async function toggleTeamInvoicePermission(memberId){
+    const member=state.teamMembers.find(item=>item.id===memberId);if(!member)return;
+    const next=!member.can_send_invoice;
+    if(!confirm(`${next?"Izinkan":"Cabut izin"} ${member.display_name} untuk mengirim invoice melalui bot WhatsApp?`)) return;
+    loading(true);
+    try{
+      const result=await manageTeamMember({action:"update_permissions",member_id:member.id,role:member.role,can_send_invoice:next});
+      toast(result.message||"Hak akses diperbarui.");
+      await refreshTeamMembers();
+    }catch(error){alert(error?.message||error);}finally{loading(false);}
+  }
+
+  async function setTeamMemberPassword(memberId){
+    const member=state.teamMembers.find(item=>item.id===memberId);if(!member)return;
+    const password=prompt(`Password baru untuk ${member.display_name}:\nMinimal 8 karakter.`);
+    if(password===null) return;
+    if(password.length<8){alert("Password minimal 8 karakter.");return;}
+    loading(true);
+    try{
+      const result=await manageTeamMember({action:"set_password",member_id:member.id,password});
+      toast(result.message||"Password berhasil diubah.");
+    }catch(error){alert(error?.message||error);}finally{loading(false);}
+  }
+
+  if($("teamRole")) $("teamRole").addEventListener("change",()=>{
+    updateTeamRoleForm();
+    if($("teamRole").value==="supervisor") $("teamTechnicianId").value="";
+  });
+  if($("teamTechnicianId")) $("teamTechnicianId").addEventListener("change",()=>{
+    const tech=state.technicians.find(item=>item.id===$("teamTechnicianId").value);
+    if(tech && !$("teamDisplayName").value.trim()) $("teamDisplayName").value=tech.name||"";
+  });
+  if($("refreshTeamMembersBtn")) $("refreshTeamMembersBtn").addEventListener("click",async()=>{
+    loading(true);await refreshTeamMembers();loading(false);toast("Daftar akun anggota disegarkan.");
+  });
+  if($("teamAccountForm")) $("teamAccountForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(accessRole()!=="admin"){alert("Hanya admin yang dapat membuat akun anggota.");return;}
+    const role=$("teamRole").value;
+    const technicianId=$("teamTechnicianId").value||null;
+    const payload={
+      action:"create",
+      role,
+      technician_id:technicianId,
+      display_name:$("teamDisplayName").value.trim(),
+      email:$("teamEmail").value.trim(),
+      password:$("teamPassword").value,
+      can_send_invoice:$("teamCanSendInvoice").checked
+    };
+    if(role==="technician"&&!technicianId){alert("Pilih data teknisi yang akan dihubungkan dengan akun ini.");return;}
+    if(!confirm(`Buat akun ${payload.display_name} sebagai ${roleLabel(role)}?`)) return;
+    loading(true);
+    try{
+      const result=await manageTeamMember(payload);
+      toast(result.message||"Akun anggota berhasil dibuat.");
+      event.target.reset();
+      $("teamRole").value="technician";
+      await refreshTeamMembers();
+    }catch(error){alert(error?.message||error);}finally{loading(false);}
   });
 
 
@@ -1404,7 +1615,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:52,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:53,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

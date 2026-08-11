@@ -175,3 +175,35 @@ body.technician-mode .content{padding-bottom:92px}
   .tech-job-card{padding:13px;border-radius:15px}.tech-job-time{font-size:18px}.tech-job-actions{grid-template-columns:1fr 42px}.tech-job-actions .btn.secondary{font-size:0}.tech-job-actions .btn.secondary:after{content:"☎";font-size:16px}
   .tech-detail-actions,.tech-status-buttons{grid-template-columns:1fr}.tech-profile-card{padding:20px 15px}.tech-profile-info>div{align-items:flex-start;flex-direction:column;gap:5px}
 }
+
+
+/* =========================================================
+   V53 - KELOLA AKUN TEKNISI / SUPERVISOR DARI WEB ADMIN
+   ========================================================= */
+.team-account-panel{margin-top:18px}
+.team-account-head{align-items:flex-start}
+.team-security-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#eaf7ef;color:#16814b;font-size:10px;font-weight:900;white-space:nowrap}
+.team-account-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;padding:15px;border:1px solid var(--line);border-radius:15px;background:#f9fbfe}
+.team-permission-choice{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;min-height:66px}
+.team-permission-choice input{width:auto;margin-top:2px;flex:0 0 auto}
+.team-permission-choice span{display:grid;gap:4px}.team-permission-choice strong{font-size:11px;color:#34435b}.team-permission-choice small{font-size:9px;line-height:1.4;color:var(--muted)}
+.team-account-submit{display:flex;align-items:end}.team-account-submit .btn{width:100%;min-height:42px}
+.team-account-divider{height:1px;background:var(--line);margin:20px 0 15px}
+.team-account-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.team-account-list-head>div{display:grid;gap:3px}.team-account-list-head strong{font-size:13px}.team-account-list-head small{font-size:10px;color:var(--muted)}
+.team-member-table{min-width:870px}.team-member-cell{display:grid;gap:3px}.team-member-cell strong{font-size:12px}.team-member-cell small{font-size:9px;color:var(--muted)}
+.team-role-badge,.team-login-badge,.team-permission-badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:9px;font-weight:900;white-space:nowrap}
+.team-role-technician{background:#edf5ff;color:#0b61e8}.team-role-supervisor{background:#f1ecff;color:#7151c9}
+.team-login-active{background:#e5f7ec;color:#14884b}.team-login-inactive{background:#fdecec;color:#bd3434}.team-login-none{background:#f0f3f7;color:#758197}
+.team-permission-yes{background:#e5f7ec;color:#14884b}.team-permission-no{background:#f0f3f7;color:#758197}
+.team-member-actions{display:flex;flex-wrap:wrap;gap:6px}.team-member-actions .btn{font-size:9px;padding:7px 9px}
+.team-account-note{margin-top:12px}
+.team-tech-table{min-width:760px}
+
+@media(max-width:900px){
+  .team-account-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .team-account-head{align-items:flex-start;gap:10px}.team-security-badge{font-size:9px}
+  .team-account-form{grid-template-columns:1fr;padding:12px}.team-permission-choice{min-height:0}.team-account-submit .btn{width:100%}
+  .team-account-list-head{align-items:stretch;flex-direction:column}.team-account-list-head .btn{width:100%}
+}

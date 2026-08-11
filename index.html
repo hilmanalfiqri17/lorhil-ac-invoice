@@ -244,14 +244,24 @@
         <section id="page-schedules" class="page">
           <div class="page-head">
             <div><h2>Jadwal Pekerjaan</h2><p>Siapkan pekerjaan hari ini, besok, atau tanggal berikutnya dan tugaskan teknisi.</p></div>
-            <button id="newScheduleBtn" class="btn primary" type="button">＋ Tambah Jadwal</button>
+            <div class="schedule-page-actions">
+              <button id="newScheduleTodayBtn" class="btn primary" type="button">＋ Jadwal Hari Ini</button>
+              <button id="newScheduleTomorrowBtn" class="btn secondary" type="button">＋ Jadwal Besok</button>
+            </div>
           </div>
 
           <form id="scheduleForm" class="panel schedule-form-panel">
             <input id="scheduleId" type="hidden">
             <div class="panel-head"><div><h3 id="scheduleFormTitle">Tambah Jadwal Pekerjaan</h3><p>Jadwal tersimpan terpisah dari invoice sampai pekerjaan selesai.</p></div></div>
             <div class="form-grid schedule-form-grid">
-              <div class="field"><label>Tanggal *</label><input id="scheduleDate" type="date" required></div>
+              <div class="field schedule-date-field">
+                <label>Tanggal *</label>
+                <input id="scheduleDate" type="date" required>
+                <div class="schedule-date-shortcuts" aria-label="Pilih tanggal cepat">
+                  <button id="scheduleTodayShortcut" class="schedule-date-chip" type="button">Hari Ini</button>
+                  <button id="scheduleTomorrowShortcut" class="schedule-date-chip" type="button">Besok</button>
+                </div>
+              </div>
               <div class="field"><label>Jam</label><input id="scheduleTime" type="time"></div>
               <div class="field"><label>Status</label><select id="scheduleStatus"><option value="scheduled">Terjadwal</option><option value="on_the_way">Dalam Perjalanan</option><option value="working">Dikerjakan</option><option value="completed">Selesai</option><option value="cancelled">Dibatalkan</option></select></div>
               <div class="field"><label>Nama Pelanggan *</label><input id="scheduleCustomerName" list="scheduleCustomerList" required placeholder="Nama pelanggan"><datalist id="scheduleCustomerList"></datalist></div>
@@ -644,6 +654,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=69"></script>
+  <script src="app.js?v=70"></script>
 </body>
 </html>

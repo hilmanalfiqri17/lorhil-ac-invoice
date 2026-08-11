@@ -515,3 +515,22 @@ body.technician-mode .content{padding-bottom:92px}
     overflow:visible;
   }
 }
+
+
+/* V70 - Jadwal dadakan hari ini */
+.schedule-page-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.schedule-date-field{align-self:start}
+.schedule-date-shortcuts{display:flex;gap:7px;margin-top:2px}
+.schedule-date-chip{border:1px solid var(--line);background:#fff;color:#536872;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.2;cursor:pointer;transition:.18s ease}
+.schedule-date-chip:hover{border-color:var(--primary);color:var(--primary-dark);background:var(--soft)}
+.schedule-date-chip.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:0 5px 14px rgba(11,120,165,.18)}
+@media(max-width:780px){
+  #page-schedules .page-head{gap:12px}
+  .schedule-page-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .schedule-page-actions .btn{width:100%}
+  .schedule-date-shortcuts{display:grid;grid-template-columns:1fr 1fr}
+  .schedule-date-chip{min-height:36px}
+}
+@media(max-width:430px){
+  .schedule-page-actions{grid-template-columns:1fr}
+}

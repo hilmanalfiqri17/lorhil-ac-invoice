@@ -169,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=69",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=70",{
             updateViaCache:"none"
           });
 
@@ -1784,15 +1784,34 @@
       <label class="technician-choice"><input type="checkbox" value="${tech.id}" ${selected.has(tech.id)?"checked":""}><span>${esc(tech.name)}</span></label>`).join(""):`<div class="empty compact">Belum ada teknisi aktif.</div>`;
   }
 
-  function resetScheduleForm(){
+  function syncScheduleDateShortcuts(){
+    const value=$("scheduleDate")?.value||"";
+    const today=datePlusDays(0);
+    const tomorrow=datePlusDays(1);
+    $("scheduleTodayShortcut")?.classList.toggle("active",value===today);
+    $("scheduleTomorrowShortcut")?.classList.toggle("active",value===tomorrow);
+  }
+
+  function setScheduleQuickDate(days){
+    if(!$("scheduleDate")) return;
+    $("scheduleDate").value=datePlusDays(days);
+    if(!$("scheduleId")?.value){
+      $("scheduleFormTitle").textContent=Number(days)===0?"Tambah Jadwal Hari Ini":"Tambah Jadwal Besok";
+    }
+    syncScheduleDateShortcuts();
+  }
+
+  function resetScheduleForm(preset="today"){
     if(!$("scheduleForm")) return;
     $("scheduleForm").reset();
     $("scheduleId").value="";
-    $("scheduleFormTitle").textContent="Tambah Jadwal Pekerjaan";
-    $("scheduleDate").value=datePlusDays(1);
-    $("scheduleTime").value="08:00";
+    const isTomorrow=preset==="tomorrow";
+    $("scheduleFormTitle").textContent=isTomorrow?"Tambah Jadwal Besok":"Tambah Jadwal Hari Ini";
+    $("scheduleDate").value=datePlusDays(isTomorrow?1:0);
+    $("scheduleTime").value=localTime().slice(0,5);
     $("scheduleStatus").value="scheduled";
     renderScheduleTechnicianChoices([]);
+    syncScheduleDateShortcuts();
   }
 
   function scheduleFilterData(){
@@ -1834,6 +1853,7 @@
     $("scheduleId").value=item.id;
     $("scheduleFormTitle").textContent="Edit Jadwal Pekerjaan";
     $("scheduleDate").value=item.work_date||"";
+    syncScheduleDateShortcuts();
     $("scheduleTime").value=(item.work_time||"").slice(0,5);
     $("scheduleStatus").value=item.status||"scheduled";
     $("scheduleCustomerName").value=item.customer_name||"";
@@ -1905,8 +1925,12 @@
   }
 
   if($("scheduleForm")) $("scheduleForm").addEventListener("submit",saveSchedule);
-  if($("resetScheduleBtn")) $("resetScheduleBtn").addEventListener("click",resetScheduleForm);
-  if($("newScheduleBtn")) $("newScheduleBtn").addEventListener("click",()=>{resetScheduleForm();$("scheduleForm").scrollIntoView({behavior:"smooth",block:"start"});});
+  if($("resetScheduleBtn")) $("resetScheduleBtn").addEventListener("click",()=>resetScheduleForm("today"));
+  if($("newScheduleTodayBtn")) $("newScheduleTodayBtn").addEventListener("click",()=>{resetScheduleForm("today");$("scheduleForm").scrollIntoView({behavior:"smooth",block:"start"});});
+  if($("newScheduleTomorrowBtn")) $("newScheduleTomorrowBtn").addEventListener("click",()=>{resetScheduleForm("tomorrow");$("scheduleForm").scrollIntoView({behavior:"smooth",block:"start"});});
+  if($("scheduleTodayShortcut")) $("scheduleTodayShortcut").addEventListener("click",()=>setScheduleQuickDate(0));
+  if($("scheduleTomorrowShortcut")) $("scheduleTomorrowShortcut").addEventListener("click",()=>setScheduleQuickDate(1));
+  if($("scheduleDate")) $("scheduleDate").addEventListener("change",syncScheduleDateShortcuts);
   ["scheduleFilterDate","scheduleFilterStatus"].forEach(id=>{if($(id)) $(id).addEventListener("change",renderSchedules);});
   if($("scheduleSearch")) $("scheduleSearch").addEventListener("input",renderSchedules);
   if($("scheduleCustomerName")) $("scheduleCustomerName").addEventListener("change",()=>{

@@ -63,6 +63,7 @@
   const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 
   let db = null;
+  let appBooting = false;
   const state = {
     session:null, invoices:[], settings:null, technicians:[],
     invoiceTechnicians:[], schedules:[], scheduleTechnicians:[], page:"dashboard", accessContext:null, monitorPeriod:"today",
@@ -73,7 +74,10 @@
 
   function show(id){ $(id).classList.remove("hidden"); }
   function hide(id){ $(id).classList.add("hidden"); }
-  function loading(on){ on ? show("loading") : hide("loading"); }
+  function loading(on){
+    if(on){ show("loading"); return; }
+    if(!appBooting) hide("loading");
+  }
   function toast(message){
     $("toast").textContent=message; show("toast");
     clearTimeout(toast.timer); toast.timer=setTimeout(()=>hide("toast"),2600);
@@ -165,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=68",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=69",{
             updateViaCache:"none"
           });
 
@@ -175,13 +179,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v61")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v69")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v58";
+            const reloadKey="lorhil-sw-reloaded-v69";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -221,25 +225,46 @@
   }
 
   async function enterApp(options={}){
-    hide("setupScreen"); hide("loginScreen"); show("app");
-    $("todayText").textContent=new Intl.DateTimeFormat("id-ID",{
-      weekday:"long",day:"numeric",month:"long",year:"numeric"
-    }).format(new Date());
-    await loadAccessContext();
-    if(state.accessContext?.is_active===false){
-      const disabledName=state.accessContext?.display_name||"Akun ini";
-      await db.auth.signOut();
-      hide("app"); show("loginScreen");
-      $("loginError").textContent=`${disabledName} sudah dinonaktifkan. Hubungi admin LORHIL AC.`;
-      return;
+    // V69: jangan pernah tampilkan shell aplikasi sebelum role akun selesai dibaca.
+    // Ini mencegah Dashboard Admin berkedip sepersekian detik ketika akun teknisi refresh.
+    hide("setupScreen");
+    hide("loginScreen");
+    hide("app");
+    appBooting=true;
+    show("loading");
+
+    try{
+      $("todayText").textContent=new Intl.DateTimeFormat("id-ID",{
+        weekday:"long",day:"numeric",month:"long",year:"numeric"
+      }).format(new Date());
+
+      await loadAccessContext();
+
+      if(state.accessContext?.is_active===false){
+        const disabledName=state.accessContext?.display_name||"Akun ini";
+        await db.auth.signOut();
+        hide("app");
+        show("loginScreen");
+        $("loginError").textContent=`${disabledName} sudah dinonaktifkan. Hubungi admin LORHIL AC.`;
+        return;
+      }
+
+      // Terapkan role dan menu ketika aplikasi masih tersembunyi.
+      applyAccessUi();
+      if(!isTechnicianAccount()) resetInvoice();
+
+      await refreshAll();
+      applyAccessUi();
+      subscribeRealtime();
+
+      const targetPage=options.restorePage===false?defaultPageForRole():rememberedPage();
+      // Pilih halaman yang benar sebelum shell aplikasi diperlihatkan.
+      showPage(targetPage);
+      show("app");
+    }finally{
+      appBooting=false;
+      hide("loading");
     }
-    applyAccessUi();
-    if(!isTechnicianAccount()) resetInvoice();
-    await refreshAll();
-    applyAccessUi();
-    subscribeRealtime();
-    const targetPage=options.restorePage===false?defaultPageForRole():rememberedPage();
-    showPage(targetPage);
   }
 
   $("loginForm").addEventListener("submit",async e=>{
@@ -2157,7 +2182,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:62,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:69,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });
@@ -2257,7 +2282,7 @@
     toast("Aktivitas berhasil disegarkan.");
   });
 
-  // V68: fallback sinkronisasi saat tab kembali aktif.
+  // V69: fallback sinkronisasi saat tab kembali aktif.
   // Realtime tetap utama; refresh ini memastikan status tidak tertinggal jika browser
   // sempat menahan koneksi ketika tab berada di background.
   let lastVisibilityRefresh=0;

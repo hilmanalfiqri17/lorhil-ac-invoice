@@ -63,6 +63,8 @@
   function errorMessage(error){ return error?.message || "Terjadi kesalahan."; }
   const accessRole = () => state.accessContext?.role || "admin";
   const isTechnicianAccount = () => accessRole() === "technician";
+  const isSupervisorAccount = () => accessRole() === "supervisor";
+  const isAdminAccount = () => accessRole() === "admin";
   const ownerUid = () => state.accessContext?.owner_user_id || uid();
 
   async function loadAccessContext(){
@@ -93,15 +95,23 @@
 
   function applyAccessUi(){
     const tech=isTechnicianAccount();
+    const supervisor=isSupervisorAccount();
     document.body.classList.toggle("technician-mode",tech);
-    if($("adminNav")) $("adminNav").classList.toggle("hidden",tech);
+    document.body.classList.toggle("supervisor-mode",supervisor);
+    if($("adminNav")) $("adminNav").classList.toggle("hidden",tech||supervisor);
+    if($("supervisorNav")) $("supervisorNav").classList.toggle("hidden",!supervisor);
     if($("technicianNav")) $("technicianNav").classList.toggle("hidden",!tech);
     if($("techBottomNav")) $("techBottomNav").classList.toggle("hidden",!tech);
     if($("globalSearchWrap")) $("globalSearchWrap").classList.toggle("hidden",tech);
-    if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech);
-    if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":"Online Invoice";
+    if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech||supervisor);
+    document.querySelectorAll(".go-invoice").forEach(el=>el.classList.toggle("hidden",tech||supervisor));
+    if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":supervisor?"Supervisor Operasional":"Online Invoice";
+    if($("supervisorWelcomeCard")) $("supervisorWelcomeCard").classList.toggle("hidden",!supervisor);
+    if($("supervisorWelcomeName")) $("supervisorWelcomeName").textContent=state.accessContext?.display_name||"Hendri";
+    if($("technicianForm")) $("technicianForm").classList.toggle("hidden",supervisor);
+    if($("teamAccountPanel")) $("teamAccountPanel").classList.toggle("hidden",accessRole()!=="admin");
     if($("userAvatarText")){
-      const label=tech?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
+      const label=(tech||supervisor)?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
       $("userAvatarText").textContent=initialsFromName(label||"LA");
     }
   }
@@ -125,7 +135,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=54",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=55",{
             updateViaCache:"none"
           });
 
@@ -135,13 +145,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v54")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v55")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v54";
+            const reloadKey="lorhil-sw-reloaded-v55";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -172,7 +182,7 @@
       return;
     }
     applyAccessUi();
-    if(!isTechnicianAccount()) resetInvoice();
+    if(isAdminAccount()) resetInvoice();
     await refreshAll();
     applyAccessUi();
     subscribeRealtime();
@@ -201,20 +211,22 @@
     "tech-dashboard":"Dashboard Teknisi","tech-jobs":"Pekerjaan Saya","tech-history":"Riwayat Pekerjaan","tech-profile":"Profil Teknisi"
   };
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
-  document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{if(isTechnicianAccount())return;resetInvoice();showPage("invoice");}));
+  document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{if(!isAdminAccount())return;resetInvoice();showPage("invoice");}));
   document.querySelectorAll(".tech-see-all[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
 
   function showPage(page){
     const techPages=new Set(["tech-dashboard","tech-jobs","tech-history","tech-profile"]);
+    const supervisorPages=new Set(["dashboard","schedules","history","customers","technicians"]);
     if(isTechnicianAccount() && !techPages.has(page)) page="tech-dashboard";
     if(!isTechnicianAccount() && techPages.has(page)) page="dashboard";
+    if(isSupervisorAccount() && !supervisorPages.has(page)) page="dashboard";
     const target=$(`page-${page}`);
     if(!target) return;
     state.page=page;
     document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
     target.classList.add("active");
     document.querySelectorAll(".nav-btn[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));
-    $("pageTitle").textContent=titles[page]||"LORHIL AC";
+    $("pageTitle").textContent=isSupervisorAccount()&&page==="dashboard"?"Dashboard Supervisor":(titles[page]||"LORHIL AC");
     $("sidebar").classList.remove("open");
     if(page==="dashboard") renderDashboard();
     if(page==="history") renderHistory();
@@ -269,7 +281,7 @@
         return inv;
       });
 
-      state.settings=settingsResult.data || (isTechnicianAccount()
+      state.settings=settingsResult.data || ((isTechnicianAccount()||isSupervisorAccount())
         ? {store_name:"LORHIL AC",phone:"",address:"",payment_info:"",footer_note:"",signer_name:"Hendri",signer_role:"Pemilik LORHIL AC"}
         : await createDefaultSettings());
       if(accessRole()==="admin") await refreshTeamMembers();
@@ -315,7 +327,7 @@
     $("brandName").textContent=storeName;
     document.title=`${storeName} Online`;
     if($("userAvatarText")){
-      const avatarLabel=isTechnicianAccount()?state.accessContext?.display_name:storeName;
+      const avatarLabel=(isTechnicianAccount()||isSupervisorAccount())?state.accessContext?.display_name:storeName;
       $("userAvatarText").textContent=initialsFromName(avatarLabel||"LA");
     }
   }
@@ -867,6 +879,10 @@
   $("saveWhatsappBtn").addEventListener("click",async()=>{closeInvoiceActionMenu();await saveInvoice({whatsappAfter:true});});
 
   async function saveInvoice({printAfter=false, downloadAfter=false, whatsappAfter=false}={}){
+    if(!isAdminAccount()){
+      alert("Pembuatan atau perubahan nota hanya dapat dilakukan oleh Admin.");
+      return;
+    }
     if(whatsappAfter){
       const phone=normalizeWhatsAppNumber($("customerPhone").value);
       if(!/^62\d{8,13}$/.test(phone)){
@@ -1001,6 +1017,7 @@
   }
 
   function editInvoice(id){
+    if(!isAdminAccount()){ alert("Edit nota hanya dapat dilakukan oleh Admin."); return; }
     const inv=state.invoices.find(x=>x.id===id);if(!inv)return;
     closeModal();showPage("invoice");
     $("invoiceHeading").textContent=`Edit ${inv.invoice_number}`;
@@ -1037,6 +1054,8 @@
 
   function openDetail(id){
     const inv=state.invoices.find(x=>x.id===id);if(!inv)return;
+    const supervisor=isSupervisorAccount();
+    const admin=isAdminAccount();
     $("detailContent").innerHTML=`
       <div class="detail-grid">
         <div class="detail-box"><h4>Informasi Nota</h4>
@@ -1064,42 +1083,45 @@
       <div class="detail-box" style="margin-top:16px"><h4>Teknisi Lapangan</h4>
         <div class="detail-row"><span>Nama teknisi</span><strong>${esc((inv.invoice_technicians||[]).map(row=>row.technician?.name||"-").join(", ")||"Belum dipilih")}</strong></div>
       </div>
-      <div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
+      ${admin?`<div class="detail-box" style="margin-top:16px"><h4>Perbarui Pembayaran</h4>
         <div class="form-grid"><div class="field"><label>Jumlah yang Sudah Dibayar</label><input id="detailPaid" type="number" min="0" max="${inv.total}" value="${inv.paid}"></div>
         <div class="field"><label>Status Otomatis</label><div id="detailStatus" class="readonly">${esc(inv.status)}</div></div></div>
         <div class="actions" style="justify-content:flex-end"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button></div>
-      </div>
+      </div>`:`<div class="supervisor-readonly-note" style="display:block;margin-top:16px">Mode supervisor: data invoice hanya dapat dilihat. Perubahan pembayaran, edit, hapus, dan pengiriman invoice tetap menjadi kewenangan Admin.</div>`}
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
         <button id="printBtn" class="btn primary">Cetak Nota</button>
-        <button id="whatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
-        <details id="moreActions" style="position:relative">
+        ${admin?`<button id="whatsappBtn" class="btn success">Kirim Invoice Otomatis</button>`:""}
+        <button id="downloadBtn" class="btn outline">Download PDF</button>
+        ${admin?`<details id="moreActions" style="position:relative">
           <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
           <div style="position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
             <button id="editBtn" class="btn secondary" style="width:100%">Edit Nota</button>
-            <button id="downloadBtn" class="btn outline" style="width:100%">Download PDF</button>
             <button id="deleteBtn" class="btn danger" style="width:100%">Hapus Nota</button>
           </div>
-        </details>
+        </details>`:""}
       </div>`;
-    const paidInput=$("detailPaid");
-    const savePaymentBtn=$("savePaymentBtn");
-    const initialPaid=Number(inv.paid)||0;
-    paidInput.addEventListener("input",()=>{
-      const paid=Math.min(inv.total,Math.max(0,Number(paidInput.value)||0));
-      $("detailStatus").textContent=statusFrom(inv.total,paid);
-      savePaymentBtn.disabled=paid===initialPaid;
-    });
-    savePaymentBtn.disabled=true;
-    savePaymentBtn.addEventListener("click",()=>updatePayment(inv.id,false));
+    if(admin){
+      const paidInput=$("detailPaid");
+      const savePaymentBtn=$("savePaymentBtn");
+      const initialPaid=Number(inv.paid)||0;
+      paidInput.addEventListener("input",()=>{
+        const paid=Math.min(inv.total,Math.max(0,Number(paidInput.value)||0));
+        $("detailStatus").textContent=statusFrom(inv.total,paid);
+        savePaymentBtn.disabled=paid===initialPaid;
+      });
+      savePaymentBtn.disabled=true;
+      savePaymentBtn.addEventListener("click",()=>updatePayment(inv.id,false));
+      $("whatsappBtn").addEventListener("click",()=>sendInvoiceAutomatically(inv));
+      $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
+      $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
+    }
     $("printBtn").addEventListener("click",()=>printInvoice(inv));
-    $("whatsappBtn").addEventListener("click",()=>sendInvoiceAutomatically(inv));
-    $("editBtn").addEventListener("click",()=>editInvoice(inv.id));
     $("downloadBtn").addEventListener("click",()=>downloadInvoice(inv));
-    $("deleteBtn").addEventListener("click",()=>deleteInvoice(inv.id,inv.invoice_number));
     show("detailModal");
   }
 
   async function updatePayment(id,printAfter){
+    if(!isAdminAccount()){ alert("Perubahan pembayaran hanya dapat dilakukan oleh Admin."); return; }
     try{
       loading(true);const paid=Math.max(0,Number($("detailPaid").value)||0);
       const {data,error}=await db.rpc("update_invoice_payment",{p_invoice_id:id,p_paid:paid});
@@ -1112,6 +1134,7 @@
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
   async function deleteInvoice(id,number){
+    if(!isAdminAccount()){ alert("Penghapusan nota hanya dapat dilakukan oleh Admin."); return; }
     if(!confirm(`Hapus nota ${number}?`)) return;
 
     loading(true);
@@ -1133,6 +1156,7 @@
     renderTeamAccountOptions();
     renderTeamMembers();
     if($("teamAccountPanel")) $("teamAccountPanel").classList.toggle("hidden",accessRole()!=="admin");
+    if($("technicianForm")) $("technicianForm").classList.toggle("hidden",isSupervisorAccount());
   }
 
   function teamMemberForTechnician(technicianId){
@@ -1141,27 +1165,39 @@
 
   function renderTechnicianAdmin(){
     if(!$("technicianAdminBody")) return;
+    const supervisor=isSupervisorAccount();
     $("technicianAdminBody").innerHTML=state.technicians.length?state.technicians.map(tech=>{
       const member=teamMemberForTechnician(tech.id);
-      const account=member
-        ? `<span class="team-login-badge ${member.is_active?"team-login-active":"team-login-inactive"}">${member.is_active?"Akun Aktif":"Akun Nonaktif"}</span><small style="display:block;margin-top:4px;color:#7b879b">${esc(member.email||"")}</small>`
-        : `<span class="team-login-badge team-login-none">Belum Ada Akun</span>`;
+      const account=supervisor
+        ? `<span class="team-login-badge team-login-none">Dikelola Admin</span>`
+        : member
+          ? `<span class="team-login-badge ${member.is_active?"team-login-active":"team-login-inactive"}">${member.is_active?"Akun Aktif":"Akun Nonaktif"}</span><small style="display:block;margin-top:4px;color:#7b879b">${esc(member.email||"")}</small>`
+          : `<span class="team-login-badge team-login-none">Belum Ada Akun</span>`;
+      const actions=supervisor
+        ? `<button class="btn outline supervisor-monitor-btn" data-tech-name="${esc(tech.name)}" type="button">Lihat Jadwal</button>`
+        : `<div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${!member&&accessRole()==="admin"?`<button class="btn primary create-tech-account-btn" data-id="${tech.id}">Buat Akun</button>`:""}
+            <button class="btn outline edit-tech-btn" data-id="${tech.id}">Edit</button>
+            <button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${(member?member.is_active:tech.is_active!==false)?"Nonaktifkan":"Aktifkan"}</button>
+            <button class="btn danger delete-tech-btn" data-id="${tech.id}">Hapus</button>
+          </div>`;
       return `<tr>
         <td><strong>${esc(tech.name)}</strong></td>
         <td>${esc(tech.phone||"-")}</td>
         <td>${tech.is_active===false?"Nonaktif":"Aktif"}</td>
         <td>${account}</td>
-        <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${!member&&accessRole()==="admin"?`<button class="btn primary create-tech-account-btn" data-id="${tech.id}">Buat Akun</button>`:""}
-            <button class="btn outline edit-tech-btn" data-id="${tech.id}">Edit</button>
-            <button class="btn secondary toggle-tech-btn" data-id="${tech.id}">${(member?member.is_active:tech.is_active!==false)?"Nonaktifkan":"Aktifkan"}</button>
-            <button class="btn danger delete-tech-btn" data-id="${tech.id}">Hapus</button>
-          </div>
-        </td>
+        <td>${actions}</td>
       </tr>`;
     }).join(""):`<tr><td colspan="5" class="empty">Belum ada teknisi.</td></tr>`;
 
+    if(supervisor){
+      $("technicianAdminBody").querySelectorAll(".supervisor-monitor-btn").forEach(btn=>btn.addEventListener("click",()=>{
+        if($("scheduleSearch")) $("scheduleSearch").value=btn.dataset.techName||"";
+        showPage("schedules");
+        renderSchedules();
+      }));
+      return;
+    }
     $("technicianAdminBody").querySelectorAll(".create-tech-account-btn")
       .forEach(btn=>btn.addEventListener("click",()=>prefillTeamAccount(btn.dataset.id)));
     $("technicianAdminBody").querySelectorAll(".edit-tech-btn")
@@ -1269,6 +1305,7 @@
 
   $("technicianForm").addEventListener("submit",async event=>{
     event.preventDefault();
+    if(!isAdminAccount()){ alert("Hanya Admin yang dapat menambah teknisi."); return; }
     const name=$("technicianName").value.trim();
     if(!name)return;
     loading(true);
@@ -1528,7 +1565,7 @@
         <td>${item.invoice_id?`<span class="schedule-invoice-link">Sudah dibuat</span>`:`<span class="micro">Belum ada</span>`}</td>
         <td><div class="schedule-actions">
           <button class="btn secondary edit-schedule-btn" data-id="${item.id}" type="button">Edit</button>
-          ${item.invoice_id?"":`<button class="btn primary invoice-from-schedule-btn" data-id="${item.id}" type="button">Buat Nota</button>`}
+          ${item.invoice_id||!isAdminAccount()?"":`<button class="btn primary invoice-from-schedule-btn" data-id="${item.id}" type="button">Buat Nota</button>`}
           <button class="btn danger delete-schedule-btn" data-id="${item.id}" type="button">Hapus</button>
         </div></td>
       </tr>`).join(""):`<tr><td colspan="8" class="empty">Belum ada jadwal pada filter ini.</td></tr>`;
@@ -1594,6 +1631,10 @@
   }
 
   function createInvoiceFromSchedule(id){
+    if(!isAdminAccount()){
+      alert("Pembuatan nota dari jadwal hanya dapat dilakukan oleh Admin.");
+      return;
+    }
     const item=state.schedules.find(schedule=>schedule.id===id);if(!item)return;
     resetInvoice();
     state.invoiceSourceScheduleId=item.id;
@@ -1793,7 +1834,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:54,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:55,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

@@ -240,3 +240,31 @@ body.technician-mode .content{padding-bottom:92px}
   .schedule-form-grid{grid-template-columns:1fr}.schedule-form-actions{display:grid;grid-template-columns:1fr 1fr}.schedule-form-actions .btn{width:100%}
   .schedule-filters{display:grid;grid-template-columns:1fr}.schedule-filters>*{width:100%!important;min-width:0!important}
 }
+
+
+/* ==========================================================
+   LORHIL AC V55 - Supervisor Operasional
+   ========================================================== */
+.supervisor-welcome-card{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  margin-bottom:18px;padding:20px 22px;border:1px solid #cfe0ff;border-radius:18px;
+  background:linear-gradient(135deg,#f7fbff 0%,#edf5ff 100%);
+  box-shadow:0 8px 24px rgba(33,84,155,.08)
+}
+.supervisor-welcome-card h2{margin:5px 0 6px;font-size:22px;color:#17314d}
+.supervisor-welcome-card p{margin:0;color:#66778b;max-width:760px;line-height:1.5}
+.supervisor-eyebrow{font-size:11px;font-weight:900;letter-spacing:.12em;color:#2f6fcd}
+.supervisor-role-pill{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border-radius:999px;background:#e3efff;color:#245da9;font-size:12px;font-weight:900;white-space:nowrap}
+body.supervisor-mode .profile-pill{border-color:#c9dcfb;background:#f7fbff}
+body.supervisor-mode .profile-pill i{background:#2d7be5}
+body.supervisor-mode .schedule-form-panel{border-color:#d7e5f8}
+body.supervisor-mode #teamAccountPanel{display:none!important}
+body.supervisor-mode #technicianForm{display:none!important}
+body.supervisor-mode .supervisor-readonly-note{display:block}
+.supervisor-readonly-note{display:none;margin:0 0 14px;padding:11px 13px;border-radius:10px;background:#f5f8fc;color:#65758a;font-size:13px;border:1px solid #dce5ef}
+.supervisor-monitor-btn{white-space:nowrap}
+
+@media(max-width:780px){
+  .supervisor-welcome-card{align-items:flex-start;flex-direction:column;padding:17px}
+  .supervisor-welcome-card h2{font-size:20px}
+}

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="style.css?v=54">
   <title>LORHIL AC Online V53</title>
 </head>
-<body data-app-version="54">
+<body data-app-version="55">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -74,6 +74,14 @@
         <button class="nav-btn" data-page="backup"><span class="nav-icon">⇧</span><span>Backup</span></button>
       </nav>
 
+      <nav id="supervisorNav" class="hidden supervisor-sidebar-nav">
+        <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="nav-btn" data-page="schedules"><span class="nav-icon">◷</span><span>Jadwal Pekerjaan</span></button>
+        <button class="nav-btn" data-page="history"><span class="nav-icon">▤</span><span>Riwayat Nota</span></button>
+        <button class="nav-btn" data-page="customers"><span class="nav-icon">♙</span><span>Pelanggan</span></button>
+        <button class="nav-btn" data-page="technicians"><span class="nav-icon">⌕</span><span>Monitoring Teknisi</span></button>
+      </nav>
+
       <nav id="technicianNav" class="hidden technician-sidebar-nav">
         <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
         <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon">▣</span><span>Pekerjaan</span></button>
@@ -114,6 +122,15 @@
         <section id="page-dashboard" class="page active dashboard-page">
           <input id="dashboardSearch" type="hidden" value="">
           <select id="dashboardStatus" class="hidden" aria-hidden="true"><option value="all">Semua</option></select>
+
+          <div id="supervisorWelcomeCard" class="supervisor-welcome-card hidden">
+            <div>
+              <span class="supervisor-eyebrow">SUPERVISOR OPERASIONAL</span>
+              <h2>Halo, <span id="supervisorWelcomeName">Hendri</span> 👋</h2>
+              <p>Pantau seluruh pekerjaan tim, atur jadwal teknisi, dan cek perkembangan nota tanpa akses pengaturan sensitif.</p>
+            </div>
+            <span class="supervisor-role-pill">Supervisor</span>
+          </div>
 
           <div class="stats dashboard-stats">
             <article class="stat-card blue">
@@ -361,7 +378,7 @@
         <section id="page-technicians" class="page">
           <div class="page-head"><div><h2>Teknisi & Akun Tim</h2><p>Kelola teknisi lapangan dan akses login anggota LORHIL AC.</p></div></div>
 
-          <div class="panel">
+          <div id="technicianDirectoryPanel" class="panel">
             <div class="panel-head"><div><h3>Daftar Teknisi</h3><p>Nama teknisi dapat dipilih saat membuat atau mengedit nota.</p></div></div>
             <form id="technicianForm" class="technician-form-row">
               <div class="field"><label>Nama Teknisi *</label><input id="technicianName" required placeholder="Contoh: Andi"></div>
@@ -536,6 +553,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=54"></script>
+  <script src="app.js?v=55"></script>
 </body>
 </html>

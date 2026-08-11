@@ -169,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=70",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=71",{
             updateViaCache:"none"
           });
 
@@ -179,7 +179,7 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v69")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v71")
                 .map(key=>caches.delete(key))
             );
           }

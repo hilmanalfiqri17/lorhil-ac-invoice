@@ -522,8 +522,8 @@ body.technician-mode .content{padding-bottom:92px}
 .schedule-date-field{align-self:start}
 .schedule-date-shortcuts{display:flex;gap:7px;margin-top:2px}
 .schedule-date-chip{border:1px solid var(--line);background:#fff;color:#536872;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.2;cursor:pointer;transition:.18s ease}
-.schedule-date-chip:hover{border-color:var(--primary);color:var(--primary-dark);background:var(--soft)}
-.schedule-date-chip.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:0 5px 14px rgba(11,120,165,.18)}
+.schedule-date-chip:hover{border-color:var(--blue);color:var(--blue-600);background:var(--blue-soft)}
+.schedule-date-chip.active{border-color:var(--blue);background:var(--blue);color:#fff;box-shadow:0 5px 14px rgba(11,97,232,.22)}
 @media(max-width:780px){
   #page-schedules .page-head{gap:12px}
   .schedule-page-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}

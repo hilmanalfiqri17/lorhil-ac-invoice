@@ -169,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=71",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=72",{
             updateViaCache:"none"
           });
 
@@ -1571,12 +1571,13 @@
   }
 
   function monitorJobsForTechnician(technicianId){
-    const linkedInvoiceIds=new Set();
+    // V72: Monitoring pekerjaan hanya bersumber dari modul Jadwal Pekerjaan.
+    // Memilih Tim Lapangan pada Nota hanya mencatat siapa yang mengerjakan nota tersebut
+    // dan TIDAK boleh membuat pekerjaan/jadwal baru pada akun teknisi.
     const jobs=[];
     state.schedules.forEach(schedule=>{
       const assigned=(schedule.schedule_technicians||[]).some(row=>row.technician_id===technicianId);
       if(!assigned) return;
-      if(schedule.invoice_id) linkedInvoiceIds.add(schedule.invoice_id);
       jobs.push({
         source:"schedule",id:schedule.id,work_date:schedule.work_date,work_time:schedule.work_time||"",
         customer_name:schedule.customer_name||"-",description:schedule.job_description||"Pekerjaan lapangan",
@@ -1585,12 +1586,6 @@
         work_started_at:schedule.work_started_at||null,
         work_completed_at:schedule.work_completed_at||null
       });
-    });
-    state.invoiceTechnicians.filter(row=>row.technician_id===technicianId && !linkedInvoiceIds.has(row.invoice_id)).forEach(row=>{
-      const inv=state.invoices.find(item=>item.id===row.invoice_id);if(!inv)return;
-      const status=row.work_status||"Terjadwal";
-      jobs.push({source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name||"-",description:invoiceText(inv)||"Pekerjaan lapangan",status,raw_status:status,invoice_id:inv.id,status_updated_at:row.work_status_updated_at||inv.updated_at||null,
-        work_started_at:row.work_started_at||null,work_completed_at:row.work_completed_at||null});
     });
     return jobs.sort((a,b)=>`${a.work_date} ${a.work_time||""}`.localeCompare(`${b.work_date} ${b.work_time||""}`));
   }
@@ -1979,17 +1974,14 @@
   }
 
   function techUnifiedJobs(){
-    const schedules=techAssignedSchedules().map(item=>({
+    // V72: akun teknisi hanya menerima tugas yang dibuat dari menu Jadwal Pekerjaan.
+    // Invoice + pilihan Tim Lapangan tetap tersimpan untuk histori nota/ranking,
+    // tetapi tidak otomatis menjadi pekerjaan di Dashboard Teknisi.
+    return techAssignedSchedules().map(item=>({
       source:"schedule",id:item.id,work_date:item.work_date,work_time:item.work_time||"",customer_name:item.customer_name,
       customer_phone:item.customer_phone||"",customer_address:item.customer_address||"",description:item.job_description||"Pekerjaan lapangan",
       notes:item.notes||"",status:scheduleStatusLabel(item.status),invoice_id:item.invoice_id||null,raw:item
-    }));
-    const invoices=techAssignedInvoices().map(inv=>({
-      source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name,
-      customer_phone:inv.customer_phone||"",customer_address:inv.customer_address||"",description:invoiceText(inv)||"Pekerjaan lapangan",
-      notes:inv.notes||"",status:effectiveWorkStatus(inv),invoice_id:inv.id,raw:inv
-    }));
-    return [...schedules,...invoices].sort((a,b)=>`${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`));
+    })).sort((a,b)=>`${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`));
   }
 
   function techJobDateParts(value){

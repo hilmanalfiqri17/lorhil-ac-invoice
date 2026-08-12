@@ -2024,7 +2024,8 @@
   }
 
   function techJobCard(job,variant="work"){
-    // V73: nomor pelanggan dan tombol WhatsApp sengaja tidak pernah ditampilkan ke teknisi.
+    // V75: privasi nomor pelanggan tetap dijaga, tetapi layout kartu teknisi dikembalikan
+    // ke struktur yang sesuai dengan style.css agar tampilan dashboard rapi kembali.
     const mapsUrl=job.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.customer_address)}`:"";
     const action=techStatusAction(job);
     const time=esc((job.work_time||"-").slice(0,5));
@@ -2040,11 +2041,26 @@
     const detailBtn=`<button class="btn outline tech-detail-btn" data-source="${job.source}" data-id="${job.id}" type="button">${techIcon("file")}<span>Detail</span></button>`;
     const mapBtn=mapsUrl?`<a class="btn outline tech-map-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")}<span>Buka Maps</span></a>`:`<button class="btn outline" type="button" disabled>${techIcon("pin")}<span>Buka Maps</span></button>`;
     const actionBtn=action?`<button class="btn primary tech-quick-status" data-source="${job.source}" data-id="${job.id}" data-next="${action.next}" type="button">${techIcon(action.iconName)}<span>${action.label}</span></button>`:"";
-    const actions=`<div class="tech-job-actions">${detailBtn}${mapBtn}${actionBtn}</div>`;
+    const actions=`<div class="tech-job-row-actions">${detailBtn}${mapBtn}${actionBtn}</div>`;
+
     if(variant==="upcoming"){
-      return `<article class="tech-upcoming-row ${techStatusCardClass(job.status)}"><div class="tech-upcoming-date"><strong>${day.weekday}</strong><span>${day.date}</span></div><div class="tech-upcoming-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
+      const upcomingStatus=`<div class="tech-job-status-area tech-upcoming-status">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small></div>`;
+      const upcomingActions=`<div class="tech-job-row-actions tech-upcoming-actions">${detailBtn}</div>`;
+      return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
+        <div class="tech-upcoming-day"><strong>${esc(day.weekday)}</strong><span>${esc(day.date)}</span></div>
+        <div class="tech-upcoming-time">${time}<small>WIB</small></div>
+        ${main}
+        ${upcomingStatus}
+        ${upcomingActions}
+      </article>`;
     }
-    return `<article class="tech-work-row ${techStatusCardClass(job.status)}"><div class="tech-work-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
+
+    return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
+      <div class="tech-job-time-block"><strong class="tech-job-time">${time}</strong><small>WIB</small></div>
+      ${main}
+      ${status}
+      ${actions}
+    </article>`;
   }
 
   function bindTechJobButtons(container){
@@ -2185,7 +2201,6 @@
       <div class="tech-detail-header"><div><div class="tech-detail-number">${source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(job.customer_name||"-")}</div></div>${workStatusBadge(job.status)}</div>
       <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
       <div class="tech-detail-actions">${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")} Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
-      <div class="tech-privacy-note">Nomor telepon pelanggan disembunyikan untuk menjaga kerahasiaan data pelanggan.</div>
       <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p></div>
       <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${details||'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}${job.invoice_id&&source==="schedule"?'<p class="schedule-linked-note">Pekerjaan ini sudah terhubung dengan nota.</p>':''}</div>`;
     $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{const next=btn.dataset.status;if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?"))return;updateTechJobStatus(source,id,next);}));

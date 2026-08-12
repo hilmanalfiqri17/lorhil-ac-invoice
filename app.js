@@ -169,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=73",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=74",{
             updateViaCache:"none"
           });
 
@@ -2045,6 +2045,25 @@
       return `<article class="tech-upcoming-row ${techStatusCardClass(job.status)}"><div class="tech-upcoming-date"><strong>${day.weekday}</strong><span>${day.date}</span></div><div class="tech-upcoming-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
     }
     return `<article class="tech-work-row ${techStatusCardClass(job.status)}"><div class="tech-work-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
+  }
+
+  function bindTechJobButtons(container){
+    if(!container) return;
+
+    container.querySelectorAll(".tech-detail-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        openTechJobDetail(btn.dataset.source,btn.dataset.id);
+      });
+    });
+
+    container.querySelectorAll(".tech-quick-status").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const next=btn.dataset.next;
+        if(!next) return;
+        if(next==="Selesai" && !confirm("Tandai pekerjaan ini sebagai selesai?")) return;
+        updateTechJobStatus(btn.dataset.source,btn.dataset.id,next);
+      });
+    });
   }
 
   function renderTechJobList(container,data,emptyText,variant="work"){

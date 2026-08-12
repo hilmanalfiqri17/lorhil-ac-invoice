@@ -169,7 +169,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=72",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=73",{
             updateViaCache:"none"
           });
 
@@ -179,13 +179,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v71")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v73")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v69";
+            const reloadKey="lorhil-sw-reloaded-v73";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -327,12 +327,26 @@
       const activityQuery=isTechnicianAccount()
         ? Promise.resolve({data:[],error:null})
         : db.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(300);
+      // V73 PRIVASI PELANGGAN:
+      // Akun teknisi tidak lagi membaca tabel invoices/work_schedules secara langsung.
+      // Jadwal teknisi diambil melalui RPC aman yang TIDAK mengembalikan nomor pelanggan.
+      const technicianMode=isTechnicianAccount();
+      const invoiceQuery=technicianMode
+        ? Promise.resolve({data:[],error:null})
+        : db.from("invoices").select("*, invoice_items(*)").order("work_date",{ascending:false}).order("work_time",{ascending:false});
+      const invoiceTechnicianQuery=technicianMode
+        ? Promise.resolve({data:[],error:null})
+        : db.from("invoice_technicians").select("*");
+      const scheduleQuery=technicianMode
+        ? db.rpc("get_my_work_schedules_safe")
+        : db.from("work_schedules").select("*").order("work_date",{ascending:true}).order("work_time",{ascending:true});
+
       const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult,scheduleResult,scheduleTechnicianResult,activityResult]=await Promise.all([
-        db.from("invoices").select("*, invoice_items(*)").order("work_date",{ascending:false}).order("work_time",{ascending:false}),
+        invoiceQuery,
         db.from("store_settings").select("*").maybeSingle(),
         db.from("technicians").select("*").order("name",{ascending:true}),
-        db.from("invoice_technicians").select("*"),
-        db.from("work_schedules").select("*").order("work_date",{ascending:true}).order("work_time",{ascending:true}),
+        invoiceTechnicianQuery,
+        scheduleQuery,
         db.from("schedule_technicians").select("*"),
         activityQuery
       ]);
@@ -1979,7 +1993,7 @@
     // tetapi tidak otomatis menjadi pekerjaan di Dashboard Teknisi.
     return techAssignedSchedules().map(item=>({
       source:"schedule",id:item.id,work_date:item.work_date,work_time:item.work_time||"",customer_name:item.customer_name,
-      customer_phone:item.customer_phone||"",customer_address:item.customer_address||"",description:item.job_description||"Pekerjaan lapangan",
+      customer_phone:"",customer_address:item.customer_address||"",description:item.job_description||"Pekerjaan lapangan",
       notes:item.notes||"",status:scheduleStatusLabel(item.status),invoice_id:item.invoice_id||null,raw:item
     })).sort((a,b)=>`${a.work_date||""} ${a.work_time||""}`.localeCompare(`${b.work_date||""} ${b.work_time||""}`));
   }
@@ -2010,53 +2024,27 @@
   }
 
   function techJobCard(job,variant="work"){
-    const phone=normalizeWhatsAppNumber(job.customer_phone);
+    // V73: nomor pelanggan dan tombol WhatsApp sengaja tidak pernah ditampilkan ke teknisi.
     const mapsUrl=job.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.customer_address)}`:"";
     const action=techStatusAction(job);
     const time=esc((job.work_time||"-").slice(0,5));
     const day=techJobDateParts(job.work_date);
     const sourceLabel=job.source==="schedule"?"Jadwal":"Nota";
     const main=`<div class="tech-job-main">
-      <div class="tech-job-main-title"><strong>${esc(job.customer_name||"-")}</strong>${phone?`<span class="tech-mini-wa">${techIcon("whatsapp","wa-green")}</span>`:""}</div>
+      <div class="tech-job-main-title"><strong>${esc(job.customer_name||"-")}</strong></div>
       <span class="tech-job-service">${esc(job.description||"Pekerjaan lapangan")}</span>
       <div class="tech-job-location"><span class="tech-location-icon">${techIcon("pin")}</span><span>${esc(job.customer_address||"Lokasi belum diisi")}</span></div>
       <span class="tech-job-source">${sourceLabel}</span>
     </div>`;
     const status=`<div class="tech-job-status-area">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small>${job.work_time?`<strong>${time} WIB</strong>`:""}</div>`;
     const detailBtn=`<button class="btn outline tech-detail-btn" data-source="${job.source}" data-id="${job.id}" type="button">${techIcon("file")}<span>Detail</span></button>`;
-    const waBtn=phone?`<a class="btn outline tech-wa-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">${techIcon("whatsapp","wa-green")}<span>WhatsApp</span></a>`:`<button class="btn outline" type="button" disabled>${techIcon("whatsapp")}<span>WhatsApp</span></button>`;
     const mapBtn=mapsUrl?`<a class="btn outline tech-map-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")}<span>Buka Maps</span></a>`:`<button class="btn outline" type="button" disabled>${techIcon("pin")}<span>Buka Maps</span></button>`;
-    const actionBtn=action?`<button class="btn primary tech-quick-status" data-source="${job.source}" data-id="${job.id}" data-status="${action.next}" type="button">${techIcon(action.iconName)}<span>${action.label}</span></button>`:"";
-    const actions=`<div class="tech-job-row-actions">${detailBtn}${variant!=="dashboard"?waBtn:""}${variant!=="dashboard"?mapBtn:""}${actionBtn}</div>`;
-
+    const actionBtn=action?`<button class="btn primary tech-quick-status" data-source="${job.source}" data-id="${job.id}" data-next="${action.next}" type="button">${techIcon(action.iconName)}<span>${action.label}</span></button>`:"";
+    const actions=`<div class="tech-job-actions">${detailBtn}${mapBtn}${actionBtn}</div>`;
     if(variant==="upcoming"){
-      const upcomingStatus=`<div class="tech-job-status-area tech-upcoming-status">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small></div>`;
-      const upcomingActions=`<div class="tech-job-row-actions tech-upcoming-actions">${detailBtn}</div>`;
-      return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
-        <div class="tech-upcoming-day"><strong>${esc(day.weekday)}</strong><span>${esc(day.date)}</span></div>
-        <div class="tech-upcoming-time">${time}<small>WIB</small></div>
-        ${main}
-        ${upcomingStatus}
-        ${upcomingActions}
-      </article>`;
+      return `<article class="tech-upcoming-row ${techStatusCardClass(job.status)}"><div class="tech-upcoming-date"><strong>${day.weekday}</strong><span>${day.date}</span></div><div class="tech-upcoming-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
     }
-
-    return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
-      <div class="tech-job-time-block"><strong class="tech-job-time">${time}</strong><small>WIB</small></div>
-      ${main}
-      ${status}
-      ${actions}
-    </article>`;
-  }
-
-  function bindTechJobButtons(container){
-    if(!container)return;
-    container.querySelectorAll(".tech-detail-btn").forEach(btn=>btn.addEventListener("click",()=>openTechJobDetail(btn.dataset.source,btn.dataset.id)));
-    container.querySelectorAll(".tech-quick-status").forEach(btn=>btn.addEventListener("click",()=>{
-      const next=btn.dataset.status;
-      if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?")) return;
-      updateTechJobStatus(btn.dataset.source,btn.dataset.id,next);
-    }));
+    return `<article class="tech-work-row ${techStatusCardClass(job.status)}"><div class="tech-work-time"><strong>${time}</strong><span>WIB</span></div>${main}${status}${actions}</article>`;
   }
 
   function renderTechJobList(container,data,emptyText,variant="work"){
@@ -2167,17 +2155,18 @@
     let job;
     if(source==="schedule"){
       const item=state.schedules.find(x=>x.id===id);if(!item)return;
-      job={source,id:item.id,work_date:item.work_date,work_time:item.work_time||"",customer_name:item.customer_name,customer_phone:item.customer_phone||"",customer_address:item.customer_address||"",description:item.job_description||"Pekerjaan lapangan",notes:item.notes||"",status:scheduleStatusLabel(item.status),invoice_id:item.invoice_id||null,raw:item};
+      job={source,id:item.id,work_date:item.work_date,work_time:item.work_time||"",customer_name:item.customer_name,customer_phone:"",customer_address:item.customer_address||"",description:item.job_description||"Pekerjaan lapangan",notes:item.notes||"",status:scheduleStatusLabel(item.status),invoice_id:item.invoice_id||null,raw:item};
     }else{
       const inv=state.invoices.find(x=>x.id===id);if(!inv)return;
-      job={source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name,customer_phone:inv.customer_phone||"",customer_address:inv.customer_address||"",description:invoiceText(inv)||"Pekerjaan lapangan",notes:inv.notes||"",status:effectiveWorkStatus(inv),invoice_id:inv.id,raw:inv};
+      job={source:"invoice",id:inv.id,work_date:inv.work_date,work_time:inv.work_time||"",customer_name:inv.customer_name,customer_phone:"",customer_address:inv.customer_address||"",description:invoiceText(inv)||"Pekerjaan lapangan",notes:inv.notes||"",status:effectiveWorkStatus(inv),invoice_id:inv.id,raw:inv};
     }
-    const phone=normalizeWhatsAppNumber(job.customer_phone),mapsUrl=job.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.customer_address)}`:"";
+    const mapsUrl=job.customer_address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.customer_address)}`:"";
     const details=source==="invoice"?(job.raw.invoice_items||[]).sort((a,b)=>a.sort_order-b.sort_order).map((item,index)=>`<div class="detail-row"><span>${index+1}.</span><strong>${esc(item.description)} • ${safeNumber(item.quantity)} unit</strong></div>`).join(""):`<div class="detail-row"><span>1.</span><strong>${esc(job.description)}</strong></div>`;
     $("detailContent").innerHTML=`
       <div class="tech-detail-header"><div><div class="tech-detail-number">${source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(job.customer_name||"-")}</div></div>${workStatusBadge(job.status)}</div>
-      <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>WhatsApp</span><strong>${esc(job.customer_phone||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
-      <div class="tech-detail-actions">${phone?`<a class="btn success tech-contact-btn" href="https://wa.me/${encodeURIComponent(phone)}" target="_blank" rel="noopener">☎ Hubungi Pelanggan</a>`:`<button class="btn secondary" disabled>Nomor belum tersedia</button>`}${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">⌖ Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
+      <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
+      <div class="tech-detail-actions">${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")} Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
+      <div class="tech-privacy-note">Nomor telepon pelanggan disembunyikan untuk menjaga kerahasiaan data pelanggan.</div>
       <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p></div>
       <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${details||'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}${job.invoice_id&&source==="schedule"?'<p class="schedule-linked-note">Pekerjaan ini sudah terhubung dengan nota.</p>':''}</div>`;
     $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{const next=btn.dataset.status;if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?"))return;updateTechJobStatus(source,id,next);}));
@@ -2198,7 +2187,7 @@
   });
 
   $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:69,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
+    const backup={app:"LORHIL AC Online",version:73,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
   });

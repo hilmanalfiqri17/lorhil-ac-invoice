@@ -16,5 +16,12 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "id": "./",
+  "scope": "./",
+  "description": "Invoice, jadwal pekerjaan, dan monitoring teknisi LORHIL AC.",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
   ]
 }

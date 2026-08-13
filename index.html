@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=75">
-  <title>LORHIL AC Online V75</title>
+  <link rel="stylesheet" href="style.css?v=76">
+  <title>LORHIL AC Online V76</title>
 </head>
-<body data-app-version="75">
+<body data-app-version="76">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -49,6 +49,16 @@
       </div>
       <div id="loginError" class="error"></div>
       <button type="submit" class="btn primary full">Masuk ke Dashboard</button>
+
+      <div class="login-install-section">
+        <div class="login-install-divider"><span>atau</span></div>
+        <button type="button" id="installAppBtn" class="btn install-app-btn full">
+          <span class="install-app-icon" aria-hidden="true">⇩</span>
+          <span id="installAppBtnText">Instal Aplikasi di HP</span>
+        </button>
+        <p id="installAppHint" class="install-app-hint">Tidak harus Chrome. Jika browser mendukung instal langsung, tombol akan membuka pemasangan aplikasi.</p>
+      </div>
+
       <p class="micro">Gunakan akun yang dibuat pada Supabase Authentication.</p>
     </form>
   </section>
@@ -648,12 +658,32 @@
     </div>
   </div>
 
+
+  <div id="installGuideModal" class="install-guide-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle">
+    <div class="install-guide-card">
+      <div class="install-guide-head">
+        <div>
+          <span class="install-guide-eyebrow">LORHIL AC</span>
+          <h3 id="installGuideTitle">Instal Aplikasi</h3>
+        </div>
+        <button id="installGuideCloseBtn" class="icon-btn" type="button" aria-label="Tutup panduan instalasi">×</button>
+      </div>
+      <div class="install-guide-app">
+        <img src="assets/icon-192.png" alt="Ikon LORHIL AC">
+        <div><strong>LORHIL AC</strong><span>Pasang agar teknisi dapat membuka sistem langsung dari layar utama HP.</span></div>
+      </div>
+      <div id="installGuideContent" class="install-guide-content"></div>
+      <div class="install-guide-note">Nama menu dapat sedikit berbeda tergantung merek HP dan browser yang digunakan.</div>
+      <button id="installGuideDoneBtn" class="btn primary full" type="button">Mengerti</button>
+    </div>
+  </div>
+
   <div id="loading" class="loading hidden"><div class="spinner"></div><span>Memproses...</span></div>
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=74"></script>
+  <script src="app.js?v=76"></script>
 </body>
 </html>

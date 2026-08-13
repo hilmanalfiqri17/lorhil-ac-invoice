@@ -128,6 +128,136 @@
     }
   }
 
+  // V76 - Instalasi PWA dari halaman login.
+  // beforeinstallprompt hanya tersedia di sebagian browser (umumnya Chromium),
+  // sehingga browser lain tetap mendapat panduan pemasangan manual.
+  let deferredInstallPrompt=null;
+
+  function isStandaloneMode(){
+    return window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
+      window.navigator.standalone===true;
+  }
+
+  function browserInstallContext(){
+    const ua=navigator.userAgent||"";
+    const ios=/iPad|iPhone|iPod/i.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    const android=/Android/i.test(ua);
+    const samsung=/SamsungBrowser/i.test(ua);
+    const edge=/EdgA|EdgiOS|Edg\//i.test(ua);
+    const firefox=/Firefox|FxiOS/i.test(ua);
+    const chrome=/Chrome|CriOS/i.test(ua) && !edge && !samsung;
+    const safari=/Safari/i.test(ua) && !/Chrome|CriOS|Edg|OPR|SamsungBrowser|Firefox|FxiOS/i.test(ua);
+    return {ios,android,samsung,edge,firefox,chrome,safari};
+  }
+
+  function installGuideSteps(){
+    const ctx=browserInstallContext();
+    if(ctx.ios){
+      return [
+        ["1","Buka menu Bagikan / Share","Tekan ikon Bagikan pada browser yang sedang digunakan."],
+        ["2","Pilih Tambahkan ke Layar Utama","Cari menu Add to Home Screen / Tambahkan ke Layar Utama."],
+        ["3","Konfirmasi pemasangan","Tekan Tambah / Add. Ikon LORHIL AC akan muncul di Home Screen."]
+      ];
+    }
+    if(ctx.android){
+      return [
+        ["1","Buka menu browser","Tekan menu ⋮ atau menu utama browser."],
+        ["2","Cari menu instalasi","Pilih Install app, Instal aplikasi, atau Tambahkan ke layar utama."],
+        ["3","Konfirmasi","Ikuti konfirmasi browser sampai ikon LORHIL AC muncul di layar utama."]
+      ];
+    }
+    if(ctx.safari){
+      return [
+        ["1","Buka menu File atau Bagikan","Pada Safari di Mac, buka menu File atau tombol Share."],
+        ["2","Pilih Add to Dock","Safari akan membuat LORHIL AC sebagai web app."],
+        ["3","Buka dari Dock / Applications","Aplikasi dapat digunakan seperti aplikasi terpisah."]
+      ];
+    }
+    return [
+      ["1","Buka menu browser","Cari menu aplikasi, instal, atau shortcut pada browser Anda."],
+      ["2","Pilih instal / tambah ke layar utama","Nama menu dapat berupa Install app, Apps, atau Add to Home Screen."],
+      ["3","Jika menu tidak tersedia","Browser tersebut mungkin tidak menyediakan pemasangan PWA. Anda tetap dapat memakai web seperti biasa atau membuka dari browser lain yang mendukung instalasi."]
+    ];
+  }
+
+  function renderInstallGuide(){
+    const container=$("installGuideContent");
+    if(!container) return;
+    container.innerHTML=installGuideSteps().map(([number,title,text])=>`
+      <div class="install-guide-step">
+        <b>${number}</b>
+        <div><strong>${title}</strong><span>${text}</span></div>
+      </div>
+    `).join("");
+  }
+
+  function updateInstallButton(){
+    const btn=$("installAppBtn");
+    const text=$("installAppBtnText");
+    const hint=$("installAppHint");
+    if(!btn || !text) return;
+
+    if(isStandaloneMode()){
+      btn.disabled=true;
+      text.textContent="Aplikasi Sudah Terpasang";
+      if(hint) hint.textContent="LORHIL AC sedang dibuka sebagai aplikasi di perangkat ini.";
+      return;
+    }
+
+    btn.disabled=false;
+    text.textContent=deferredInstallPrompt?"Instal Aplikasi Sekarang":"Instal Aplikasi di HP";
+    if(hint){
+      hint.textContent=deferredInstallPrompt
+        ? "Browser siap memasang LORHIL AC sebagai aplikasi."
+        : "Tidak harus Chrome. Jika instal otomatis tidak tersedia, tombol akan menampilkan panduan sesuai perangkat.";
+    }
+  }
+
+  function openInstallGuide(){
+    renderInstallGuide();
+    show("installGuideModal");
+  }
+
+  async function requestAppInstall(){
+    if(isStandaloneMode()){
+      updateInstallButton();
+      return;
+    }
+
+    if(deferredInstallPrompt){
+      try{
+        deferredInstallPrompt.prompt();
+        const choice=await deferredInstallPrompt.userChoice;
+        if(choice?.outcome==="accepted"){
+          toast("Pemasangan aplikasi dimulai.");
+        }
+      }catch(error){
+        console.warn("Prompt instalasi tidak dapat dibuka:",error);
+        openInstallGuide();
+      }finally{
+        deferredInstallPrompt=null;
+        updateInstallButton();
+      }
+      return;
+    }
+
+    openInstallGuide();
+  }
+
+  window.addEventListener("beforeinstallprompt",event=>{
+    event.preventDefault();
+    deferredInstallPrompt=event;
+    updateInstallButton();
+  });
+
+  window.addEventListener("appinstalled",()=>{
+    deferredInstallPrompt=null;
+    updateInstallButton();
+    hide("installGuideModal");
+    toast("LORHIL AC berhasil dipasang sebagai aplikasi.");
+  });
+
   async function init(){
     if(!configured){
       show("setupScreen"); hide("loginScreen"); hide("app"); return;
@@ -169,7 +299,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=74",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=76",{
             updateViaCache:"none"
           });
 
@@ -179,13 +309,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v73")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v76")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v73";
+            const reloadKey="lorhil-sw-reloaded-v76";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -276,6 +406,14 @@
     loading(false);
     if(error) $("loginError").textContent="Email atau password salah.";
   });
+  if($("installAppBtn")) $("installAppBtn").addEventListener("click",requestAppInstall);
+  if($("installGuideCloseBtn")) $("installGuideCloseBtn").addEventListener("click",()=>hide("installGuideModal"));
+  if($("installGuideDoneBtn")) $("installGuideDoneBtn").addEventListener("click",()=>hide("installGuideModal"));
+  if($("installGuideModal")) $("installGuideModal").addEventListener("click",event=>{
+    if(event.target===$("installGuideModal")) hide("installGuideModal");
+  });
+  updateInstallButton();
+
   $("togglePassword").addEventListener("click",()=>{
     $("loginPassword").type=$("loginPassword").type==="password"?"text":"password";
   });

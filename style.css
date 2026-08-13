@@ -534,3 +534,36 @@ body.technician-mode .content{padding-bottom:92px}
 @media(max-width:430px){
   .schedule-page-actions{grid-template-columns:1fr}
 }
+
+
+/* =========================================================
+   V76 - INSTALL APLIKASI DARI HALAMAN LOGIN
+   Mendukung prompt native bila browser menyediakan
+   beforeinstallprompt, dengan panduan fallback lintas browser.
+   ========================================================= */
+.login-install-section{margin-top:14px}
+.login-install-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:#97a3b6;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.login-install-divider:before,.login-install-divider:after{content:"";height:1px;flex:1;background:var(--line)}
+.install-app-btn{background:#eef5ff;color:#0a58cf;border-color:#bed5fb;box-shadow:none}
+.install-app-btn:hover{background:#e5f0ff;border-color:#8eb8f7}
+.install-app-btn:disabled{cursor:default;transform:none;opacity:.75;background:#e8f7ee;color:#198448;border-color:#c8ead6}
+.install-app-icon{font-size:18px;line-height:1}
+.install-app-hint{margin:8px 4px 0;text-align:center;color:var(--muted);font-size:10px;line-height:1.45}
+.install-guide-modal{position:fixed;inset:0;z-index:210;background:rgba(3,16,45,.68);display:grid;place-items:center;padding:18px;backdrop-filter:blur(4px)}
+.install-guide-card{width:min(430px,100%);max-height:92vh;overflow:auto;background:#fff;border:1px solid rgba(255,255,255,.5);border-radius:22px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.32)}
+.install-guide-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:17px}
+.install-guide-head h3{margin:3px 0 0;font-size:22px}
+.install-guide-eyebrow{font-size:9px;font-weight:900;letter-spacing:.12em;color:var(--blue)}
+.install-guide-app{display:flex;align-items:center;gap:13px;padding:13px;border:1px solid var(--line);border-radius:14px;background:#f8fbff;margin-bottom:16px}
+.install-guide-app img{width:48px;height:48px;object-fit:contain;border-radius:12px;background:#fff}
+.install-guide-app strong,.install-guide-app span{display:block}
+.install-guide-app strong{font-size:14px}
+.install-guide-app span{margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}
+.install-guide-content{display:grid;gap:10px}
+.install-guide-step{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:flex-start;padding:10px 11px;border-radius:12px;background:#f7f9fc;border:1px solid var(--line)}
+.install-guide-step b{width:28px;height:28px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:11px}
+.install-guide-step strong,.install-guide-step span{display:block}
+.install-guide-step strong{font-size:12px;margin-bottom:2px}
+.install-guide-step span{font-size:10.5px;color:var(--muted);line-height:1.45}
+.install-guide-note{margin:13px 0;padding:10px 11px;border-radius:11px;background:#fff8e8;border:1px solid #f3dfaa;color:#7c6425;font-size:10px;line-height:1.45}
+@media(max-width:620px){.install-guide-card{padding:18px;border-radius:19px}.install-guide-head h3{font-size:20px}}

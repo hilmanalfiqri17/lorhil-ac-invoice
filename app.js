@@ -301,7 +301,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=78",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=80",{
             updateViaCache:"none"
           });
 
@@ -311,13 +311,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v79")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v80")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v79";
+            const reloadKey="lorhil-sw-reloaded-v80";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -2517,7 +2517,7 @@
     const support=Array.isArray(supportResult.data)?supportResult.data[0]:supportResult.data;
     return {
       app:"LORHIL AC Online",
-      version:79,
+      version:80,
       exported_at:new Date().toISOString(),
       note:"Backup dibuat dari akun Admin. Password Supabase Authentication tidak pernah diekspor. Jalankan SQL V79 agar counter nomor nota ikut tercadangkan.",
       invoices,
@@ -2656,7 +2656,7 @@
     return (data.invoice_technicians||[]).filter(row=>row.invoice_id===invoiceId).map(row=>techMap.get(row.technician_id)||row.technician_id).join(", ");
   }
 
-  function scheduleTechnicianNames(scheduleId,data,techMap){
+  function exportScheduleTechnicianNames(scheduleId,data,techMap){
     return (data.schedule_technicians||[]).filter(row=>row.schedule_id===scheduleId).map(row=>techMap.get(row.technician_id)||row.technician_id).join(", ");
   }
 
@@ -2697,7 +2697,7 @@
       return [inv.invoice_number||item.invoice_id,inv.work_date||"",inv.customer_name||"",item.sort_order,item.description,safeNumber(item.quantity),safeNumber(item.unit_price),safeNumber(item.line_total),item.created_at];
     })];
     const schedules=[["Tanggal","Jam","Pelanggan","WhatsApp","Alamat","Pekerjaan","Teknisi","Status","Invoice Terkait","Catatan","Dibuat","Diperbarui"],...(data.work_schedules||[]).map(row=>[
-      row.work_date,row.work_time,row.customer_name,row.customer_phone,row.customer_address,row.job_description,scheduleTechnicianNames(row.id,data,techMap),scheduleStatusLabel(row.status),itemInvoiceMap.get(row.invoice_id)?.invoice_number||row.invoice_id||"",row.notes,row.created_at,row.updated_at
+      row.work_date,row.work_time,row.customer_name,row.customer_phone,row.customer_address,row.job_description,exportScheduleTechnicianNames(row.id,data,techMap),scheduleStatusLabel(row.status),itemInvoiceMap.get(row.invoice_id)?.invoice_number||row.invoice_id||"",row.notes,row.created_at,row.updated_at
     ])];
     const technicians=[["Nama Teknisi","WhatsApp","Status","Dibuat","Diperbarui"],...(data.technicians||[]).map(row=>[row.name,row.phone,row.is_active!==false?"Aktif":"Nonaktif",row.created_at,row.updated_at])];
     const team=[["Nama Anggota","Email Login","Teknisi Terhubung","Peran","Boleh Invoice Bot","Status Akun","Auth User ID","Dibuat","Diperbarui"],...(data.team_members||[]).map(row=>[row.display_name,row.email||"",techMap.get(row.technician_id)||"",row.role,row.can_send_invoice?"Ya":"Tidak",row.is_active!==false?"Aktif":"Nonaktif",row.auth_user_id,row.created_at,row.updated_at])];

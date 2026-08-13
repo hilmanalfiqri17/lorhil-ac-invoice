@@ -69,7 +69,7 @@
     invoiceTechnicians:[], schedules:[], scheduleTechnicians:[], page:"dashboard", accessContext:null, monitorPeriod:"today",
     dashboardPeriod:"today", realtime:null, techJobFilter:"today",
     revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[], invoiceSourceScheduleId:null,
-    activityLogs:[]
+    activityLogs:[], databaseUsage:null
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -121,6 +121,7 @@
     if($("techBottomNav")) $("techBottomNav").classList.toggle("hidden",!tech);
     if($("globalSearchWrap")) $("globalSearchWrap").classList.toggle("hidden",tech);
     if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech);
+    if($("databaseUsagePanel")) $("databaseUsagePanel").classList.toggle("hidden",accessRole()!=="admin");
     if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":"Online Invoice";
     if($("userAvatarText")){
       const label=tech?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
@@ -299,7 +300,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=76",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=78",{
             updateViaCache:"none"
           });
 
@@ -2345,10 +2346,79 @@
     show("detailModal");
   }
 
+  function formatDatabaseBytes(bytes){
+    const value=Number(bytes)||0;
+    if(value>=1024*1024*1024) return `${(value/(1024*1024*1024)).toFixed(2)} GB`;
+    if(value>=1024*1024) return `${(value/(1024*1024)).toFixed(2)} MB`;
+    if(value>=1024) return `${(value/1024).toFixed(1)} KB`;
+    return `${value} B`;
+  }
+
+  function databaseUsageVisual(percent){
+    const p=Number(percent)||0;
+    if(p>=90) return {label:"Kritis",cls:"critical",message:"Kapasitas database hampir penuh. Segera siapkan upgrade atau lakukan evaluasi data yang tidak diperlukan."};
+    if(p>=80) return {label:"Waspada",cls:"warning",message:"Penggunaan database sudah tinggi. Pantau lebih sering dan siapkan langkah sebelum mencapai batas paket."};
+    if(p>=60) return {label:"Perhatian",cls:"attention",message:"Penggunaan database mulai meningkat. Masih dapat digunakan, tetapi sebaiknya dipantau secara berkala."};
+    return {label:"Aman",cls:"safe",message:"Kapasitas database masih dalam kondisi aman."};
+  }
+
+  function renderDatabaseUsage(){
+    if(!$("databaseUsagePanel") || accessRole()!=="admin") return;
+    const usage=state.databaseUsage;
+    if(!usage) return;
+    const used=Number(usage.used_bytes)||0;
+    const limit=Number(usage.limit_bytes)||500*1024*1024;
+    const percent=Math.max(0,Math.min(100,Number(usage.percent_used)||((used/limit)*100)||0));
+    const remaining=Math.max(0,limit-used);
+    const visual=databaseUsageVisual(percent);
+    $("databaseUsedText").textContent=`${formatDatabaseBytes(used)} / ${formatDatabaseBytes(limit)}`;
+    $("databasePercentText").textContent=`${percent.toFixed(1)}% terpakai`;
+    $("databaseRemainingText").textContent=`Sisa sekitar ${formatDatabaseBytes(remaining)}`;
+    $("databaseProgressBar").style.width=`${percent}%`;
+    $("databaseProgressBar").className=visual.cls;
+    const track=$("databaseProgressBar").parentElement;
+    if(track) track.setAttribute("aria-valuenow",String(Math.round(percent)));
+    $("databaseUsageStatus").textContent=visual.label;
+    $("databaseUsageStatus").className=`database-status-badge ${visual.cls}`;
+    $("databaseUsageMessage").textContent=visual.message;
+    $("databaseUsageMessage").className=`database-usage-message ${visual.cls}`;
+    $("databaseCheckedAt").textContent=`Terakhir diperiksa: ${new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date())}`;
+  }
+
+  async function loadDatabaseUsage(showResultToast=false){
+    if(!$("databaseUsagePanel") || accessRole()!=="admin" || !db) return;
+    $("databaseUsagePanel").classList.remove("hidden");
+    $("databaseUsedText").textContent="Memuat...";
+    $("databaseUsageStatus").textContent="Memuat";
+    $("databaseUsageStatus").className="database-status-badge neutral";
+    try{
+      const {data,error}=await db.rpc("get_database_usage");
+      if(error) throw error;
+      const row=Array.isArray(data)?data[0]:data;
+      if(!row) throw new Error("Data penggunaan database tidak tersedia.");
+      state.databaseUsage=row;
+      renderDatabaseUsage();
+      if(showResultToast) toast("Penggunaan database berhasil diperbarui.");
+    }catch(error){
+      console.warn("Gagal membaca penggunaan database:",error);
+      $("databaseUsedText").textContent="Belum tersedia";
+      $("databasePercentText").textContent="-";
+      $("databaseRemainingText").textContent="Jalankan SQL V77 terlebih dahulu";
+      $("databaseProgressBar").style.width="0%";
+      $("databaseUsageStatus").textContent="Perlu Setup";
+      $("databaseUsageStatus").className="database-status-badge neutral";
+      $("databaseUsageMessage").textContent="Fitur monitor database belum aktif. Jalankan file lorhil-v77-database-usage.sql melalui Supabase SQL Editor.";
+      $("databaseUsageMessage").className="database-usage-message attention";
+      $("databaseCheckedAt").textContent="Pemeriksaan gagal";
+      if(showResultToast) alert(errorMessage(error));
+    }
+  }
+
   function renderSettings(){
     const s=state.settings||{};
     $("storeName").value=s.store_name||"LORHIL AC";$("storePhone").value=s.phone||"";$("storeAddress").value=s.address||"";
     $("paymentInfo").value=s.payment_info||"";$("footerNote").value=s.footer_note||"";$("signerName").value=s.signer_name||"Hendri";$("signerRole").value=s.signer_role||"Pemilik LORHIL AC";
+    if(accessRole()==="admin") loadDatabaseUsage(false);
   }
   $("settingsForm").addEventListener("submit",async e=>{
     e.preventDefault();loading(true);
@@ -2357,6 +2427,8 @@
     const {data,error}=await db.from("store_settings").upsert(payload).select().single();loading(false);
     if(error){alert(errorMessage(error));return;}state.settings=data;applyBrand();toast("Pengaturan berhasil disimpan.");
   });
+
+  if($("refreshDatabaseUsageBtn")) $("refreshDatabaseUsageBtn").addEventListener("click",()=>loadDatabaseUsage(true));
 
   $("downloadBackupBtn").addEventListener("click",()=>{
     const backup={app:"LORHIL AC Online",version:73,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};

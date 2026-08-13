@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=76">
-  <title>LORHIL AC Online V76</title>
+  <link rel="stylesheet" href="style.css?v=78">
+  <title>LORHIL AC Online V78</title>
 </head>
-<body data-app-version="76">
+<body data-app-version="78">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -616,9 +616,62 @@
           </div>
         </section>
 
-        <section id="page-settings" class="page">
-          <div class="page-head"><div><h2>Pengaturan Toko</h2><p>Pengaturan tersinkron di semua perangkat.</p></div></div>
-          <form id="settingsForm" class="panel settings-form">
+        <section id="page-settings" class="page settings-page">
+          <div class="page-head settings-page-head">
+            <div>
+              <h2>Pengaturan</h2>
+              <p>Pantau kapasitas database dan kelola informasi toko LORHIL AC.</p>
+            </div>
+          </div>
+
+          <article id="databaseUsagePanel" class="panel database-usage-panel hidden">
+            <div class="panel-head database-usage-head">
+              <div>
+                <h3>Penggunaan Database Supabase</h3>
+                <p>Pantau kapasitas database PostgreSQL yang digunakan aplikasi LORHIL AC.</p>
+              </div>
+              <button id="refreshDatabaseUsageBtn" class="btn secondary" type="button">↻ Cek Sekarang</button>
+            </div>
+
+            <div class="database-usage-summary">
+              <div class="database-usage-icon" aria-hidden="true">DB</div>
+              <div class="database-usage-main">
+                <div class="database-usage-numbers">
+                  <div>
+                    <small>Terpakai</small>
+                    <strong id="databaseUsedText">Memuat...</strong>
+                  </div>
+                  <div class="database-usage-limit">
+                    <small>Batas Paket Free</small>
+                    <strong>500 MB</strong>
+                  </div>
+                  <span id="databaseUsageStatus" class="database-status-badge neutral">Memuat</span>
+                </div>
+
+                <div class="database-progress-track" role="progressbar" aria-label="Penggunaan database Supabase" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <i id="databaseProgressBar"></i>
+                </div>
+                <div class="database-progress-meta">
+                  <strong id="databasePercentText">0%</strong>
+                  <span id="databaseRemainingText">Sisa kapasitas sedang dihitung</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="databaseUsageMessage" class="database-usage-message">Ukuran database akan diperiksa otomatis saat halaman Pengaturan dibuka.</div>
+            <div class="database-usage-foot">
+              <span id="databaseCheckedAt">Belum diperiksa</span>
+              <span>Hanya database PostgreSQL. Supabase Storage memiliki kuota terpisah.</span>
+            </div>
+          </article>
+
+          <form id="settingsForm" class="panel settings-form settings-store-panel">
+            <div class="panel-head settings-store-head">
+              <div>
+                <h3>Pengaturan Toko</h3>
+                <p>Identitas dan informasi toko tersinkron di semua perangkat.</p>
+              </div>
+            </div>
             <div class="form-grid">
               <div class="field"><label>Nama Toko *</label><input id="storeName" required></div>
               <div class="field"><label>WhatsApp</label><input id="storePhone"></div>
@@ -684,6 +737,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=76"></script>
+  <script src="app.js?v=78"></script>
 </body>
 </html>

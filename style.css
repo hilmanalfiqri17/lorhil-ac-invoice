@@ -627,3 +627,36 @@ body.technician-mode .content{padding-bottom:92px}
   .database-progress-meta span{text-align:left}
   .settings-store-panel{padding:15px}
 }
+
+/* =========================================================
+   V79 - BACKUP LENGKAP + EXPORT EXCEL DI PENGATURAN ADMIN
+   ========================================================= */
+.backup-export-panel{margin-bottom:16px;transition:.2s ease}
+.backup-export-panel.database-critical{border-color:#efb6b6;box-shadow:0 10px 30px rgba(190,55,55,.10)}
+.backup-export-head{align-items:center}
+.backup-safe-badge{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:var(--green-soft);color:#198448;font-size:9.5px;font-weight:900;white-space:nowrap}
+.backup-export-alert{margin-bottom:14px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:11px;line-height:1.5;font-weight:700}
+.backup-export-alert.safe{background:#f7fafc;color:#53627a}
+.backup-export-alert.attention{background:#fff9e8;border-color:#f0dfaa;color:#806620}
+.backup-export-alert.warning{background:var(--orange-soft);border-color:#f3d2b8;color:#9b5418}
+.backup-export-alert.critical{background:var(--red-soft);border-color:#efcaca;color:#a33b3b}
+.backup-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.backup-export-card{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfdff;min-width:0}
+.backup-export-card-icon{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;font-size:11px;font-weight:950;letter-spacing:.03em}
+.backup-export-card-icon.json{background:#edf5ff;color:#0b61e8;border:1px solid #cfe1fb}
+.backup-export-card-icon.excel,.backup-excel-icon{background:#e8f7ee!important;color:#16814b!important;border:1px solid #c8ead6!important;font-size:11px!important;font-weight:950!important}
+.backup-export-card-copy{min-width:0}.backup-export-card-copy strong{display:block;font-size:12px}.backup-export-card-copy p{margin:4px 0;color:var(--muted);font-size:10px;line-height:1.45}.backup-export-card-copy small{display:block;color:#7e8ba0;font-size:9px;line-height:1.35}
+.backup-export-card .btn{min-width:135px}
+.backup-export-note{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);color:var(--muted);font-size:9.5px;line-height:1.5}
+.backup-export-note strong{color:#4e5c72}
+.backup-page-card{margin-bottom:12px}
+
+@media(max-width:1050px){
+  .backup-export-grid{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .backup-export-head{align-items:flex-start;flex-direction:column}
+  .backup-export-card{grid-template-columns:46px minmax(0,1fr);align-items:start}
+  .backup-export-card-icon{width:44px;height:44px}
+  .backup-export-card .btn{grid-column:1/-1;width:100%;min-width:0}
+}

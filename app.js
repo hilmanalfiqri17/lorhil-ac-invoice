@@ -122,6 +122,7 @@
     if($("globalSearchWrap")) $("globalSearchWrap").classList.toggle("hidden",tech);
     if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech);
     if($("databaseUsagePanel")) $("databaseUsagePanel").classList.toggle("hidden",accessRole()!=="admin");
+    if($("backupExportPanel")) $("backupExportPanel").classList.toggle("hidden",accessRole()!=="admin");
     if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":"Online Invoice";
     if($("userAvatarText")){
       const label=tech?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
@@ -310,13 +311,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v76")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v79")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v76";
+            const reloadKey="lorhil-sw-reloaded-v79";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -2383,6 +2384,16 @@
     $("databaseUsageMessage").textContent=visual.message;
     $("databaseUsageMessage").className=`database-usage-message ${visual.cls}`;
     $("databaseCheckedAt").textContent=`Terakhir diperiksa: ${new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date())}`;
+    if($("backupExportAlert")){
+      let alertClass="safe";
+      let alertText="Backup dapat dilakukan kapan saja. Saat database mendekati batas, lakukan kedua unduhan agar arsip data tetap aman.";
+      if(percent>=95){alertClass="critical";alertText="KAPASITAS KRITIS. Download Backup Lengkap dan Semua Data Excel sekarang, lalu segera lakukan penanganan kapasitas Supabase.";}
+      else if(percent>=90){alertClass="warning";alertText="Database hampir penuh. Sangat disarankan mengunduh Backup Lengkap dan Semua Data Excel sekarang.";}
+      else if(percent>=80){alertClass="attention";alertText="Database mulai mendekati batas. Lakukan backup JSON dan Excel sebagai langkah pengamanan.";}
+      $("backupExportAlert").className=`backup-export-alert ${alertClass}`;
+      $("backupExportAlert").textContent=alertText;
+      $("backupExportPanel")?.classList.toggle("database-critical",percent>=90);
+    }
   }
 
   async function loadDatabaseUsage(showResultToast=false){
@@ -2418,6 +2429,7 @@
     const s=state.settings||{};
     $("storeName").value=s.store_name||"LORHIL AC";$("storePhone").value=s.phone||"";$("storeAddress").value=s.address||"";
     $("paymentInfo").value=s.payment_info||"";$("footerNote").value=s.footer_note||"";$("signerName").value=s.signer_name||"Hendri";$("signerRole").value=s.signer_role||"Pemilik LORHIL AC";
+    renderBackupExportStatus();
     if(accessRole()==="admin") loadDatabaseUsage(false);
   }
   $("settingsForm").addEventListener("submit",async e=>{
@@ -2430,10 +2442,304 @@
 
   if($("refreshDatabaseUsageBtn")) $("refreshDatabaseUsageBtn").addEventListener("click",()=>loadDatabaseUsage(true));
 
-  $("downloadBackupBtn").addEventListener("click",()=>{
-    const backup={app:"LORHIL AC Online",version:73,exported_at:new Date().toISOString(),invoices:state.invoices,technicians:state.technicians,invoice_technicians:state.invoiceTechnicians,schedules:state.schedules,schedule_technicians:state.scheduleTechnicians,activity_logs:state.activityLogs,settings:state.settings};
-    const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download=`backup-lorhil-online-${localDate()}.json`;a.click();URL.revokeObjectURL(url);
+  const BACKUP_JSON_TIME_KEY="lorhil:last-backup-json-v79";
+  const BACKUP_EXCEL_TIME_KEY="lorhil:last-backup-excel-v79";
+
+  function backupTimeLabel(key){
+    try{
+      const raw=localStorage.getItem(key);
+      if(!raw) return "Belum pernah diunduh di perangkat ini.";
+      const date=new Date(raw);
+      if(Number.isNaN(date.getTime())) return "Belum pernah diunduh di perangkat ini.";
+      return `Terakhir diunduh: ${new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(date)}`;
+    }catch(_error){
+      return "Riwayat unduhan tidak tersedia.";
+    }
+  }
+
+  function renderBackupExportStatus(){
+    if($("lastBackupJsonText")) $("lastBackupJsonText").textContent=backupTimeLabel(BACKUP_JSON_TIME_KEY);
+    if($("lastExcelExportText")) $("lastExcelExportText").textContent=backupTimeLabel(BACKUP_EXCEL_TIME_KEY);
+  }
+
+  function markBackupDownloaded(key){
+    try{ localStorage.setItem(key,new Date().toISOString()); }catch(_error){}
+    renderBackupExportStatus();
+  }
+
+  function triggerBlobDownload(blob,filename){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1200);
+  }
+
+  async function fetchAllRows(table,{orderBy="id",ascending=true,batchSize=1000}={}){
+    const rows=[];
+    for(let from=0;;from+=batchSize){
+      let query=db.from(table).select("*").range(from,from+batchSize-1);
+      if(orderBy) query=query.order(orderBy,{ascending});
+      const {data,error}=await query;
+      if(error) throw new Error(`Gagal membaca ${table}: ${error.message}`);
+      const batch=data||[];
+      rows.push(...batch);
+      if(batch.length<batchSize) break;
+    }
+    return rows;
+  }
+
+  async function fetchCompleteBackupData(){
+    if(accessRole()!=="admin") throw new Error("Hanya Admin yang dapat melakukan backup lengkap.");
+    const teamPromise=manageTeamMember({action:"list"})
+      .then(result=>({members:Array.isArray(result?.members)?result.members:[],error:null}))
+      .catch(error=>({members:[],error}));
+    const [
+      invoices,invoiceItems,settings,technicians,invoiceTechnicians,
+      schedules,scheduleTechnicians,activityLogs,supportResult,teamResult
+    ]=await Promise.all([
+      fetchAllRows("invoices",{orderBy:"created_at"}),
+      fetchAllRows("invoice_items",{orderBy:"created_at"}),
+      fetchAllRows("store_settings",{orderBy:null}),
+      fetchAllRows("technicians",{orderBy:"created_at"}),
+      fetchAllRows("invoice_technicians",{orderBy:"created_at"}),
+      fetchAllRows("work_schedules",{orderBy:"created_at"}),
+      fetchAllRows("schedule_technicians",{orderBy:"created_at"}),
+      fetchAllRows("activity_logs",{orderBy:"created_at"}),
+      db.rpc("get_admin_backup_support"),
+      teamPromise
+    ]);
+    if(supportResult.error) console.warn("Metadata backup tambahan belum tersedia. Jalankan SQL V79:",supportResult.error);
+    if(teamResult.error) console.warn("Akun tim tidak dapat dimasukkan ke backup:",teamResult.error);
+    const support=Array.isArray(supportResult.data)?supportResult.data[0]:supportResult.data;
+    return {
+      app:"LORHIL AC Online",
+      version:79,
+      exported_at:new Date().toISOString(),
+      note:"Backup dibuat dari akun Admin. Password Supabase Authentication tidak pernah diekspor. Jalankan SQL V79 agar counter nomor nota ikut tercadangkan.",
+      invoices,
+      invoice_items:invoiceItems,
+      store_settings:settings,
+      invoice_sequences:Array.isArray(support?.invoice_sequences)?support.invoice_sequences:[],
+      technicians,
+      invoice_technicians:invoiceTechnicians,
+      work_schedules:schedules,
+      schedule_technicians:scheduleTechnicians,
+      activity_logs:activityLogs,
+      team_members:teamResult.members||[]
+    };
+  }
+
+  async function downloadCompleteBackupJson(){
+    loading(true);
+    try{
+      const backup=await fetchCompleteBackupData();
+      const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json;charset=utf-8"});
+      triggerBlobDownload(blob,`LORHIL_AC_BACKUP_LENGKAP_${localDate()}.json`);
+      markBackupDownloaded(BACKUP_JSON_TIME_KEY);
+      toast("Backup lengkap berhasil dibuat.");
+    }catch(error){
+      alert(errorMessage(error));
+    }finally{
+      loading(false);
+    }
+  }
+
+  function xmlEscape(value){
+    return String(value??"")
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+  }
+
+  function excelColumnName(index){
+    let n=index+1,out="";
+    while(n>0){n--;out=String.fromCharCode(65+(n%26))+out;n=Math.floor(n/26);}
+    return out;
+  }
+
+  function excelCellXml(value,rowIndex,columnIndex){
+    const ref=`${excelColumnName(columnIndex)}${rowIndex+1}`;
+    if(typeof value==="number" && Number.isFinite(value)) return `<c r="${ref}" t="n"><v>${value}</v></c>`;
+    if(typeof value==="boolean") return `<c r="${ref}" t="b"><v>${value?1:0}</v></c>`;
+    const text=value===null||value===undefined?"":(typeof value==="object"?JSON.stringify(value):String(value));
+    return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(text)}</t></is></c>`;
+  }
+
+  function worksheetXml(rows){
+    const safeRows=rows.length?rows:[["Tidak ada data"]];
+    const sheetRows=safeRows.map((row,r)=>`<row r="${r+1}">${row.map((value,c)=>excelCellXml(value,r,c)).join("")}</row>`).join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`;
+  }
+
+  function crc32(bytes){
+    if(!crc32.table){
+      crc32.table=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);return c>>>0;});
+    }
+    let crc=0xFFFFFFFF;
+    for(const byte of bytes) crc=crc32.table[(crc^byte)&0xFF]^(crc>>>8);
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+
+  function uint16(n){const a=new Uint8Array(2);new DataView(a.buffer).setUint16(0,n,true);return a;}
+  function uint32(n){const a=new Uint8Array(4);new DataView(a.buffer).setUint32(0,n>>>0,true);return a;}
+  function concatBytes(parts){const size=parts.reduce((sum,p)=>sum+p.length,0);const out=new Uint8Array(size);let offset=0;for(const part of parts){out.set(part,offset);offset+=part.length;}return out;}
+
+  function dosDateTime(date=new Date()){
+    const year=Math.max(1980,date.getFullYear());
+    return {
+      time:((date.getHours()&31)<<11)|((date.getMinutes()&63)<<5)|((Math.floor(date.getSeconds()/2))&31),
+      date:(((year-1980)&127)<<9)|(((date.getMonth()+1)&15)<<5)|(date.getDate()&31)
+    };
+  }
+
+  function makeZip(files){
+    const encoder=new TextEncoder();
+    const localParts=[],centralParts=[];
+    let offset=0;
+    const dt=dosDateTime();
+    for(const file of files){
+      const name=encoder.encode(file.name);
+      const data=typeof file.data==="string"?encoder.encode(file.data):file.data;
+      const crc=crc32(data);
+      const local=concatBytes([
+        uint32(0x04034b50),uint16(20),uint16(0x0800),uint16(0),uint16(dt.time),uint16(dt.date),
+        uint32(crc),uint32(data.length),uint32(data.length),uint16(name.length),uint16(0),name,data
+      ]);
+      localParts.push(local);
+      const central=concatBytes([
+        uint32(0x02014b50),uint16(20),uint16(20),uint16(0x0800),uint16(0),uint16(dt.time),uint16(dt.date),
+        uint32(crc),uint32(data.length),uint32(data.length),uint16(name.length),uint16(0),uint16(0),uint16(0),uint16(0),uint32(0),uint32(offset),name
+      ]);
+      centralParts.push(central);
+      offset+=local.length;
+    }
+    const central=concatBytes(centralParts);
+    const end=concatBytes([
+      uint32(0x06054b50),uint16(0),uint16(0),uint16(files.length),uint16(files.length),uint32(central.length),uint32(offset),uint16(0)
+    ]);
+    return concatBytes([...localParts,central,end]);
+  }
+
+  function safeSheetName(name,index){
+    const cleaned=String(name||`Sheet ${index+1}`).replace(/[\\/*?:\[\]]/g," ").trim().slice(0,31);
+    return cleaned||`Sheet ${index+1}`;
+  }
+
+  function buildXlsxBlob(sheetSpecs){
+    const sheets=sheetSpecs.map((sheet,index)=>({name:safeSheetName(sheet.name,index),rows:sheet.rows||[]}));
+    const workbookSheets=sheets.map((sheet,index)=>`<sheet name="${xmlEscape(sheet.name)}" sheetId="${index+1}" r:id="rId${index+1}"/>`).join("");
+    const rels=sheets.map((_,index)=>`<Relationship Id="rId${index+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index+1}.xml"/>`).join("");
+    const overrides=sheets.map((_,index)=>`<Override PartName="/xl/worksheets/sheet${index+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("");
+    const now=new Date().toISOString();
+    const files=[
+      {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>${overrides}</Types>`},
+      {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`},
+      {name:"xl/workbook.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets></workbook>`},
+      {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+      {name:"xl/styles.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>`},
+      {name:"docProps/core.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Backup Data LORHIL AC</dc:title><dc:creator>LORHIL AC Online</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created></cp:coreProperties>`},
+      {name:"docProps/app.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>LORHIL AC Online</Application></Properties>`}
+    ];
+    sheets.forEach((sheet,index)=>files.push({name:`xl/worksheets/sheet${index+1}.xml`,data:worksheetXml(sheet.rows)}));
+    const zip=makeZip(files);
+    return new Blob([zip],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  }
+
+  function technicianNameMap(data){
+    return new Map((data.technicians||[]).map(row=>[row.id,row.name||"-"]));
+  }
+
+  function invoiceTechnicianNames(invoiceId,data,techMap){
+    return (data.invoice_technicians||[]).filter(row=>row.invoice_id===invoiceId).map(row=>techMap.get(row.technician_id)||row.technician_id).join(", ");
+  }
+
+  function scheduleTechnicianNames(scheduleId,data,techMap){
+    return (data.schedule_technicians||[]).filter(row=>row.schedule_id===scheduleId).map(row=>techMap.get(row.technician_id)||row.technician_id).join(", ");
+  }
+
+  function buildCustomerRows(data){
+    const map=new Map();
+    for(const inv of data.invoices||[]){
+      const key=(inv.customer_phone||"").trim()||String(inv.customer_name||"").trim().toLowerCase();
+      if(!key) continue;
+      const current=map.get(key)||{name:inv.customer_name||"-",phone:inv.customer_phone||"",address:inv.customer_address||"",count:0,total:0,last:""};
+      current.count+=1;
+      current.total+=safeNumber(inv.total);
+      const date=`${inv.work_date||""} ${inv.work_time||""}`.trim();
+      if(!current.last || date>current.last){current.last=date;current.address=inv.customer_address||current.address;current.name=inv.customer_name||current.name;}
+      map.set(key,current);
+    }
+    return [["Nama Pelanggan","WhatsApp","Alamat Terakhir","Jumlah Nota","Total Transaksi","Transaksi Terakhir"],...Array.from(map.values()).sort((a,b)=>String(a.name).localeCompare(String(b.name),"id")).map(row=>[row.name,row.phone,row.address,row.count,row.total,row.last])];
+  }
+
+  function buildExcelSheets(data){
+    const techMap=technicianNameMap(data);
+    const itemInvoiceMap=new Map((data.invoices||[]).map(inv=>[inv.id,inv]));
+    const summary=[
+      ["LORHIL AC - Ringkasan Export Data",""],
+      ["Tanggal Export",data.exported_at],
+      ["Jumlah Invoice",(data.invoices||[]).length],
+      ["Jumlah Rincian Pekerjaan",(data.invoice_items||[]).length],
+      ["Jumlah Pelanggan Unik",Math.max(0,buildCustomerRows(data).length-1)],
+      ["Jumlah Jadwal",(data.work_schedules||[]).length],
+      ["Jumlah Teknisi",(data.technicians||[]).length],
+      ["Jumlah Aktivitas",(data.activity_logs||[]).length],
+      ["Catatan","Password akun tidak diekspor."]
+    ];
+    const invoices=[["No. Nota","Tanggal","Jam","Pelanggan","WhatsApp","Alamat","Teknisi","Subtotal","Diskon","Total","Dibayar/DP","Sisa","Status","Catatan","Dibuat","Diperbarui"],...(data.invoices||[]).map(inv=>[
+      inv.invoice_number,inv.work_date,inv.work_time,inv.customer_name,inv.customer_phone,inv.customer_address,invoiceTechnicianNames(inv.id,data,techMap),safeNumber(inv.subtotal),safeNumber(inv.discount),safeNumber(inv.total),safeNumber(inv.paid),safeNumber(inv.balance),inv.status,inv.notes,inv.created_at,inv.updated_at
+    ])];
+    const items=[["No. Nota","Tanggal","Pelanggan","Urutan","Keterangan Pekerjaan","Qty","Harga Jasa","Total Jasa","Dibuat"],...(data.invoice_items||[]).map(item=>{
+      const inv=itemInvoiceMap.get(item.invoice_id)||{};
+      return [inv.invoice_number||item.invoice_id,inv.work_date||"",inv.customer_name||"",item.sort_order,item.description,safeNumber(item.quantity),safeNumber(item.unit_price),safeNumber(item.line_total),item.created_at];
+    })];
+    const schedules=[["Tanggal","Jam","Pelanggan","WhatsApp","Alamat","Pekerjaan","Teknisi","Status","Invoice Terkait","Catatan","Dibuat","Diperbarui"],...(data.work_schedules||[]).map(row=>[
+      row.work_date,row.work_time,row.customer_name,row.customer_phone,row.customer_address,row.job_description,scheduleTechnicianNames(row.id,data,techMap),scheduleStatusLabel(row.status),itemInvoiceMap.get(row.invoice_id)?.invoice_number||row.invoice_id||"",row.notes,row.created_at,row.updated_at
+    ])];
+    const technicians=[["Nama Teknisi","WhatsApp","Status","Dibuat","Diperbarui"],...(data.technicians||[]).map(row=>[row.name,row.phone,row.is_active!==false?"Aktif":"Nonaktif",row.created_at,row.updated_at])];
+    const team=[["Nama Anggota","Email Login","Teknisi Terhubung","Peran","Boleh Invoice Bot","Status Akun","Auth User ID","Dibuat","Diperbarui"],...(data.team_members||[]).map(row=>[row.display_name,row.email||"",techMap.get(row.technician_id)||"",row.role,row.can_send_invoice?"Ya":"Tidak",row.is_active!==false?"Aktif":"Nonaktif",row.auth_user_id,row.created_at,row.updated_at])];
+    const payments=[["No. Nota","Tanggal","Pelanggan","Total","Dibayar/DP","Sisa Tagihan","Status"],...(data.invoices||[]).map(inv=>[inv.invoice_number,inv.work_date,inv.customer_name,safeNumber(inv.total),safeNumber(inv.paid),safeNumber(inv.balance),inv.status])];
+    const activities=[["Waktu","Anggota","Peran","Aksi","Jenis Data","Label","Keterangan","Metadata"],...(data.activity_logs||[]).map(row=>[row.created_at,row.actor_name,row.actor_role,row.action,row.entity_type,row.entity_label,row.description,row.metadata])];
+    const settings=[["Nama Toko","WhatsApp","Alamat","Informasi Pembayaran","Catatan/Garansi","Penandatangan","Jabatan","Diperbarui"],...(data.store_settings||[]).map(row=>[row.store_name,row.phone,row.address,row.payment_info,row.footer_note,row.signer_name,row.signer_role,row.updated_at])];
+    const sequences=[["Tahun","Nomor Terakhir"],...(data.invoice_sequences||[]).map(row=>[row.sequence_year,row.last_number])];
+    return [
+      {name:"Ringkasan",rows:summary},
+      {name:"Invoice",rows:invoices},
+      {name:"Rincian Pekerjaan",rows:items},
+      {name:"Pelanggan",rows:buildCustomerRows(data)},
+      {name:"Jadwal Pekerjaan",rows:schedules},
+      {name:"Teknisi",rows:technicians},
+      {name:"Akun Tim",rows:team},
+      {name:"Pembayaran",rows:payments},
+      {name:"Aktivitas Tim",rows:activities},
+      {name:"Pengaturan",rows:settings},
+      {name:"Nomor Nota",rows:sequences}
+    ];
+  }
+
+  async function downloadCompleteExcel(){
+    loading(true);
+    try{
+      const data=await fetchCompleteBackupData();
+      const blob=buildXlsxBlob(buildExcelSheets(data));
+      triggerBlobDownload(blob,`LORHIL_AC_SEMUA_DATA_${localDate()}.xlsx`);
+      markBackupDownloaded(BACKUP_EXCEL_TIME_KEY);
+      toast("Semua data Excel berhasil dibuat.");
+    }catch(error){
+      alert(errorMessage(error));
+    }finally{
+      loading(false);
+    }
+  }
+
+  ["downloadBackupBtn","downloadBackupSettingsBtn"].forEach(id=>{
+    if($(id)) $(id).addEventListener("click",downloadCompleteBackupJson);
+  });
+  ["downloadExcelBackupBtn","downloadExcelSettingsBtn"].forEach(id=>{
+    if($(id)) $(id).addEventListener("click",downloadCompleteExcel);
   });
 
 

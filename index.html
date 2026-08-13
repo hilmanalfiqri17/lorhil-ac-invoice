@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=78">
-  <title>LORHIL AC Online V78</title>
+  <link rel="stylesheet" href="style.css?v=79">
+  <title>LORHIL AC Online V79</title>
 </head>
-<body data-app-version="78">
+<body data-app-version="79">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -665,6 +665,46 @@
             </div>
           </article>
 
+          <article id="backupExportPanel" class="panel backup-export-panel">
+            <div class="panel-head backup-export-head">
+              <div>
+                <h3>Backup & Export Semua Data</h3>
+                <p>Simpan salinan data LORHIL AC ke perangkat sebelum kapasitas database mendekati penuh.</p>
+              </div>
+              <span class="backup-safe-badge">Data tidak dihapus</span>
+            </div>
+
+            <div id="backupExportAlert" class="backup-export-alert safe">
+              Backup dapat dilakukan kapan saja. Saat database mendekati batas, lakukan kedua unduhan agar arsip data tetap aman.
+            </div>
+
+            <div class="backup-export-grid">
+              <div class="backup-export-card">
+                <div class="backup-export-card-icon json">{ }</div>
+                <div class="backup-export-card-copy">
+                  <strong>Backup Lengkap JSON</strong>
+                  <p>Untuk arsip dan pemulihan data aplikasi. Mengambil seluruh data operasional yang dapat dibaca akun Admin.</p>
+                  <small id="lastBackupJsonText">Belum pernah diunduh di perangkat ini.</small>
+                </div>
+                <button id="downloadBackupSettingsBtn" class="btn primary" type="button">Download Backup</button>
+              </div>
+
+              <div class="backup-export-card">
+                <div class="backup-export-card-icon excel">XLS</div>
+                <div class="backup-export-card-copy">
+                  <strong>Semua Data Excel</strong>
+                  <p>File Excel multi-sheet untuk invoice, rincian pekerjaan, pelanggan, jadwal, teknisi, pembayaran, aktivitas, dan pengaturan.</p>
+                  <small id="lastExcelExportText">Belum pernah diunduh di perangkat ini.</small>
+                </div>
+                <button id="downloadExcelSettingsBtn" class="btn success" type="button">Download Excel</button>
+              </div>
+            </div>
+
+            <div class="backup-export-note">
+              <strong>Penting:</strong> Backup dari web tidak menghapus data dari Supabase. Simpan file hasil unduhan di lokasi yang aman dan jangan unggah file backup pelanggan ke repository GitHub publik.
+            </div>
+          </article>
+
           <form id="settingsForm" class="panel settings-form settings-store-panel">
             <div class="panel-head settings-store-head">
               <div>
@@ -686,12 +726,18 @@
         </section>
 
         <section id="page-backup" class="page">
-          <div class="page-head"><div><h2>Backup Data</h2><p>Cadangkan database online ke file JSON.</p></div></div>
-          <div class="panel backup-panel">
+          <div class="page-head"><div><h2>Backup Data</h2><p>Cadangkan seluruh data operasional ke JSON atau Excel.</p></div></div>
+          <div class="panel backup-panel backup-page-card">
             <div class="backup-icon">⇩</div>
-            <div><h3>Backup Database</h3><p>Backup berisi invoice, item, teknisi, relasi teknisi, dan pengaturan akun yang sedang login.</p></div>
-            <button id="downloadBackupBtn" class="btn primary">Download Backup JSON</button>
+            <div><h3>Backup Lengkap JSON</h3><p>Untuk arsip dan kebutuhan pemulihan data aplikasi.</p></div>
+            <button id="downloadBackupBtn" class="btn primary" type="button">Download Backup JSON</button>
           </div>
+          <div class="panel backup-panel backup-page-card">
+            <div class="backup-icon backup-excel-icon">XLS</div>
+            <div><h3>Semua Data Excel</h3><p>Download satu file Excel dengan beberapa sheet agar data mudah dibaca dan diarsipkan.</p></div>
+            <button id="downloadExcelBackupBtn" class="btn success" type="button">Download Excel</button>
+          </div>
+          <div class="notice">Unduhan hanya membaca data dan tidak menghapus data dari Supabase. Untuk keamanan, simpan hasil backup di lebih dari satu lokasi.</div>
         </section>
       </div>
     </main>
@@ -737,6 +783,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=79"></script>
 </body>
 </html>

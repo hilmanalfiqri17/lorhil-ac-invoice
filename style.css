@@ -738,3 +738,174 @@ body.technician-mode .content{padding-bottom:92px}
 .location-share-copy p{margin:9px auto 0;max-width:330px;color:var(--muted);font-size:12px;line-height:1.6}
 .location-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}
 @media(max-width:460px){.location-share-card{padding:21px 17px;border-radius:19px}.location-share-actions{grid-template-columns:1fr}.location-share-actions .primary{grid-row:1}}
+
+/* ==========================================================
+   V85 - REDESIGN AKUN TEKNISI (DESKTOP PRO)
+   Referensi: Dashboard Teknisi, Pekerjaan Saya, Riwayat Pekerjaan
+   Fokus pada visual; alur status, tracking, jadwal, dan privasi tetap sama.
+   ========================================================== */
+body.technician-mode{background:#f4f7fb}
+body.technician-mode .main-shell{background:#f4f7fb}
+body.technician-mode .topbar{height:88px;padding:0 28px;background:rgba(255,255,255,.98);border-bottom:1px solid #e4eaf2;box-shadow:none}
+body.technician-mode .topbar h1{font-size:25px;color:#10213f;letter-spacing:-.025em}
+body.technician-mode .topbar p{font-size:11px;color:#6f809c;margin-top:5px}
+body.technician-mode .content{width:100%;max-width:none;padding:17px 28px 30px}
+body.technician-mode .technician-page{max-width:1500px;margin:0 auto}
+body.technician-mode .sidebar{background:linear-gradient(180deg,#041a43 0%,#05265b 100%)}
+body.technician-mode .sidebar:before{width:360px;height:360px;left:-250px;top:90px;background:rgba(19,84,190,.23)}
+body.technician-mode .sidebar:after{width:420px;height:420px;right:-340px;bottom:60px;background:rgba(22,89,204,.18)}
+body.technician-mode .brand{padding-bottom:18px}
+body.technician-mode .brand img{width:45px;height:45px}
+body.technician-mode .brand strong{font-size:16px}
+body.technician-mode .brand small{font-size:10px;color:#d3def1}
+body.technician-mode .technician-sidebar-nav{gap:7px}
+body.technician-mode .technician-sidebar-nav .nav-btn{min-height:49px;border-radius:12px;font-size:13px;font-weight:850;padding:12px 14px}
+body.technician-mode .technician-sidebar-nav .nav-btn.active{background:linear-gradient(90deg,#0b5ce5,#1669e9);box-shadow:0 10px 25px rgba(0,82,210,.28)}
+body.technician-mode .sidebar-footer .nav-btn{min-height:48px;border:1px solid rgba(255,255,255,.08);background:rgba(3,20,52,.32);border-radius:12px}
+
+/* Dashboard hero */
+.tech-dashboard-page .tech-welcome-pro{min-height:170px;margin-bottom:14px;padding:25px 31px;border-radius:18px;background:linear-gradient(112deg,#075ee9 0%,#1450d4 54%,#182daa 100%);box-shadow:0 13px 30px rgba(16,65,162,.17)}
+.tech-dashboard-page .tech-welcome-pro:before{width:470px;height:190px;right:310px;top:-110px;background:rgba(255,255,255,.055)}
+.tech-dashboard-page .tech-welcome-pro:after{width:620px;height:235px;left:250px;bottom:-178px;background:rgba(0,29,130,.18)}
+.tech-dashboard-page .tech-welcome-copy{max-width:44%;padding-top:6px}
+.tech-dashboard-page .tech-welcome-pro .tech-eyebrow{font-size:10px;color:#e4efff;letter-spacing:.12em}
+.tech-dashboard-page .tech-welcome-pro h2{font-size:29px;margin:7px 0 8px;color:#fff}
+.tech-dashboard-page .tech-welcome-pro p{max-width:390px;font-size:12px;line-height:1.55;color:#f0f5ff}
+.tech-dashboard-page .tech-hero-illustration{left:51%;bottom:-17px;width:230px;height:176px}
+.tech-dashboard-page .tech-safety-note{width:310px;min-height:82px;padding:14px 16px;border-radius:16px}
+.tech-dashboard-page .tech-safety-icon{width:43px;height:43px;flex-basis:43px;background:#1767e8}
+.tech-dashboard-page .tech-safety-note strong{font-size:11px;margin-bottom:4px}
+.tech-dashboard-page .tech-safety-note small{font-size:10px;line-height:1.45}
+
+/* Berbagi lokasi */
+.tech-live-location-panel{margin:0 0 14px;padding:13px 16px;grid-template-columns:46px minmax(0,1fr) auto;border-radius:15px;border:1px solid #d5e2f3;background:#fff;box-shadow:0 7px 22px rgba(31,58,96,.05)}
+.tech-live-location-icon{width:42px;height:42px;background:#eaf3ff;color:#1465e9;border-radius:12px;font-size:0}
+.tech-live-location-icon:before{content:"⌖";font-size:20px}
+.tech-live-location-copy strong{font-size:11px;color:#172844}
+.tech-live-location-copy small{font-size:9.5px;color:#74839a}
+.tech-live-location-panel .btn{min-width:150px;border-radius:11px;padding:9px 13px;font-size:10px;background:#fff}
+.tech-live-location-panel.live .btn{background:#eaf8ef;border-color:#c6e8d2;color:#17894c}
+
+/* Summary cards */
+.tech-summary-grid-four{gap:13px;margin:0 0 18px}
+.tech-summary-grid-four .tech-summary-card{min-height:112px;padding:15px 16px;border-radius:15px;border:1px solid #e1e7f0;box-shadow:0 8px 22px rgba(27,55,94,.055);background:#fff}
+.tech-summary-icon{width:50px;height:50px;flex-basis:50px;border-radius:13px;box-shadow:0 8px 18px rgba(20,55,110,.12)}
+.tech-summary-grid-four .tech-summary-card small{font-size:9px;color:#667793}
+.tech-summary-grid-four .tech-summary-card strong{font-size:24px;color:#12213e}
+.tech-summary-grid-four .tech-summary-card p{font-size:9.5px;color:#7a899f}
+.tech-summary-link{font-size:8.5px;margin-top:7px;color:#005eea}
+
+/* Section headings */
+.tech-section-head{margin:16px 1px 9px;min-height:28px}
+.tech-section-head h3{font-size:16px;color:#10213f;letter-spacing:-.01em}
+.tech-section-head p{font-size:9px;color:#71809a;margin-top:3px}
+.tech-count-badge{min-width:22px;height:21px;border-radius:6px;font-size:9.5px;background:#1266e7}
+.tech-text-link{font-size:9.5px;color:#005bdc;padding:5px 2px}
+
+/* Job list cards */
+.tech-dashboard-job-list,.tech-work-list,.tech-upcoming-list,.tech-history-list{border:1px solid #e1e7f0;border-radius:15px;background:#fff;box-shadow:0 8px 24px rgba(31,58,96,.055);overflow:hidden}
+.tech-dashboard-job-list .tech-job-card,.tech-work-list .tech-job-card{min-height:82px;padding:12px 15px;grid-template-columns:82px minmax(300px,1.55fr) minmax(145px,.63fr) minmax(235px,auto);gap:14px;border-bottom:1px solid #e7ecf3}
+.tech-job-time-block{padding-right:13px;border-right:1px solid #dce4ef}
+.tech-job-time-block .tech-job-time{font-size:17px;color:#075ddd}
+.tech-job-time-block small{font-size:8.5px;color:#627591}
+.tech-job-main-title strong{font-size:13px;color:#13233e}
+.tech-job-service{margin-top:3px;padding:3px 7px;border-radius:6px;font-size:8.5px;background:#eaf2ff;color:#065fdc}
+.tech-job-location{margin-top:4px;font-size:8.5px;color:#72809a}
+.tech-job-source{display:inline-flex;margin:4px 0 0;padding:3px 7px;border-radius:7px;background:#eef2f5;color:#667588;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
+.tech-job-status-area .work-badge{margin-bottom:4px;padding:5px 8px;font-size:8.5px}
+.tech-job-status-area small{font-size:8.5px;color:#71809a}
+.tech-job-status-area strong{font-size:9.5px;color:#344761;margin-top:2px}
+.tech-job-row-actions{gap:7px;flex-wrap:nowrap}
+.tech-job-row-actions .btn{min-height:36px;padding:8px 11px;border-radius:9px;font-size:8.8px;border-color:#9fc2fc;color:#075ddd;box-shadow:none}
+.tech-job-row-actions .btn.primary{min-width:96px;color:#fff;border-color:#0b61e8;background:linear-gradient(180deg,#1168ef,#0759db);box-shadow:0 7px 14px rgba(11,97,232,.15)}
+.tech-job-row-actions .tech-map-btn{min-width:98px}
+.tech-job-row-actions .tech-detail-btn{min-width:78px}
+
+/* Upcoming rows */
+.tech-upcoming-list .tech-job-card{min-height:104px;padding:14px 17px;grid-template-columns:96px 86px minmax(300px,1.55fr) 155px minmax(210px,auto);gap:14px}
+.tech-upcoming-day{padding-left:3px;color:#1264db}
+.tech-upcoming-day strong{font-size:8px;color:#2264bc}
+.tech-upcoming-day span{font-size:8px;color:#687a96}
+.tech-upcoming-time{font-size:17px;color:#11213e}
+.tech-upcoming-time small{font-size:8px;color:#6e809b}
+.tech-upcoming-status{padding-left:0}
+.tech-upcoming-status .work-badge{font-size:8.5px}
+.tech-upcoming-status small{font-size:8.5px;color:#72809a}
+.tech-upcoming-actions{gap:9px!important;display:flex!important;justify-content:flex-end!important}
+.tech-upcoming-actions .btn{min-width:104px}
+.tech-upcoming-actions .tech-detail-btn{min-width:104px!important;width:auto!important}
+
+/* Pekerjaan Saya - hilangkan heading ganda, layout seperti mockup */
+.tech-jobs-page .tech-page-meta-date{display:none}
+.tech-jobs-page .tech-filter-row-pro{margin:7px 0 15px;gap:8px}
+.tech-jobs-page .tech-filter-row-pro .chip{height:36px;min-width:82px;padding:0 19px;border-radius:9px;border:1px solid #d5deea;background:#fff;color:#394a64;font-size:11px;font-weight:750;box-shadow:none}
+.tech-jobs-page .tech-filter-row-pro .chip.active{background:#0863e9;color:#fff;border-color:#0863e9;box-shadow:0 6px 15px rgba(8,99,233,.18)}
+.tech-work-stats{margin-bottom:19px;border-radius:15px;border:1px solid #e1e7ef;box-shadow:0 8px 22px rgba(31,58,96,.05)}
+.tech-work-stats article{min-height:104px;padding:16px 20px;gap:14px}
+.tech-work-stat-icon{width:48px;height:48px;flex-basis:48px;border-radius:12px}
+.tech-work-stats small{font-size:8.5px;color:#677895}
+.tech-work-stats strong{font-size:24px;color:#13213e}
+.tech-work-stats p{font-size:8.5px;color:#7a899f}
+.tech-jobs-page #techJobsPrimarySection,.tech-jobs-page #techJobsUpcomingSection{margin-top:0}
+.tech-jobs-page .tech-work-list{min-height:0}
+.tech-job-empty-pro{min-height:105px!important;border:1px dashed #a9c9fb!important;border-radius:15px!important;background:#fff!important;display:flex!important;flex-direction:column;justify-content:center;align-items:center;gap:5px!important;color:#677893!important}
+.tech-empty-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#eaf3ff;color:#1265e7}
+.tech-empty-icon .tech-inline-svg{width:20px;height:20px}
+.tech-job-empty-pro strong{font-size:12px;color:#172640}
+.tech-job-empty-pro small{font-size:9px;color:#76859a}
+
+/* Riwayat */
+.tech-history-page{padding-top:0}
+.tech-history-info-banner{position:relative;display:flex;align-items:center;gap:12px;min-height:68px;margin:3px 0 13px;padding:13px 20px;border:1px solid #cfe0fb;border-radius:13px;background:linear-gradient(90deg,#f3f8ff,#eef5ff);color:#31537e;font-size:10px;overflow:hidden}
+.tech-history-info-icon{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:#1768ea;color:#fff;font-size:15px;font-weight:900}
+.tech-history-watermark{position:absolute;right:35px;top:-8px;color:#c5d9fb;font-size:76px;font-weight:900;opacity:.6;transform:rotate(-8deg)}
+.tech-history-list{display:grid;gap:9px;border:0;background:transparent;box-shadow:none;overflow:visible}
+.tech-history-card{min-height:102px!important;display:grid!important;grid-template-columns:160px minmax(320px,1.55fr) 110px 170px minmax(220px,auto)!important;gap:18px!important;align-items:center!important;padding:14px 18px!important;border:1px solid #e1e7ef!important;border-radius:14px!important;background:#fff!important;box-shadow:0 7px 20px rgba(31,58,96,.055)!important}
+.tech-history-date-block{display:flex;align-items:flex-start;gap:10px;border-right:2px solid #2e72ee;padding-right:17px}
+.tech-history-calendar{display:grid;place-items:center;color:#1265e7;padding-top:2px}.tech-history-calendar .tech-inline-svg{width:14px;height:14px}
+.tech-history-date-block div{display:grid;gap:2px}.tech-history-date-block small{font-size:9px;color:#536884;font-weight:800}.tech-history-date-block strong{font-size:22px;line-height:1.05;color:#075ddd}.tech-history-date-block span{font-size:8.5px;color:#5f718d;font-weight:850}
+.tech-history-card .tech-job-main-title strong{font-size:14px}
+.tech-history-source{justify-self:center;display:inline-flex;padding:5px 11px;border-radius:999px;background:#f0f3f7;color:#68768b;font-size:8.5px;font-weight:900;text-transform:uppercase}
+.tech-history-status .work-badge{width:max-content}
+.tech-history-status small{font-size:8.5px}.tech-history-status strong{font-size:10px}
+.tech-history-actions{flex-wrap:nowrap;justify-content:flex-end}.tech-history-actions .btn{min-width:92px}
+
+/* Footer note */
+.tech-page-footer-note{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;margin-top:14px;padding:10px 15px;border:1px solid #cfe0fb;border-radius:12px;background:linear-gradient(90deg,#f4f8ff,#f8fbff);color:#1461d6;font-size:8.8px}
+.tech-footer-message,.tech-footer-safety{display:flex;align-items:center;gap:8px}.tech-footer-safety{white-space:nowrap}
+.tech-footer-info,.tech-footer-shield{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#1768ea;color:#fff;font-weight:900;font-size:11px}.tech-footer-shield{border-radius:7px}.tech-footer-shield.outline{background:#fff;color:#1768ea;border:1px solid #1768ea}
+
+/* Desktop optimization */
+@media(min-width:1181px){
+  body.technician-mode .content{padding-left:26px;padding-right:26px}
+  .tech-dashboard-page .tech-welcome-pro{display:flex;align-items:center}
+  .tech-dashboard-page .tech-safety-note{margin-left:auto}
+}
+
+/* Tablet */
+@media(max-width:1180px){
+  .tech-dashboard-page .tech-hero-illustration{left:48%;width:205px;height:160px}
+  .tech-dashboard-page .tech-safety-note{width:270px}
+  .tech-dashboard-job-list .tech-job-card,.tech-work-list .tech-job-card{grid-template-columns:78px minmax(250px,1fr) 145px;gap:12px}
+  .tech-dashboard-job-list .tech-job-row-actions,.tech-work-list .tech-job-row-actions{grid-column:2/-1;justify-content:flex-start}
+  .tech-history-card{grid-template-columns:145px minmax(260px,1fr) 95px 155px!important}.tech-history-actions{grid-column:2/-1;justify-content:flex-start}
+}
+
+/* Mobile: pertahankan UX teknisi yang sudah responsif */
+@media(max-width:780px){
+  body.technician-mode .content{padding:12px 11px 92px}
+  .tech-dashboard-page .tech-welcome-pro{min-height:210px;border-radius:17px;padding:18px 15px 14px}
+  .tech-dashboard-page .tech-welcome-copy{max-width:100%;padding-right:88px;padding-top:0}
+  .tech-dashboard-page .tech-welcome-pro h2{font-size:21px}.tech-dashboard-page .tech-welcome-pro p{font-size:10px;max-width:235px}
+  .tech-dashboard-page .tech-hero-illustration{left:auto;right:-4px;bottom:52px;width:125px;height:125px}
+  .tech-dashboard-page .tech-safety-note{width:100%;min-height:58px;margin-top:36px;padding:9px 10px}.tech-dashboard-page .tech-safety-note small{font-size:8.5px}
+  .tech-live-location-panel{grid-template-columns:40px minmax(0,1fr);padding:11px 12px}.tech-live-location-panel .btn{grid-column:1/-1;width:100%}
+  .tech-summary-grid-four .tech-summary-card{min-height:101px}
+  .tech-dashboard-job-list,.tech-work-list,.tech-upcoming-list,.tech-history-list{border:0;background:transparent;box-shadow:none;overflow:visible;gap:9px}
+  .tech-dashboard-job-list .tech-job-card,.tech-work-list .tech-job-card{grid-template-columns:64px 1fr!important;gap:8px 10px!important;min-height:0;padding:12px!important;border:1px solid #dfe6f0!important;border-radius:14px!important;box-shadow:0 6px 17px rgba(31,58,96,.055)!important}
+  .tech-job-time-block{grid-row:1/3}.tech-job-row-actions{grid-column:1/-1!important;display:grid!important;grid-template-columns:1fr 1fr;gap:7px}.tech-job-row-actions .tech-quick-status{grid-column:1/-1}.tech-job-row-actions .btn{width:100%;min-width:0}
+  .tech-upcoming-list .tech-job-card{grid-template-columns:66px 1fr!important;padding:12px!important;border:1px solid #dfe6f0!important;border-radius:14px!important;box-shadow:0 6px 17px rgba(31,58,96,.055)!important}.tech-upcoming-actions{grid-column:1/-1!important;display:grid!important;grid-template-columns:1fr 1fr!important}.tech-upcoming-actions .btn{min-width:0;width:100%!important}
+  .tech-history-info-banner{min-height:56px;padding:11px 12px;font-size:9px}.tech-history-watermark{right:8px;font-size:58px}
+  .tech-history-card{grid-template-columns:70px 1fr!important;gap:8px 11px!important;padding:12px!important;min-height:0!important}.tech-history-date-block{grid-row:1/3;padding-right:9px;display:block;text-align:center}.tech-history-calendar{margin-bottom:4px}.tech-history-date-block small{font-size:7.5px}.tech-history-date-block strong{font-size:17px}.tech-history-source{grid-column:2;justify-self:start}.tech-history-status{grid-column:2}.tech-history-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.tech-history-actions .btn{width:100%;min-width:0}
+  .tech-page-footer-note{align-items:flex-start;flex-direction:column;font-size:8px}.tech-footer-safety{white-space:normal}
+}

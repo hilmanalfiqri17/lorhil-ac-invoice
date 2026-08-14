@@ -2724,13 +2724,26 @@
 
     if(variant==="upcoming"){
       const upcomingStatus=`<div class="tech-job-status-area tech-upcoming-status">${workStatusBadge(job.status)}<small>${job.status==="Dalam Perjalanan"?"Menuju lokasi":job.status==="Dikerjakan"?"Pekerjaan sedang berlangsung":job.status==="Selesai"?"Pekerjaan selesai":"Sesuai jadwal"}</small></div>`;
-      const upcomingActions=`<div class="tech-job-row-actions tech-upcoming-actions">${detailBtn}</div>`;
+      const upcomingActions=`<div class="tech-job-row-actions tech-upcoming-actions">${mapBtn}<button class="btn primary tech-detail-btn" data-source="${job.source}" data-id="${job.id}" type="button">${techIcon("file")}<span>Detail</span></button></div>`;
       return `<article class="tech-job-card ${job.source}-source ${techStatusCardClass(job.status)}">
         <div class="tech-upcoming-day"><strong>${esc(day.weekday)}</strong><span>${esc(day.date)}</span></div>
         <div class="tech-upcoming-time">${time}<small>WIB</small></div>
         ${main}
         ${upcomingStatus}
         ${upcomingActions}
+      </article>`;
+    }
+
+    if(variant==="history"){
+      const historyDate=job.work_date?new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(`${job.work_date}T00:00:00`)).toUpperCase().replaceAll(".",""):"-";
+      const historyStatus=`<div class="tech-job-status-area tech-history-status">${workStatusBadge(job.status)}<small>Pekerjaan selesai</small><strong>${time} WIB</strong></div>`;
+      const historyActions=`<div class="tech-job-row-actions tech-history-actions">${detailBtn}${mapBtn}</div>`;
+      return `<article class="tech-job-card tech-history-card ${job.source}-source ${techStatusCardClass(job.status)}">
+        <div class="tech-history-date-block"><span class="tech-history-calendar">${techIcon("calendarClock")}</span><div><small>${esc(historyDate)}</small><strong>${time}</strong><span>WIB</span></div></div>
+        ${main}
+        <div class="tech-history-source">${sourceLabel}</div>
+        ${historyStatus}
+        ${historyActions}
       </article>`;
     }
 
@@ -2763,7 +2776,13 @@
 
   function renderTechJobList(container,data,emptyText,variant="work"){
     if(!container)return;
-    container.innerHTML=data.length?data.map(job=>techJobCard(job,variant)).join(""):`<div class="tech-job-empty">${esc(emptyText||"Belum ada pekerjaan.")}</div>`;
+    if(data.length){
+      container.innerHTML=data.map(job=>techJobCard(job,variant)).join("");
+    }else if(variant==="work"){
+      container.innerHTML=`<div class="tech-job-empty tech-job-empty-pro"><span class="tech-empty-icon">${techIcon("file")}</span><strong>Tidak ada pekerjaan aktif pada filter ini</strong><small>${esc(emptyText||"Semua pekerjaan akan muncul di sini saat ada penugasan yang sedang berjalan.")}</small></div>`;
+    }else{
+      container.innerHTML=`<div class="tech-job-empty">${esc(emptyText||"Belum ada pekerjaan.")}</div>`;
+    }
     bindTechJobButtons(container);
   }
 
@@ -2833,7 +2852,7 @@
     if(!isTechnicianAccount()||!$("techHistoryList"))return;
     const today=localDate();
     const data=techUnifiedJobs().filter(job=>job.status==="Selesai"||job.work_date<today).sort((a,b)=>`${b.work_date} ${b.work_time||""}`.localeCompare(`${a.work_date} ${a.work_time||""}`));
-    renderTechJobList($("techHistoryList"),data,"Riwayat pekerjaan masih kosong.","work");
+    renderTechJobList($("techHistoryList"),data,"Riwayat pekerjaan masih kosong.","history");
   }
 
   function renderTechProfile(){

@@ -9,10 +9,10 @@
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=84">
-  <title>LORHIL AC Online V84</title>
+  <link rel="stylesheet" href="style.css?v=85">
+  <title>LORHIL AC Online V85</title>
 </head>
-<body data-app-version="84">
+<body data-app-version="85">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -603,10 +603,15 @@
 
           <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Berikutnya <span id="techUpcomingBadge" class="tech-count-badge purple">0</span></h3><p>Tugas terdekat setelah hari ini.</p></div><button class="tech-text-link tech-see-all" data-page="tech-jobs" type="button">Lihat Semua</button></div>
           <div id="techUpcomingJobs" class="tech-job-list compact tech-upcoming-list"></div>
+
+          <div class="tech-page-footer-note">
+            <div class="tech-footer-message"><span class="tech-footer-info">i</span><span>Pastikan lokasi & jadwal tepat waktu dan konfirmasi setelah pekerjaan selesai.</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield">✓</span><span>Utamakan keselamatan kerja</span></div>
+          </div>
         </section>
 
         <section id="page-tech-jobs" class="page technician-page tech-jobs-page">
-          <div class="page-head tech-page-head"><div><h2>Pekerjaan Saya</h2><p id="techJobsPageDate">Daftar pekerjaan yang ditugaskan kepada akun Anda.</p></div></div>
+          <div class="tech-page-meta-date" id="techJobsPageDate">Daftar pekerjaan yang ditugaskan kepada akun Anda.</div>
           <div class="tech-filter-row tech-filter-row-pro">
             <button class="chip tech-job-filter active" data-tech-filter="today" type="button">Hari Ini</button>
             <button class="chip tech-job-filter" data-tech-filter="tomorrow" type="button">Besok</button>
@@ -630,11 +635,25 @@
             <div class="tech-section-head tech-next-head"><div><h3>Pekerjaan Mendatang <span id="techJobsUpcomingBadge" class="tech-count-badge purple">0</span></h3></div><button class="tech-text-link" data-tech-filter-jump="all" type="button">Lihat Semua</button></div>
             <div id="techJobsUpcomingList" class="tech-job-list compact tech-upcoming-list"></div>
           </div>
+
+          <div class="tech-page-footer-note">
+            <div class="tech-footer-message"><span class="tech-footer-info">i</span><span>Pastikan selalu memeriksa detail pekerjaan dan lokasi sebelum berangkat ke lokasi.</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield">✓</span><span>Utamakan keselamatan kerja</span></div>
+          </div>
         </section>
 
-        <section id="page-tech-history" class="page technician-page">
-          <div class="page-head tech-page-head"><div><h2>Riwayat Pekerjaan</h2><p>Riwayat tugas yang sudah selesai atau tanggalnya telah lewat.</p></div></div>
-          <div id="techHistoryList" class="tech-job-list"></div>
+        <section id="page-tech-history" class="page technician-page tech-history-page">
+          <div class="tech-history-info-banner">
+            <span class="tech-history-info-icon">i</span>
+            <span>Halaman ini menampilkan riwayat pekerjaan yang sudah selesai atau telah dikerjakan di masa lalu.</span>
+            <span class="tech-history-watermark" aria-hidden="true">✓</span>
+          </div>
+          <div id="techHistoryList" class="tech-job-list tech-history-list"></div>
+
+          <div class="tech-page-footer-note">
+            <div class="tech-footer-message"><span class="tech-footer-shield">✓</span><span>Pastikan selalu memperbarui status pekerjaan dan berbagi lokasi saat berangkat untuk memudahkan koordinasi tim.</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield outline">✓</span><span>Utamakan keselamatan kerja</span></div>
+          </div>
         </section>
 
         <section id="page-tech-profile" class="page technician-page">
@@ -835,6 +854,6 @@
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=84"></script>
+  <script src="app.js?v=85"></script>
 </body>
 </html>

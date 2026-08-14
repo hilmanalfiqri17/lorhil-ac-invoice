@@ -71,7 +71,7 @@
     revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[], invoiceSourceScheduleId:null,
     activityLogs:[], databaseUsage:null,
     liveLocations:[], liveTrackingAvailable:true, selectedLiveTechnicianId:null,
-    liveTrackingWatchId:null, liveTrackingJob:null, liveTrackingLastSentAt:0,
+    liveTrackingWatchId:null, liveTrackingHeartbeatId:null, liveTrackingJob:null, liveTrackingLastSentAt:0,
     liveTrackingLastCoords:null
   };
 
@@ -507,7 +507,7 @@
       if(liveLocationResult.error){
         state.liveLocations=[];
         state.liveTrackingAvailable=false;
-        console.warn("Live Tracking V81 belum siap. Jalankan lorhil-v81-live-tracking.sql:",liveLocationResult.error.message);
+        console.warn("Live Tracking V82 belum siap. Jalankan lorhil-v82-live-tracking.sql:",liveLocationResult.error.message);
       }else{
         state.liveLocations=liveLocationResult.data||[];
         state.liveTrackingAvailable=true;
@@ -1833,7 +1833,8 @@
   // sehingga tidak membuat riwayat titik GPS yang terus membesar.
   // ==========================================================
   const LIVE_LOCATION_FRESH_MS=120000;
-  const LIVE_LOCATION_SEND_INTERVAL_MS=20000;
+  const LIVE_LOCATION_SEND_INTERVAL_MS=10000;
+  const LIVE_LOCATION_HEARTBEAT_MS=12000;
 
   function liveLocationForTechnician(technicianId){
     return state.liveLocations.find(row=>row.technician_id===technicianId)||null;
@@ -1873,41 +1874,152 @@
     return `https://maps.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}&z=16&output=embed`;
   }
 
+  let monitorLeafletMap=null;
+  const monitorLeafletMarkers=new Map();
+  let monitorMapDidInitialFit=false;
+  let monitorLastMarkerCount=0;
+
+  function technicianLiveJob(technicianId){
+    return monitorCurrentJob(monitorJobsForTechnician(technicianId));
+  }
+
+  function liveMarkerTheme(job,row){
+    if(job?.status==="Dalam Perjalanan") return {cls:"onway",label:"Dalam Perjalanan"};
+    if(job?.status==="Dikerjakan") return {cls:"working",label:"Dikerjakan"};
+    const view=liveLocationVisual(row);
+    if(view.fresh) return {cls:"live",label:"Live"};
+    return {cls:"last",label:"Lokasi Terakhir"};
+  }
+
+  function liveTechnicianAvatarHtml(tech){
+    const photo=String(tech?.photo_url||"").trim();
+    if(photo && /^https?:\/\//i.test(photo)) return `<img src="${esc(photo)}" alt="${esc(tech.name||"Teknisi")}">`;
+    return `<span>${esc(initialsFromName(tech?.name||"T"))}</span>`;
+  }
+
+  function ensureMonitorLeafletMap(){
+    const el=$("monitorLiveMap");
+    if(!el || !window.L) return null;
+    if(!monitorLeafletMap){
+      monitorLeafletMap=L.map(el,{zoomControl:true,attributionControl:true,preferCanvas:false}).setView([-2.5,118],5);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        maxZoom:19,
+        attribution:'&copy; OpenStreetMap contributors'
+      }).addTo(monitorLeafletMap);
+    }
+    setTimeout(()=>monitorLeafletMap?.invalidateSize(),60);
+    return monitorLeafletMap;
+  }
+
+  function clearMonitorLeafletMarkers(){
+    monitorLeafletMarkers.forEach(marker=>marker.remove());
+    monitorLeafletMarkers.clear();
+  }
+
+  function focusLiveTechnicianOnMap(technicianId){
+    const row=liveLocationForTechnician(technicianId);
+    const map=ensureMonitorLeafletMap();
+    if(!map||!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))) return false;
+    state.selectedLiveTechnicianId=technicianId;
+    map.flyTo([Number(row.latitude),Number(row.longitude)],16,{animate:true,duration:.7});
+    const marker=monitorLeafletMarkers.get(technicianId);
+    marker?.openPopup();
+    renderMonitorLiveTechnicianList();
+    return true;
+  }
+
+  function renderMonitorLiveTechnicianList(){
+    const list=$("monitorLiveTechnicianList");
+    if(!list||isTechnicianAccount())return;
+    const techs=state.technicians.filter(tech=>tech.is_active!==false);
+    list.innerHTML=techs.length?techs.map(tech=>{
+      const row=liveLocationForTechnician(tech.id);
+      const hasCoords=!!(row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
+      const view=liveLocationVisual(row);
+      const job=technicianLiveJob(tech.id);
+      const theme=liveMarkerTheme(job,row);
+      const accuracy=Number(row?.accuracy_m);
+      const selected=state.selectedLiveTechnicianId===tech.id;
+      return `<article class="monitor-live-tech-card ${selected?"selected":""} ${hasCoords?"":"no-location"}" data-id="${tech.id}">
+        <div class="monitor-live-card-top">
+          <div class="monitor-live-card-identity"><span class="monitor-live-card-avatar">${liveTechnicianAvatarHtml(tech)}</span><div><strong>${esc(tech.name||"Teknisi")}</strong><small>${hasCoords?`Update ${esc(relativeLiveTime(row))}`:"Belum ada posisi"}</small></div></div>
+          <span class="monitor-live-job-badge ${theme.cls}">${esc(theme.label)}</span>
+        </div>
+        <div class="monitor-live-card-meta"><span>Akurasi GPS</span><strong>${hasCoords&&Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</strong></div>
+        <div class="monitor-live-card-actions">
+          <button class="btn outline live-focus-btn" type="button" ${hasCoords?"":"disabled"}>⌖ Lihat Lokasi</button>
+          ${hasCoords?`<a class="btn secondary" href="${googleMapsOpenUrl(row.latitude,row.longitude)}" target="_blank" rel="noopener">Buka Maps</a>`:`<button class="btn secondary" type="button" disabled>Buka Maps</button>`}
+        </div>
+      </article>`;
+    }).join(""):`<div class="monitor-live-empty-copy"><strong>Belum ada teknisi aktif</strong><span>Tambahkan atau aktifkan teknisi terlebih dahulu.</span></div>`;
+    list.querySelectorAll(".monitor-live-tech-card").forEach(card=>{
+      const techId=card.dataset.id;
+      card.addEventListener("click",event=>{
+        if(event.target.closest("a,button"))return;
+        focusLiveTechnicianOnMap(techId);
+      });
+      card.querySelector(".live-focus-btn")?.addEventListener("click",()=>focusLiveTechnicianOnMap(techId));
+    });
+  }
+
+  function renderMonitorLiveMap(){
+    if(isTechnicianAccount()||state.page!=="monitoring")return;
+    const map=ensureMonitorLeafletMap();
+    const empty=$("monitorLiveMapEmpty");
+    if(!map){
+      if(empty){empty.classList.remove("hidden");empty.querySelector("strong").textContent="Peta belum dapat dimuat";empty.querySelector("small").textContent="Pastikan perangkat terhubung internet lalu segarkan halaman.";}
+      return;
+    }
+    clearMonitorLeafletMarkers();
+    const rows=state.liveLocations.filter(row=>Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
+    if(!rows.length){
+      empty?.classList.remove("hidden");
+      monitorMapDidInitialFit=false;
+      monitorLastMarkerCount=0;
+      return;
+    }
+    empty?.classList.add("hidden");
+    const points=[];
+    rows.forEach(row=>{
+      const tech=state.technicians.find(item=>item.id===row.technician_id);
+      if(!tech||tech.is_active===false)return;
+      const lat=Number(row.latitude),lng=Number(row.longitude);
+      const job=technicianLiveJob(tech.id);
+      const theme=liveMarkerTheme(job,row);
+      const view=liveLocationVisual(row);
+      const accuracy=Number(row.accuracy_m);
+      const icon=L.divIcon({
+        className:"lorhil-live-marker-wrap",
+        html:`<div class="lorhil-live-marker ${theme.cls}"><div class="lorhil-live-marker-avatar">${liveTechnicianAvatarHtml(tech)}</div><span class="lorhil-live-marker-pin"></span></div>`,
+        iconSize:[52,62],iconAnchor:[26,57],popupAnchor:[0,-54]
+      });
+      const marker=L.marker([lat,lng],{icon,title:tech.name||"Teknisi"}).addTo(map);
+      marker.bindTooltip(`<strong>${esc(tech.name||"Teknisi")}</strong><span>${esc(theme.label)}</span>`,{permanent:true,direction:"top",offset:[0,-50],className:`lorhil-live-tooltip ${theme.cls}`});
+      marker.bindPopup(`<div class="lorhil-map-popup"><strong>${esc(tech.name||"Teknisi")}</strong><span>${esc(theme.label)}</span><small>${esc(view.label)} • update ${esc(relativeLiveTime(row))}</small><small>Akurasi ${Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</small><a href="${googleMapsOpenUrl(lat,lng)}" target="_blank" rel="noopener">Buka di Google Maps</a></div>`);
+      marker.on("click",()=>{state.selectedLiveTechnicianId=tech.id;renderMonitorLiveTechnicianList();});
+      monitorLeafletMarkers.set(tech.id,marker);
+      points.push([lat,lng]);
+    });
+    if(!points.length)return;
+    const markerCountChanged=points.length!==monitorLastMarkerCount;
+    if(state.selectedLiveTechnicianId&&monitorLeafletMarkers.has(state.selectedLiveTechnicianId)&&!markerCountChanged){
+      // Jangan menggeser map pada setiap update realtime; posisi dipertahankan admin.
+    }else if(!monitorMapDidInitialFit||markerCountChanged){
+      if(points.length===1) map.setView(points[0],16);
+      else map.fitBounds(points,{padding:[55,55],maxZoom:15});
+      monitorMapDidInitialFit=true;
+    }
+    monitorLastMarkerCount=points.length;
+  }
+
   function renderMonitorLivePanel(){
-    if(isTechnicianAccount()||!$("monitorLiveSelected"))return;
+    if(isTechnicianAccount()||!$("monitorLiveTechnicianList"))return;
     const valid=state.liveLocations.filter(row=>Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
     const fresh=valid.filter(row=>liveLocationVisual(row).fresh);
     if($("monitorLiveCount")) $("monitorLiveCount").textContent=`${fresh.length} lokasi aktif`;
-
-    let selectedId=state.selectedLiveTechnicianId;
-    if(!selectedId || !valid.some(row=>row.technician_id===selectedId)){
-      selectedId=(fresh[0]||valid[0])?.technician_id||null;
-      state.selectedLiveTechnicianId=selectedId;
-    }
-    const row=selectedId?liveLocationForTechnician(selectedId):null;
-    const tech=selectedId?state.technicians.find(item=>item.id===selectedId):null;
-    const frame=$("monitorLiveMapFrame"),empty=$("monitorLiveMapEmpty");
-    if(!row||!tech){
-      $("monitorLiveSelected").innerHTML='<div class="monitor-live-empty-copy"><strong>Belum ada posisi teknisi</strong><span>Posisi akan tersedia setelah teknisi menekan status Dalam Perjalanan/Dikerjakan dan memberi izin lokasi.</span></div>';
-      if(frame){frame.classList.add("hidden");frame.removeAttribute("src");}
-      if(empty) empty.classList.remove("hidden");
-      return;
-    }
-    const view=liveLocationVisual(row);
-    const accuracy=Number(row.accuracy_m);
-    const mapUrl=googleMapsOpenUrl(row.latitude,row.longitude);
-    $("monitorLiveSelected").innerHTML=`<div class="monitor-live-person">
-      <div class="monitor-live-person-head"><span class="monitor-avatar">${esc(initialsFromName(tech.name||"T"))}</span><div><h4>${esc(tech.name||"Teknisi")}</h4><p>Posisi anggota teknisi</p></div></div>
-      <span class="monitor-live-state ${view.cls}">● ${esc(view.label)}</span>
-      <div class="monitor-live-meta"><div><span>Update terakhir</span><strong>${esc(relativeLiveTime(row))}</strong></div><div><span>Akurasi GPS</span><strong>${Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</strong></div></div>
-      <a class="btn outline monitor-live-open" href="${mapUrl}" target="_blank" rel="noopener">⌖ Buka di Google Maps</a>
-    </div>`;
-    if(frame){
-      const nextSrc=googleMapsEmbedUrl(row.latitude,row.longitude);
-      if(frame.dataset.locationKey!==`${row.latitude},${row.longitude}`){frame.src=nextSrc;frame.dataset.locationKey=`${row.latitude},${row.longitude}`;}
-      frame.classList.remove("hidden");
-    }
-    if(empty) empty.classList.add("hidden");
+    if(state.selectedLiveTechnicianId&&!valid.some(row=>row.technician_id===state.selectedLiveTechnicianId)) state.selectedLiveTechnicianId=null;
+    renderMonitorLiveTechnicianList();
+    renderMonitorLiveMap();
   }
 
   function openTechnicianLivePosition(technicianId){
@@ -1915,6 +2027,7 @@
     if(!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))){toast("Lokasi teknisi belum tersedia.");return;}
     state.selectedLiveTechnicianId=technicianId;
     renderMonitorLivePanel();
+    setTimeout(()=>focusLiveTechnicianOnMap(technicianId),90);
     $("monitorLivePanel")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
 
@@ -1968,9 +2081,29 @@
     return "Lokasi belum dapat dibaca dari perangkat.";
   }
 
+  function requestLiveTrackingHeartbeat(){
+    if(!isTechnicianAccount()||!state.liveTrackingJob||!navigator.geolocation)return;
+    navigator.geolocation.getCurrentPosition(
+      position=>sendLiveLocation(position,state.liveTrackingJob).catch(error=>console.warn(error)),
+      ()=>{},
+      {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
+    );
+  }
+
+  function startLiveTrackingHeartbeat(){
+    if(state.liveTrackingHeartbeatId!==null) clearInterval(state.liveTrackingHeartbeatId);
+    state.liveTrackingHeartbeatId=setInterval(()=>{
+      if(document.visibilityState==="visible") requestLiveTrackingHeartbeat();
+    },LIVE_LOCATION_HEARTBEAT_MS);
+  }
+
+  function stopLiveTrackingHeartbeat(){
+    if(state.liveTrackingHeartbeatId!==null){clearInterval(state.liveTrackingHeartbeatId);state.liveTrackingHeartbeatId=null;}
+  }
+
   async function startLiveTrackingForJob(job,{silent=false}={}){
     if(!isTechnicianAccount()||!job)return false;
-    if(!state.liveTrackingAvailable){if(!silent)alert("Live Tracking belum siap. Admin perlu menjalankan SQL V81 terlebih dahulu.");return false;}
+    if(!state.liveTrackingAvailable){if(!silent)alert("Live Tracking belum siap. Admin perlu menjalankan SQL V82 terlebih dahulu.");return false;}
     if(!navigator.geolocation){if(!silent)alert("Perangkat/browser ini tidak mendukung pembacaan lokasi.");return false;}
     if(!window.isSecureContext){if(!silent)alert("Live Tracking memerlukan koneksi HTTPS.");return false;}
 
@@ -1989,7 +2122,9 @@
         if(!silent) alert(`Status pekerjaan tetap tersimpan, tetapi Live Tracking belum aktif.\n\n${message}`);
         renderTechLiveLocationStatus(message);
       };
-      state.liveTrackingWatchId=navigator.geolocation.watchPosition(success,failure,{enableHighAccuracy:true,maximumAge:10000,timeout:20000});
+      state.liveTrackingWatchId=navigator.geolocation.watchPosition(success,failure,{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+      startLiveTrackingHeartbeat();
+      requestLiveTrackingHeartbeat();
       renderTechLiveLocationStatus();
     });
   }
@@ -1999,6 +2134,7 @@
       navigator.geolocation.clearWatch(state.liveTrackingWatchId);
       state.liveTrackingWatchId=null;
     }
+    stopLiveTrackingHeartbeat();
     state.liveTrackingJob=null;
     state.liveTrackingLastSentAt=0;
     if(remote && isTechnicianAccount() && db && state.liveTrackingAvailable){
@@ -2037,7 +2173,7 @@
     const view=liveLocationVisual(own);
     panel.classList.remove("live","warning");
     if(!state.liveTrackingAvailable){
-      panel.classList.add("warning");title.textContent="Live Location belum disiapkan";text.textContent="Admin perlu menjalankan SQL Live Tracking V81.";action.textContent="Belum Tersedia";action.disabled=true;return;
+      panel.classList.add("warning");title.textContent="Live Location belum disiapkan";text.textContent="Admin perlu menjalankan SQL Live Tracking V82.";action.textContent="Belum Tersedia";action.disabled=true;return;
     }
     if(errorText){
       panel.classList.add("warning");title.textContent="Live Location belum aktif";text.textContent=errorText;action.textContent=activeJob?"Coba Aktifkan Lagi":"Aktif saat Berangkat";action.disabled=!activeJob;return;
@@ -3101,6 +3237,10 @@
   let lastVisibilityRefresh=0;
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState!=="visible"||!state.session) return;
+    if(isTechnicianAccount()){
+      resumeLiveTrackingIfPossible().catch(()=>{});
+      if(state.liveTrackingWatchId!==null&&state.liveTrackingJob) requestLiveTrackingHeartbeat();
+    }
     const now=Date.now();
     if(now-lastVisibilityRefresh<1500) return;
     lastVisibilityRefresh=now;

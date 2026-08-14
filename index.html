@@ -8,10 +8,11 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=81">
-  <title>LORHIL AC Online V81</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css?v=82">
+  <title>LORHIL AC Online V82</title>
 </head>
-<body data-app-version="81">
+<body data-app-version="82">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -490,21 +491,27 @@
             <article class="monitor-summary-card"><span class="monitor-summary-icon green">✓</span><div><small>Selesai Hari Ini</small><strong id="monitorCompletedToday">0</strong><p>Status selesai</p></div></article>
           </div>
 
-          <div id="monitorLivePanel" class="panel monitor-live-panel">
+          <div id="monitorLivePanel" class="panel monitor-live-panel monitor-live-v82">
+            <div class="monitor-live-notice">
+              <span class="monitor-live-notice-dot">●</span>
+              <div><strong>Tracking aktif saat pekerjaan berlangsung.</strong> Posisi anggota teknisi tampil bersama dalam satu peta dan diperbarui selama aplikasi teknisi masih aktif.</div>
+            </div>
             <div class="panel-head monitor-live-head">
               <div>
                 <h3><span class="section-icon">⌖</span> Live Tracking Teknisi</h3>
-                <p>Menampilkan posisi anggota teknisi saja. Lokasi pelanggan tidak ditampilkan.</p>
+                <p>Satu peta untuk melihat posisi seluruh anggota teknisi. Lokasi pelanggan tidak ditampilkan.</p>
               </div>
               <span id="monitorLiveCount" class="monitor-live-count">0 lokasi aktif</span>
             </div>
             <div class="monitor-live-layout">
-              <div id="monitorLiveSelected" class="monitor-live-selected">
-                <div class="monitor-live-empty-copy"><strong>Belum ada teknisi dipilih</strong><span>Klik tombol <b>Lihat Posisi</b> pada kartu teknisi.</span></div>
+              <div class="monitor-live-team-column">
+                <div class="monitor-live-team-head"><strong>Posisi Anggota</strong><small>Klik anggota untuk fokus ke lokasinya.</small></div>
+                <div id="monitorLiveTechnicianList" class="monitor-live-technician-list"></div>
               </div>
               <div class="monitor-live-map-shell">
-                <iframe id="monitorLiveMapFrame" class="monitor-live-map hidden" title="Posisi live teknisi" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                <div id="monitorLiveMapEmpty" class="monitor-live-map-empty"><span>⌖</span><strong>Posisi teknisi akan tampil di sini</strong><small>Tracking aktif ketika teknisi sedang menjalankan pekerjaan dan memberi izin lokasi.</small></div>
+                <div id="monitorLiveMap" class="monitor-live-map" aria-label="Peta live seluruh teknisi"></div>
+                <div id="monitorLiveMapEmpty" class="monitor-live-map-empty"><span>⌖</span><strong>Belum ada posisi teknisi</strong><small>Posisi akan tampil setelah teknisi mengaktifkan lokasi saat pekerjaan berlangsung.</small></div>
+                <div class="monitor-live-map-legend" aria-label="Keterangan status"><span><i class="legend-onway"></i>Dalam Perjalanan</span><span><i class="legend-working"></i>Dikerjakan</span><span><i class="legend-last"></i>Lokasi Terakhir</span></div>
               </div>
             </div>
           </div>
@@ -811,6 +818,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=81"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js?v=82"></script>
 </body>
 </html>

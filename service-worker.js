@@ -1,4 +1,4 @@
-const CACHE = "lorhil-ac-online-v81";
+const CACHE = "lorhil-ac-online-v82";
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -61,6 +61,8 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if(url.hostname.includes("supabase.co")) return;
+  // V82: peta live memakai tile online. Jangan simpan tile peta di cache PWA agar cache HP tidak membengkak.
+  if(url.hostname.endsWith("tile.openstreetmap.org") || url.hostname === "unpkg.com") return;
 
   const networkFirst =
     event.request.mode === "navigate" ||

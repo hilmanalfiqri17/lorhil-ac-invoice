@@ -726,3 +726,15 @@ body.technician-mode .content{padding-bottom:92px}
 @media(max-width:1050px){.monitor-live-v82 .monitor-live-layout{grid-template-columns:minmax(250px,.7fr) minmax(420px,1.3fr)}}
 @media(max-width:900px){.monitor-live-v82 .monitor-live-layout{grid-template-columns:1fr;min-height:0}.monitor-live-technician-list{max-height:330px}.monitor-live-v82 .monitor-live-map-shell,.monitor-live-v82 .monitor-live-map{min-height:390px}.monitor-live-map-legend{max-width:calc(100% - 24px)}}
 @media(max-width:620px){.monitor-live-v82{padding:13px}.monitor-live-notice{font-size:9.5px}.monitor-live-v82 .monitor-live-map-shell,.monitor-live-v82 .monitor-live-map{min-height:350px}.monitor-live-card-actions{grid-template-columns:1fr 1fr}.monitor-live-map-legend{font-size:7px;gap:7px}.lorhil-live-tooltip{display:none}}
+
+/* ==========================================================
+   V83 - BERBAGI LOKASI + SESI PERANGKAT
+   ========================================================== */
+.location-share-modal{position:fixed;inset:0;z-index:210;display:grid;place-items:center;padding:20px;background:rgba(3,16,45,.62);backdrop-filter:blur(5px)}
+.location-share-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 28px 80px rgba(0,0,0,.28);text-align:center}
+.location-share-icon{width:58px;height:58px;margin:0 auto 14px;border-radius:18px;display:grid;place-items:center;background:#eaf3ff;color:var(--blue);font-size:29px;font-weight:900}
+.location-share-eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:10px;font-weight:900;letter-spacing:.12em}
+.location-share-copy h3{margin:0;font-size:21px;letter-spacing:-.02em}
+.location-share-copy p{margin:9px auto 0;max-width:330px;color:var(--muted);font-size:12px;line-height:1.6}
+.location-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}
+@media(max-width:460px){.location-share-card{padding:21px 17px;border-radius:19px}.location-share-actions{grid-template-columns:1fr}.location-share-actions .primary{grid-row:1}}

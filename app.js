@@ -72,7 +72,7 @@
     activityLogs:[], databaseUsage:null,
     liveLocations:[], liveTrackingAvailable:true, selectedLiveTechnicianId:null,
     liveTrackingWatchId:null, liveTrackingHeartbeatId:null, liveTrackingJob:null, liveTrackingLastSentAt:0,
-    liveTrackingLastCoords:null
+    liveTrackingLastCoords:null, liveTrackingSessionId:null
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -507,7 +507,7 @@
       if(liveLocationResult.error){
         state.liveLocations=[];
         state.liveTrackingAvailable=false;
-        console.warn("Live Tracking V82 belum siap. Jalankan lorhil-v82-live-tracking.sql:",liveLocationResult.error.message);
+        console.warn("Live Tracking belum siap. Jalankan SQL V83 setelah SQL V81:",liveLocationResult.error.message);
       }else{
         state.liveLocations=liveLocationResult.data||[];
         state.liveTrackingAvailable=true;
@@ -2042,10 +2042,133 @@
     else state.liveLocations.push(row);
   }
 
+  function trackingSessionStorageKey(){
+    const techId=state.accessContext?.technician_id||"unknown";
+    return `lorhil-live-session-v83:${uid()||"unknown"}:${techId}`;
+  }
+
+  function readSavedTrackingSession(){
+    try{
+      const raw=localStorage.getItem(trackingSessionStorageKey());
+      if(!raw)return null;
+      const value=JSON.parse(raw);
+      if(!value?.sessionId)return null;
+      return value;
+    }catch(_error){return null;}
+  }
+
+  function saveTrackingSession(sessionId,job){
+    const value={sessionId,source:job?.source||null,jobId:job?.id||null,savedAt:new Date().toISOString()};
+    state.liveTrackingSessionId=sessionId;
+    try{localStorage.setItem(trackingSessionStorageKey(),JSON.stringify(value));}catch(_error){}
+    return value;
+  }
+
+  function clearSavedTrackingSession(sessionId=null){
+    try{
+      if(sessionId){
+        const saved=readSavedTrackingSession();
+        if(saved?.sessionId && saved.sessionId!==sessionId)return;
+      }
+      localStorage.removeItem(trackingSessionStorageKey());
+    }catch(_error){}
+    if(!sessionId||state.liveTrackingSessionId===sessionId)state.liveTrackingSessionId=null;
+  }
+
+  function createTrackingSessionId(){
+    if(globalThis.crypto?.randomUUID)return globalThis.crypto.randomUUID();
+    return `trk-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function savedTrackingSessionMatchesJob(saved,job){
+    return !!(saved&&job&&saved.source===job.source&&String(saved.jobId||"")===String(job.id||""));
+  }
+
+  async function claimTrackingSession(job){
+    const techId=state.accessContext?.technician_id;
+    if(!techId||!job)return null;
+    const own=liveLocationForTechnician(techId);
+    const saved=readSavedTrackingSession();
+    if(savedTrackingSessionMatchesJob(saved,job)&&own?.tracking_active===true&&own?.tracking_session_id===saved.sessionId){
+      state.liveTrackingSessionId=saved.sessionId;
+      return saved.sessionId;
+    }
+
+    const sessionId=createTrackingSessionId();
+    const {data,error}=await db.rpc("claim_my_live_tracking",{
+      p_source:job.source||null,
+      p_job_id:job.id||null,
+      p_session_id:sessionId
+    });
+    if(error){
+      if(/does not exist|Could not find the function|schema cache/i.test(error.message||""))state.liveTrackingAvailable=false;
+      throw error;
+    }
+    const row=Array.isArray(data)?data[0]:data;
+    if(row)upsertLocalLiveLocation(row);
+    saveTrackingSession(sessionId,job);
+    return sessionId;
+  }
+
+  function currentTrackingSessionForJob(job){
+    const techId=state.accessContext?.technician_id;
+    const own=liveLocationForTechnician(techId);
+    const saved=readSavedTrackingSession();
+    if(!savedTrackingSessionMatchesJob(saved,job))return null;
+    if(!own?.tracking_active||own?.tracking_session_id!==saved.sessionId)return null;
+    state.liveTrackingSessionId=saved.sessionId;
+    return saved.sessionId;
+  }
+
+  let locationShareNoticeResolver=null;
+  function locationShareNoticeStorageKey(){return `lorhil-location-share-notice-v83:${uid()||"unknown"}`;}
+  function locationShareNoticeAccepted(){
+    try{return localStorage.getItem(locationShareNoticeStorageKey())==="yes";}catch(_error){return false;}
+  }
+  function finishLocationShareNotice(accepted){
+    const modal=$("locationShareModal");
+    if(modal)hide("locationShareModal");
+    if(accepted){try{localStorage.setItem(locationShareNoticeStorageKey(),"yes");}catch(_error){}}
+    const resolve=locationShareNoticeResolver;locationShareNoticeResolver=null;
+    if(resolve)resolve(accepted);
+  }
+  function ensureLocationShareNoticeAccepted(){
+    if(locationShareNoticeAccepted())return Promise.resolve(true);
+    const modal=$("locationShareModal");
+    if(!modal){
+      const accepted=confirm("Aktifkan Berbagi Lokasi?\n\nLokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.");
+      if(accepted){try{localStorage.setItem(locationShareNoticeStorageKey(),"yes");}catch(_error){}}
+      return Promise.resolve(accepted);
+    }
+    show("locationShareModal");
+    return new Promise(resolve=>{locationShareNoticeResolver=resolve;});
+  }
+  if($("locationShareAllowBtn"))$("locationShareAllowBtn").addEventListener("click",()=>finishLocationShareNotice(true));
+  if($("locationShareLaterBtn"))$("locationShareLaterBtn").addEventListener("click",()=>finishLocationShareNotice(false));
+
+  function stopLocalTrackingRuntime(){
+    if(state.liveTrackingWatchId!==null&&navigator.geolocation){
+      navigator.geolocation.clearWatch(state.liveTrackingWatchId);
+      state.liveTrackingWatchId=null;
+    }
+    stopLiveTrackingHeartbeat();
+    state.liveTrackingJob=null;
+    state.liveTrackingLastSentAt=0;
+  }
+
+  function handleTrackingSessionReplaced(){
+    const sessionId=state.liveTrackingSessionId||readSavedTrackingSession()?.sessionId||null;
+    stopLocalTrackingRuntime();
+    clearSavedTrackingSession(sessionId);
+    renderTechLiveLocationStatus("Berbagi lokasi pada perangkat ini sudah tidak aktif. Aktifkan kembali jika perangkat ini yang digunakan untuk pekerjaan.");
+  }
+
   async function sendLiveLocation(position,job){
     if(!isTechnicianAccount()||!state.liveTrackingAvailable)return;
     const techId=state.accessContext?.technician_id;
     if(!techId)return;
+    const sessionId=state.liveTrackingSessionId||currentTrackingSessionForJob(job);
+    if(!sessionId)return;
     const now=Date.now();
     if(now-state.liveTrackingLastSentAt<LIVE_LOCATION_SEND_INTERVAL_MS)return;
     const coords=position.coords||{};
@@ -2055,6 +2178,7 @@
     const payload={
       p_latitude:latitude,
       p_longitude:longitude,
+      p_session_id:sessionId,
       p_accuracy_m:Number.isFinite(Number(coords.accuracy))?Number(coords.accuracy):null,
       p_source:job?.source||null,
       p_job_id:job?.id||null,
@@ -2063,13 +2187,14 @@
     const {data,error}=await db.rpc("update_my_live_location",payload);
     if(error){
       state.liveTrackingLastSentAt=0;
-      if(/does not exist|Could not find the function|schema cache/i.test(error.message||"")) state.liveTrackingAvailable=false;
-      console.warn("Gagal mengirim live location:",error.message);
+      if(/TRACKING_SESSION_REPLACED/i.test(error.message||"")){handleTrackingSessionReplaced();return;}
+      if(/does not exist|Could not find the function|schema cache/i.test(error.message||""))state.liveTrackingAvailable=false;
+      console.warn("Gagal mengirim lokasi:",error.message);
       renderTechLiveLocationStatus(error.message||"Gagal mengirim lokasi");
       return;
     }
     const row=Array.isArray(data)?data[0]:data;
-    if(row) upsertLocalLiveLocation(row);
+    if(row)upsertLocalLiveLocation(row);
     state.liveTrackingLastCoords={latitude,longitude};
     renderTechLiveLocationStatus();
   }
@@ -2082,7 +2207,7 @@
   }
 
   function requestLiveTrackingHeartbeat(){
-    if(!isTechnicianAccount()||!state.liveTrackingJob||!navigator.geolocation)return;
+    if(!isTechnicianAccount()||!state.liveTrackingJob||!state.liveTrackingSessionId||!navigator.geolocation)return;
     navigator.geolocation.getCurrentPosition(
       position=>sendLiveLocation(position,state.liveTrackingJob).catch(error=>console.warn(error)),
       ()=>{},
@@ -2091,9 +2216,9 @@
   }
 
   function startLiveTrackingHeartbeat(){
-    if(state.liveTrackingHeartbeatId!==null) clearInterval(state.liveTrackingHeartbeatId);
+    if(state.liveTrackingHeartbeatId!==null)clearInterval(state.liveTrackingHeartbeatId);
     state.liveTrackingHeartbeatId=setInterval(()=>{
-      if(document.visibilityState==="visible") requestLiveTrackingHeartbeat();
+      if(document.visibilityState==="visible")requestLiveTrackingHeartbeat();
     },LIVE_LOCATION_HEARTBEAT_MS);
   }
 
@@ -2101,12 +2226,37 @@
     if(state.liveTrackingHeartbeatId!==null){clearInterval(state.liveTrackingHeartbeatId);state.liveTrackingHeartbeatId=null;}
   }
 
-  async function startLiveTrackingForJob(job,{silent=false}={}){
+  async function startLiveTrackingForJob(job,{silent=false,claim=false}={}){
     if(!isTechnicianAccount()||!job)return false;
-    if(!state.liveTrackingAvailable){if(!silent)alert("Live Tracking belum siap. Admin perlu menjalankan SQL V82 terlebih dahulu.");return false;}
+    if(!state.liveTrackingAvailable){if(!silent)alert("Berbagi Lokasi belum siap. Admin perlu menjalankan SQL V83 terlebih dahulu.");return false;}
     if(!navigator.geolocation){if(!silent)alert("Perangkat/browser ini tidak mendukung pembacaan lokasi.");return false;}
-    if(!window.isSecureContext){if(!silent)alert("Live Tracking memerlukan koneksi HTTPS.");return false;}
+    if(!window.isSecureContext){if(!silent)alert("Berbagi Lokasi memerlukan koneksi HTTPS.");return false;}
 
+    if(claim&&!silent){
+      const accepted=await ensureLocationShareNoticeAccepted();
+      if(!accepted){renderTechLiveLocationStatus("Berbagi lokasi belum diaktifkan pada perangkat ini.");return false;}
+    }
+
+    if(state.liveTrackingWatchId!==null&&state.liveTrackingJob&&
+       (state.liveTrackingJob.source!==job.source||String(state.liveTrackingJob.id)!==String(job.id))){
+      stopLocalTrackingRuntime();
+    }
+
+    let sessionId=null;
+    try{
+      sessionId=claim?await claimTrackingSession(job):currentTrackingSessionForJob(job);
+    }catch(error){
+      const message=errorMessage(error);
+      if(!silent)alert(`Berbagi Lokasi belum dapat diaktifkan.\n\n${message}`);
+      renderTechLiveLocationStatus(message);
+      return false;
+    }
+    if(!sessionId){
+      if(!silent)renderTechLiveLocationStatus("Berbagi lokasi belum aktif pada perangkat ini.");
+      return false;
+    }
+
+    state.liveTrackingSessionId=sessionId;
     state.liveTrackingJob={source:job.source,id:job.id};
     if(state.liveTrackingWatchId!==null){renderTechLiveLocationStatus();return true;}
 
@@ -2119,7 +2269,7 @@
       const failure=error=>{
         if(!settled){settled=true;resolve(false);}
         const message=geolocationErrorMessage(error);
-        if(!silent) alert(`Status pekerjaan tetap tersimpan, tetapi Live Tracking belum aktif.\n\n${message}`);
+        if(!silent)alert(`Status pekerjaan tetap tersimpan, tetapi Berbagi Lokasi belum aktif.\n\n${message}`);
         renderTechLiveLocationStatus(message);
       };
       state.liveTrackingWatchId=navigator.geolocation.watchPosition(success,failure,{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
@@ -2130,21 +2280,18 @@
   }
 
   async function stopLiveTracking({remote=true,silent=false}={}){
-    if(state.liveTrackingWatchId!==null && navigator.geolocation){
-      navigator.geolocation.clearWatch(state.liveTrackingWatchId);
-      state.liveTrackingWatchId=null;
-    }
-    stopLiveTrackingHeartbeat();
-    state.liveTrackingJob=null;
-    state.liveTrackingLastSentAt=0;
-    if(remote && isTechnicianAccount() && db && state.liveTrackingAvailable){
-      const {data,error}=await db.rpc("stop_my_live_tracking");
-      if(error){if(!silent)console.warn("Gagal menonaktifkan live tracking:",error.message);}
+    const saved=readSavedTrackingSession();
+    const sessionId=state.liveTrackingSessionId||saved?.sessionId||null;
+    stopLocalTrackingRuntime();
+    if(remote&&sessionId&&isTechnicianAccount()&&db&&state.liveTrackingAvailable){
+      const {data,error}=await db.rpc("stop_my_live_tracking",{p_session_id:sessionId});
+      if(error){if(!silent)console.warn("Gagal menonaktifkan berbagi lokasi:",error.message);}
       else{
         const row=Array.isArray(data)?data[0]:data;
         if(row)upsertLocalLiveLocation(row);
       }
     }
+    clearSavedTrackingSession(sessionId);
     renderTechLiveLocationStatus();
   }
 
@@ -2152,15 +2299,16 @@
     if(!isTechnicianAccount()||state.liveTrackingWatchId!==null||!state.liveTrackingAvailable)return;
     const activeJob=activeTrackingJobForTechnician();
     const own=liveLocationForTechnician(state.accessContext?.technician_id);
+    const saved=readSavedTrackingSession();
     if(!activeJob){
-      if(own?.tracking_active) stopLiveTracking({remote:true,silent:true});
+      if(own?.tracking_active&&saved?.sessionId&&own.tracking_session_id===saved.sessionId)await stopLiveTracking({remote:true,silent:true});
       return;
     }
-    if(!own?.tracking_active)return;
+    if(!own?.tracking_active||!savedTrackingSessionMatchesJob(saved,activeJob)||own.tracking_session_id!==saved.sessionId)return;
     try{
       if(navigator.permissions?.query){
         const permission=await navigator.permissions.query({name:"geolocation"});
-        if(permission.state==="granted") await startLiveTrackingForJob(activeJob,{silent:true});
+        if(permission.state==="granted")await startLiveTrackingForJob(activeJob,{silent:true,claim:false});
       }
     }catch(_error){}
   }
@@ -2170,28 +2318,32 @@
     const panel=$("techLiveLocationPanel"),title=$("techLiveLocationTitle"),text=$("techLiveLocationText"),action=$("techLiveLocationAction");
     const activeJob=activeTrackingJobForTechnician();
     const own=liveLocationForTechnician(state.accessContext?.technician_id);
+    const saved=readSavedTrackingSession();
+    const localOwnsSession=!!(saved?.sessionId&&own?.tracking_session_id===saved.sessionId);
     const view=liveLocationVisual(own);
     panel.classList.remove("live","warning");
     if(!state.liveTrackingAvailable){
-      panel.classList.add("warning");title.textContent="Live Location belum disiapkan";text.textContent="Admin perlu menjalankan SQL Live Tracking V82.";action.textContent="Belum Tersedia";action.disabled=true;return;
+      panel.classList.add("warning");title.textContent="Berbagi Lokasi belum disiapkan";text.textContent="Admin perlu menjalankan SQL V83.";action.textContent="Belum Tersedia";action.disabled=true;return;
     }
     if(errorText){
-      panel.classList.add("warning");title.textContent="Live Location belum aktif";text.textContent=errorText;action.textContent=activeJob?"Coba Aktifkan Lagi":"Aktif saat Berangkat";action.disabled=!activeJob;return;
+      panel.classList.add("warning");title.textContent="Berbagi Lokasi belum aktif";text.textContent=errorText;action.textContent=activeJob?"Izinkan Lokasi":"Aktif saat Berangkat";action.disabled=!activeJob;return;
     }
     const browserWatching=state.liveTrackingWatchId!==null;
-    if(activeJob && (browserWatching||view.fresh)){
-      panel.classList.add("live");title.textContent="Live Location Aktif";text.textContent=`Posisi sedang dibagikan kepada Admin • update ${relativeLiveTime(own)}`;action.textContent="Live Aktif";action.disabled=true;
+    if(activeJob&&localOwnsSession&&(browserWatching||view.fresh)){
+      panel.classList.add("live");title.textContent="Berbagi Lokasi Aktif";text.textContent=`Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim • update ${relativeLiveTime(own)}`;action.textContent="Berbagi Aktif";action.disabled=true;
+    }else if(activeJob&&own?.tracking_active&&!localOwnsSession){
+      panel.classList.add("warning");title.textContent="Berbagi Lokasi";text.textContent="Berbagi lokasi aktif dari perangkat lain. Aktifkan di perangkat ini jika HP ini yang digunakan untuk pekerjaan.";action.textContent="Gunakan Perangkat Ini";action.disabled=false;
     }else if(activeJob){
-      panel.classList.add("warning");title.textContent="Aktifkan Live Location";text.textContent="Pekerjaan sedang berlangsung. Tekan tombol dan izinkan akses lokasi HP.";action.textContent="Aktifkan Lokasi";action.disabled=false;
+      panel.classList.add("warning");title.textContent="Aktifkan Berbagi Lokasi";text.textContent="Izinkan akses lokasi agar posisi pekerjaan dapat diperbarui selama tugas berlangsung.";action.textContent="Izinkan Lokasi";action.disabled=false;
     }else{
-      title.textContent="Live Location";text.textContent="Lokasi hanya dibagikan saat status pekerjaan Dalam Perjalanan atau Dikerjakan.";action.textContent="Aktif saat Berangkat";action.disabled=true;
+      title.textContent="Berbagi Lokasi";text.textContent="Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.";action.textContent="Aktif saat Berangkat";action.disabled=true;
     }
   }
 
-  if($("techLiveLocationAction")) $("techLiveLocationAction").addEventListener("click",async()=>{
+  if($("techLiveLocationAction"))$("techLiveLocationAction").addEventListener("click",async()=>{
     const job=activeTrackingJobForTechnician();
     if(!job)return;
-    await startLiveTrackingForJob(job,{silent:false});
+    await startLiveTrackingForJob(job,{silent:false,claim:true});
   });
 
   function monitorStatusInfo(job){
@@ -2714,7 +2866,7 @@
       }
       await refreshAll();closeModal();toast(`Status pekerjaan diubah menjadi ${status}.`);
       if(["Dalam Perjalanan","Dikerjakan"].includes(status)){
-        startLiveTrackingForJob({source,id},{silent:false}).catch(error=>console.warn("Live tracking gagal dimulai",error));
+        startLiveTrackingForJob({source,id},{silent:false,claim:true}).catch(error=>console.warn("Berbagi lokasi gagal dimulai",error));
       }
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
@@ -2735,7 +2887,7 @@
       <div class="tech-detail-header"><div><div class="tech-detail-number">${source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(job.customer_name||"-")}</div></div>${workStatusBadge(job.status)}</div>
       <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
       <div class="tech-detail-actions">${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")} Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
-      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p><div class="tech-live-detail"><span>⌖</span><div><strong>Live Location Teknisi</strong><small>Lokasi Anda dibagikan kepada Admin saat status Dalam Perjalanan atau Dikerjakan. Tracking berhenti saat pekerjaan Selesai.</small></div></div></div>
+      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p><div class="tech-live-detail"><span>⌖</span><div><strong>Berbagi Lokasi</strong><small>Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim. Berbagi lokasi selesai saat pekerjaan ditandai Selesai.</small></div></div></div>
       <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${details||'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}${job.invoice_id&&source==="schedule"?'<p class="schedule-linked-note">Pekerjaan ini sudah terhubung dengan nota.</p>':''}</div>`;
     $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{const next=btn.dataset.status;if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?"))return;updateTechJobStatus(source,id,next);}));
     show("detailModal");

@@ -9,10 +9,10 @@
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=82">
-  <title>LORHIL AC Online V82</title>
+  <link rel="stylesheet" href="style.css?v=83">
+  <title>LORHIL AC Online V83</title>
 </head>
-<body data-app-version="82">
+<body data-app-version="83">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -585,8 +585,8 @@
           <div id="techLiveLocationPanel" class="tech-live-location-panel">
             <span class="tech-live-location-icon">⌖</span>
             <div class="tech-live-location-copy">
-              <strong id="techLiveLocationTitle">Live Location</strong>
-              <small id="techLiveLocationText">Lokasi akan dibagikan kepada Admin saat pekerjaan berlangsung.</small>
+              <strong id="techLiveLocationTitle">Berbagi Lokasi</strong>
+              <small id="techLiveLocationText">Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.</small>
             </div>
             <button id="techLiveLocationAction" class="btn secondary" type="button">Aktif saat Berangkat</button>
           </div>
@@ -793,6 +793,22 @@
   </div>
 
 
+
+  <div id="locationShareModal" class="location-share-modal hidden" role="dialog" aria-modal="true" aria-labelledby="locationShareTitle">
+    <div class="location-share-card">
+      <div class="location-share-icon" aria-hidden="true">⌖</div>
+      <div class="location-share-copy">
+        <span class="location-share-eyebrow">LORHIL AC</span>
+        <h3 id="locationShareTitle">Aktifkan Berbagi Lokasi</h3>
+        <p>Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.</p>
+      </div>
+      <div class="location-share-actions">
+        <button id="locationShareLaterBtn" class="btn secondary" type="button">Nanti</button>
+        <button id="locationShareAllowBtn" class="btn primary" type="button">Izinkan Lokasi</button>
+      </div>
+    </div>
+  </div>
+
   <div id="installGuideModal" class="install-guide-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle">
     <div class="install-guide-card">
       <div class="install-guide-head">
@@ -819,6 +835,6 @@
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=82"></script>
+  <script src="app.js?v=83"></script>
 </body>
 </html>

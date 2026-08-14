@@ -304,7 +304,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=80",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=84",{
             updateViaCache:"none"
           });
 
@@ -3063,7 +3063,7 @@
     const support=Array.isArray(supportResult.data)?supportResult.data[0]:supportResult.data;
     return {
       app:"LORHIL AC Online",
-      version:80,
+      version:84,
       exported_at:new Date().toISOString(),
       note:"Backup dibuat dari akun Admin. Password Supabase Authentication tidak pernah diekspor. Jalankan SQL V79 agar counter nomor nota ikut tercadangkan.",
       invoices,

@@ -69,7 +69,10 @@
     invoiceTechnicians:[], schedules:[], scheduleTechnicians:[], page:"dashboard", accessContext:null, monitorPeriod:"today",
     dashboardPeriod:"today", realtime:null, techJobFilter:"today",
     revenuePeriodOffset:0, trendPeriodOffset:0, teamMembers:[], invoiceSourceScheduleId:null,
-    activityLogs:[], databaseUsage:null
+    activityLogs:[], databaseUsage:null,
+    liveLocations:[], liveTrackingAvailable:true, selectedLiveTechnicianId:null,
+    liveTrackingWatchId:null, liveTrackingJob:null, liveTrackingLastSentAt:0,
+    liveTrackingLastCoords:null
   };
 
   function show(id){ $(id).classList.remove("hidden"); }
@@ -419,8 +422,8 @@
   $("togglePassword").addEventListener("click",()=>{
     $("loginPassword").type=$("loginPassword").type==="password"?"text":"password";
   });
-  $("logoutBtn").addEventListener("click",async()=>{ loading(true); await db.auth.signOut(); loading(false); });
-  if($("techProfileLogoutBtn")) $("techProfileLogoutBtn").addEventListener("click",async()=>{ loading(true); await db.auth.signOut(); loading(false); });
+  $("logoutBtn").addEventListener("click",async()=>{ loading(true); if(isTechnicianAccount()) await stopLiveTracking({remote:true,silent:true}); await db.auth.signOut(); loading(false); });
+  if($("techProfileLogoutBtn")) $("techProfileLogoutBtn").addEventListener("click",async()=>{ loading(true); await stopLiveTracking({remote:true,silent:true}); await db.auth.signOut(); loading(false); });
   $("menuBtn").addEventListener("click",()=> $("sidebar").classList.toggle("open"));
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
@@ -450,12 +453,12 @@
     if(page==="schedules") renderSchedules();
     if(page==="customers") renderCustomers();
     if(page==="technicians") renderTechnicians();
-    if(page==="monitoring") renderMonitoringTechnicians();
+    if(page==="monitoring"){ renderMonitoringTechnicians(); renderMonitorLivePanel(); }
     if(page==="activity") renderActivityLog();
     if(page==="settings") renderSettings();
     if(page==="invoice"){ refreshCustomerList(); renderTechnicianChoices(); }
-    if(page==="tech-dashboard") renderTechDashboard();
-    if(page==="tech-jobs") renderTechJobs();
+    if(page==="tech-dashboard"){ renderTechDashboard(); renderTechLiveLocationStatus(); }
+    if(page==="tech-jobs"){ renderTechJobs(); renderTechLiveLocationStatus(); }
     if(page==="tech-history") renderTechHistory();
     if(page==="tech-profile") renderTechProfile();
   }
@@ -481,14 +484,15 @@
         ? db.rpc("get_my_work_schedules_safe")
         : db.from("work_schedules").select("*").order("work_date",{ascending:true}).order("work_time",{ascending:true});
 
-      const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult,scheduleResult,scheduleTechnicianResult,activityResult]=await Promise.all([
+      const [invoiceResult,settingsResult,technicianResult,invoiceTechnicianResult,scheduleResult,scheduleTechnicianResult,activityResult,liveLocationResult]=await Promise.all([
         invoiceQuery,
         db.from("store_settings").select("*").maybeSingle(),
         db.from("technicians").select("*").order("name",{ascending:true}),
         invoiceTechnicianQuery,
         scheduleQuery,
         db.from("schedule_technicians").select("*"),
-        activityQuery
+        activityQuery,
+        db.from("technician_live_locations").select("*")
       ]);
 
       if(invoiceResult.error) throw invoiceResult.error;
@@ -500,6 +504,14 @@
       if(activityResult.error) throw new Error("Activity Log belum siap. Jalankan SQL V59 Activity Log terlebih dahulu. " + activityResult.error.message);
 
       state.activityLogs=activityResult.data||[];
+      if(liveLocationResult.error){
+        state.liveLocations=[];
+        state.liveTrackingAvailable=false;
+        console.warn("Live Tracking V81 belum siap. Jalankan lorhil-v81-live-tracking.sql:",liveLocationResult.error.message);
+      }else{
+        state.liveLocations=liveLocationResult.data||[];
+        state.liveTrackingAvailable=true;
+      }
       state.technicians=technicianResult.data||[];
       state.invoiceTechnicians=invoiceTechnicianResult.data||[];
       state.scheduleTechnicians=scheduleTechnicianResult.data||[];
@@ -531,6 +543,8 @@
         renderTechJobs();
         renderTechHistory();
         renderTechProfile();
+        renderTechLiveLocationStatus();
+        resumeLiveTrackingIfPossible();
       }else{
         renderDashboard();
         renderHistory();
@@ -538,6 +552,7 @@
         renderCustomers();
         renderTechnicians();
         renderMonitoringTechnicians();
+        renderMonitorLivePanel();
         renderActivityLog();
         refreshCustomerList();
         renderScheduleCustomerList();
@@ -1811,6 +1826,238 @@
     return jobs.find(job=>job.status!=="Dibatalkan"&&job.status!=="Selesai"&&(job.work_date>today||(job.work_date===today&&(job.work_time||"23:59").slice(0,5)>=nowTime)))||null;
   }
 
+
+  // ==========================================================
+  // V81 - LIVE TRACKING TEKNISI
+  // Hanya menyimpan SATU posisi terakhir per teknisi (upsert),
+  // sehingga tidak membuat riwayat titik GPS yang terus membesar.
+  // ==========================================================
+  const LIVE_LOCATION_FRESH_MS=120000;
+  const LIVE_LOCATION_SEND_INTERVAL_MS=20000;
+
+  function liveLocationForTechnician(technicianId){
+    return state.liveLocations.find(row=>row.technician_id===technicianId)||null;
+  }
+
+  function liveLocationAgeMs(row){
+    const ms=Date.parse(row?.updated_at||"");
+    return Number.isFinite(ms)?Math.max(0,Date.now()-ms):Infinity;
+  }
+
+  function relativeLiveTime(row){
+    const age=liveLocationAgeMs(row);
+    if(!Number.isFinite(age)||age===Infinity)return "Belum ada update";
+    const sec=Math.floor(age/1000);
+    if(sec<10)return "baru saja";
+    if(sec<60)return `${sec} detik lalu`;
+    const min=Math.floor(sec/60);
+    if(min<60)return `${min} menit lalu`;
+    const hour=Math.floor(min/60);
+    if(hour<24)return `${hour} jam lalu`;
+    return `${Math.floor(hour/24)} hari lalu`;
+  }
+
+  function liveLocationVisual(row){
+    if(!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))) return {label:"Belum Ada Lokasi",cls:"offline",fresh:false};
+    const fresh=row.tracking_active===true && liveLocationAgeMs(row)<=LIVE_LOCATION_FRESH_MS;
+    if(fresh)return {label:"Live",cls:"",fresh:true};
+    if(row.tracking_active===true)return {label:"Update Terhenti",cls:"stale",fresh:false};
+    return {label:"Lokasi Terakhir",cls:"offline",fresh:false};
+  }
+
+  function googleMapsOpenUrl(lat,lng){
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+  }
+
+  function googleMapsEmbedUrl(lat,lng){
+    return `https://maps.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}&z=16&output=embed`;
+  }
+
+  function renderMonitorLivePanel(){
+    if(isTechnicianAccount()||!$("monitorLiveSelected"))return;
+    const valid=state.liveLocations.filter(row=>Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
+    const fresh=valid.filter(row=>liveLocationVisual(row).fresh);
+    if($("monitorLiveCount")) $("monitorLiveCount").textContent=`${fresh.length} lokasi aktif`;
+
+    let selectedId=state.selectedLiveTechnicianId;
+    if(!selectedId || !valid.some(row=>row.technician_id===selectedId)){
+      selectedId=(fresh[0]||valid[0])?.technician_id||null;
+      state.selectedLiveTechnicianId=selectedId;
+    }
+    const row=selectedId?liveLocationForTechnician(selectedId):null;
+    const tech=selectedId?state.technicians.find(item=>item.id===selectedId):null;
+    const frame=$("monitorLiveMapFrame"),empty=$("monitorLiveMapEmpty");
+    if(!row||!tech){
+      $("monitorLiveSelected").innerHTML='<div class="monitor-live-empty-copy"><strong>Belum ada posisi teknisi</strong><span>Posisi akan tersedia setelah teknisi menekan status Dalam Perjalanan/Dikerjakan dan memberi izin lokasi.</span></div>';
+      if(frame){frame.classList.add("hidden");frame.removeAttribute("src");}
+      if(empty) empty.classList.remove("hidden");
+      return;
+    }
+    const view=liveLocationVisual(row);
+    const accuracy=Number(row.accuracy_m);
+    const mapUrl=googleMapsOpenUrl(row.latitude,row.longitude);
+    $("monitorLiveSelected").innerHTML=`<div class="monitor-live-person">
+      <div class="monitor-live-person-head"><span class="monitor-avatar">${esc(initialsFromName(tech.name||"T"))}</span><div><h4>${esc(tech.name||"Teknisi")}</h4><p>Posisi anggota teknisi</p></div></div>
+      <span class="monitor-live-state ${view.cls}">● ${esc(view.label)}</span>
+      <div class="monitor-live-meta"><div><span>Update terakhir</span><strong>${esc(relativeLiveTime(row))}</strong></div><div><span>Akurasi GPS</span><strong>${Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</strong></div></div>
+      <a class="btn outline monitor-live-open" href="${mapUrl}" target="_blank" rel="noopener">⌖ Buka di Google Maps</a>
+    </div>`;
+    if(frame){
+      const nextSrc=googleMapsEmbedUrl(row.latitude,row.longitude);
+      if(frame.dataset.locationKey!==`${row.latitude},${row.longitude}`){frame.src=nextSrc;frame.dataset.locationKey=`${row.latitude},${row.longitude}`;}
+      frame.classList.remove("hidden");
+    }
+    if(empty) empty.classList.add("hidden");
+  }
+
+  function openTechnicianLivePosition(technicianId){
+    const row=liveLocationForTechnician(technicianId);
+    if(!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))){toast("Lokasi teknisi belum tersedia.");return;}
+    state.selectedLiveTechnicianId=technicianId;
+    renderMonitorLivePanel();
+    $("monitorLivePanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  function activeTrackingJobForTechnician(){
+    if(!isTechnicianAccount())return null;
+    return techUnifiedJobs().find(job=>["Dalam Perjalanan","Dikerjakan"].includes(job.status))||null;
+  }
+
+  function upsertLocalLiveLocation(row){
+    const idx=state.liveLocations.findIndex(item=>item.technician_id===row.technician_id);
+    if(idx>=0) state.liveLocations[idx]={...state.liveLocations[idx],...row};
+    else state.liveLocations.push(row);
+  }
+
+  async function sendLiveLocation(position,job){
+    if(!isTechnicianAccount()||!state.liveTrackingAvailable)return;
+    const techId=state.accessContext?.technician_id;
+    if(!techId)return;
+    const now=Date.now();
+    if(now-state.liveTrackingLastSentAt<LIVE_LOCATION_SEND_INTERVAL_MS)return;
+    const coords=position.coords||{};
+    const latitude=Number(coords.latitude),longitude=Number(coords.longitude);
+    if(!Number.isFinite(latitude)||!Number.isFinite(longitude))return;
+    state.liveTrackingLastSentAt=now;
+    const payload={
+      p_latitude:latitude,
+      p_longitude:longitude,
+      p_accuracy_m:Number.isFinite(Number(coords.accuracy))?Number(coords.accuracy):null,
+      p_source:job?.source||null,
+      p_job_id:job?.id||null,
+      p_tracking_active:true
+    };
+    const {data,error}=await db.rpc("update_my_live_location",payload);
+    if(error){
+      state.liveTrackingLastSentAt=0;
+      if(/does not exist|Could not find the function|schema cache/i.test(error.message||"")) state.liveTrackingAvailable=false;
+      console.warn("Gagal mengirim live location:",error.message);
+      renderTechLiveLocationStatus(error.message||"Gagal mengirim lokasi");
+      return;
+    }
+    const row=Array.isArray(data)?data[0]:data;
+    if(row) upsertLocalLiveLocation(row);
+    state.liveTrackingLastCoords={latitude,longitude};
+    renderTechLiveLocationStatus();
+  }
+
+  function geolocationErrorMessage(error){
+    if(error?.code===1)return "Izin lokasi ditolak. Aktifkan izin Lokasi untuk LORHIL AC di pengaturan Chrome/HP.";
+    if(error?.code===2)return "Posisi GPS belum tersedia. Pastikan fitur Lokasi/GPS HP aktif.";
+    if(error?.code===3)return "GPS terlalu lama mendapatkan posisi. Coba berada di area yang lebih terbuka lalu ulangi.";
+    return "Lokasi belum dapat dibaca dari perangkat.";
+  }
+
+  async function startLiveTrackingForJob(job,{silent=false}={}){
+    if(!isTechnicianAccount()||!job)return false;
+    if(!state.liveTrackingAvailable){if(!silent)alert("Live Tracking belum siap. Admin perlu menjalankan SQL V81 terlebih dahulu.");return false;}
+    if(!navigator.geolocation){if(!silent)alert("Perangkat/browser ini tidak mendukung pembacaan lokasi.");return false;}
+    if(!window.isSecureContext){if(!silent)alert("Live Tracking memerlukan koneksi HTTPS.");return false;}
+
+    state.liveTrackingJob={source:job.source,id:job.id};
+    if(state.liveTrackingWatchId!==null){renderTechLiveLocationStatus();return true;}
+
+    return await new Promise(resolve=>{
+      let settled=false;
+      const success=position=>{
+        if(!settled){settled=true;resolve(true);}
+        sendLiveLocation(position,state.liveTrackingJob).catch(error=>console.warn(error));
+      };
+      const failure=error=>{
+        if(!settled){settled=true;resolve(false);}
+        const message=geolocationErrorMessage(error);
+        if(!silent) alert(`Status pekerjaan tetap tersimpan, tetapi Live Tracking belum aktif.\n\n${message}`);
+        renderTechLiveLocationStatus(message);
+      };
+      state.liveTrackingWatchId=navigator.geolocation.watchPosition(success,failure,{enableHighAccuracy:true,maximumAge:10000,timeout:20000});
+      renderTechLiveLocationStatus();
+    });
+  }
+
+  async function stopLiveTracking({remote=true,silent=false}={}){
+    if(state.liveTrackingWatchId!==null && navigator.geolocation){
+      navigator.geolocation.clearWatch(state.liveTrackingWatchId);
+      state.liveTrackingWatchId=null;
+    }
+    state.liveTrackingJob=null;
+    state.liveTrackingLastSentAt=0;
+    if(remote && isTechnicianAccount() && db && state.liveTrackingAvailable){
+      const {data,error}=await db.rpc("stop_my_live_tracking");
+      if(error){if(!silent)console.warn("Gagal menonaktifkan live tracking:",error.message);}
+      else{
+        const row=Array.isArray(data)?data[0]:data;
+        if(row)upsertLocalLiveLocation(row);
+      }
+    }
+    renderTechLiveLocationStatus();
+  }
+
+  async function resumeLiveTrackingIfPossible(){
+    if(!isTechnicianAccount()||state.liveTrackingWatchId!==null||!state.liveTrackingAvailable)return;
+    const activeJob=activeTrackingJobForTechnician();
+    const own=liveLocationForTechnician(state.accessContext?.technician_id);
+    if(!activeJob){
+      if(own?.tracking_active) stopLiveTracking({remote:true,silent:true});
+      return;
+    }
+    if(!own?.tracking_active)return;
+    try{
+      if(navigator.permissions?.query){
+        const permission=await navigator.permissions.query({name:"geolocation"});
+        if(permission.state==="granted") await startLiveTrackingForJob(activeJob,{silent:true});
+      }
+    }catch(_error){}
+  }
+
+  function renderTechLiveLocationStatus(errorText=""){
+    if(!isTechnicianAccount()||!$("techLiveLocationPanel"))return;
+    const panel=$("techLiveLocationPanel"),title=$("techLiveLocationTitle"),text=$("techLiveLocationText"),action=$("techLiveLocationAction");
+    const activeJob=activeTrackingJobForTechnician();
+    const own=liveLocationForTechnician(state.accessContext?.technician_id);
+    const view=liveLocationVisual(own);
+    panel.classList.remove("live","warning");
+    if(!state.liveTrackingAvailable){
+      panel.classList.add("warning");title.textContent="Live Location belum disiapkan";text.textContent="Admin perlu menjalankan SQL Live Tracking V81.";action.textContent="Belum Tersedia";action.disabled=true;return;
+    }
+    if(errorText){
+      panel.classList.add("warning");title.textContent="Live Location belum aktif";text.textContent=errorText;action.textContent=activeJob?"Coba Aktifkan Lagi":"Aktif saat Berangkat";action.disabled=!activeJob;return;
+    }
+    const browserWatching=state.liveTrackingWatchId!==null;
+    if(activeJob && (browserWatching||view.fresh)){
+      panel.classList.add("live");title.textContent="Live Location Aktif";text.textContent=`Posisi sedang dibagikan kepada Admin • update ${relativeLiveTime(own)}`;action.textContent="Live Aktif";action.disabled=true;
+    }else if(activeJob){
+      panel.classList.add("warning");title.textContent="Aktifkan Live Location";text.textContent="Pekerjaan sedang berlangsung. Tekan tombol dan izinkan akses lokasi HP.";action.textContent="Aktifkan Lokasi";action.disabled=false;
+    }else{
+      title.textContent="Live Location";text.textContent="Lokasi hanya dibagikan saat status pekerjaan Dalam Perjalanan atau Dikerjakan.";action.textContent="Aktif saat Berangkat";action.disabled=true;
+    }
+  }
+
+  if($("techLiveLocationAction")) $("techLiveLocationAction").addEventListener("click",async()=>{
+    const job=activeTrackingJobForTechnician();
+    if(!job)return;
+    await startLiveTrackingForJob(job,{silent:false});
+  });
+
   function monitorStatusInfo(job){
     if(!job) return {label:"Tidak Ada Tugas",cls:"idle"};
     const map={"Dalam Perjalanan":"onway","Dikerjakan":"working","Selesai":"done","Terjadwal":"scheduled","Dibatalkan":"cancelled"};
@@ -1870,18 +2117,22 @@
       const inProgress=jobs.filter(job=>["Dalam Perjalanan","Dikerjakan"].includes(job.status)&&monitorStatusEventDate(job)>=range.start&&monitorStatusEventDate(job)<=range.end).length;
       const completion=period.length?Math.min(100,Math.round(completed/period.length*100)):0;
       const info=monitorStatusInfo(current);
+      const liveRow=liveLocationForTechnician(tech.id);
+      const liveView=liveLocationVisual(liveRow);
+      const hasCoords=!!(liveRow&&Number.isFinite(Number(liveRow.latitude))&&Number.isFinite(Number(liveRow.longitude)));
       return `<article class="monitor-tech-card ${tech.is_active===false?"inactive":""}">
         <div class="monitor-tech-main">
           <div class="monitor-tech-identity"><span class="monitor-avatar">${esc(initialsFromName(tech.name||"T"))}</span><div><h4>${esc(tech.name||"Teknisi")}</h4><p>${esc(tech.phone||"Nomor WA belum diisi")}</p><span class="monitor-account-state ${tech.is_active===false?"inactive":"active"}">${tech.is_active===false?"Nonaktif":"Aktif"}</span></div></div>
-          <div class="monitor-current"><small>Status Saat Ini</small><span class="monitor-status ${info.cls}">${esc(info.label)}</span>${current?`<strong>${esc(current.customer_name)}</strong><p>${esc(current.description)}</p>`:`<p>Belum ada pekerjaan hari ini.</p>`}</div>
+          <div class="monitor-current"><small>Status Saat Ini</small><span class="monitor-status ${info.cls}">${esc(info.label)}</span>${current?`<strong>${esc(current.customer_name)}</strong><p>${esc(current.description)}</p>`:`<p>Belum ada pekerjaan hari ini.</p>`}<div class="monitor-location-row ${liveView.cls}"><span class="location-dot"></span><div><strong>${esc(liveView.label)}</strong><small>${hasCoords?` • ${esc(relativeLiveTime(liveRow))}`:" • belum ada posisi"}</small></div></div></div>
           <div class="monitor-period-stats"><div><strong>${period.length}</strong><span>Pekerjaan</span></div><div><strong>${completed}</strong><span>Selesai</span></div><div><strong>${inProgress}</strong><span>Berjalan</span></div></div>
           <div class="monitor-next"><small>Jadwal Berikutnya</small>${next?`<strong>${formatDate(next.work_date)} • ${esc((next.work_time||"-").slice(0,5))}</strong><p>${esc(next.customer_name)} — ${esc(next.description)}</p>`:`<strong>Belum ada jadwal</strong><p>Tidak ada tugas berikutnya.</p>`}</div>
         </div>
         <div class="monitor-progress"><div><span>Penyelesaian ${esc(monitorDateRange().label)}</span><strong>${completion}%</strong></div><div class="monitor-progress-track"><i style="width:${completion}%"></i></div></div>
-        <div class="monitor-tech-actions"><button class="btn outline monitor-schedule-btn" data-id="${tech.id}" type="button">Lihat Jadwal</button><button class="btn secondary monitor-history-btn" data-id="${tech.id}" type="button">Riwayat</button></div>
+        <div class="monitor-tech-actions"><button class="btn outline monitor-location-btn" data-id="${tech.id}" type="button" ${hasCoords?"":"disabled"}>⌖ Lihat Posisi</button><button class="btn outline monitor-schedule-btn" data-id="${tech.id}" type="button">Lihat Jadwal</button><button class="btn secondary monitor-history-btn" data-id="${tech.id}" type="button">Riwayat</button></div>
       </article>`;
     }).join(""):`<div class="empty monitor-empty">Tidak ada teknisi yang sesuai filter.</div>`;
 
+    $("monitorTechnicianCards").querySelectorAll(".monitor-location-btn").forEach(btn=>btn.addEventListener("click",()=>openTechnicianLivePosition(btn.dataset.id)));
     $("monitorTechnicianCards").querySelectorAll(".monitor-schedule-btn").forEach(btn=>btn.addEventListener("click",()=>openTechnicianScheduleFromMonitoring(btn.dataset.id)));
     $("monitorTechnicianCards").querySelectorAll(".monitor-history-btn").forEach(btn=>btn.addEventListener("click",()=>openTechnicianHistoryMonitoring(btn.dataset.id)));
   }
@@ -2249,6 +2500,7 @@
     if($("techTodayLabel")) $("techTodayLabel").textContent=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date());
     renderTechJobList($("techTodayJobs"),todayJobs,"Belum ada pekerjaan yang ditugaskan untuk hari ini.","dashboard");
     renderTechJobList($("techUpcomingJobs"),upcoming.slice(0,4),"Belum ada pekerjaan berikutnya.","upcoming");
+    renderTechLiveLocationStatus();
   }
 
   function renderTechJobs(){
@@ -2321,7 +2573,13 @@
         ?await db.rpc("update_my_schedule_status",{p_schedule_id:id,p_status:scheduleLabelToRaw(status)})
         :await db.rpc("update_my_work_status",{p_invoice_id:id,p_status:status});
       if(result.error) throw result.error;
+      if(["Selesai","Dibatalkan","Terjadwal"].includes(status)){
+        await stopLiveTracking({remote:true,silent:true});
+      }
       await refreshAll();closeModal();toast(`Status pekerjaan diubah menjadi ${status}.`);
+      if(["Dalam Perjalanan","Dikerjakan"].includes(status)){
+        startLiveTrackingForJob({source,id},{silent:false}).catch(error=>console.warn("Live tracking gagal dimulai",error));
+      }
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
 
@@ -2341,7 +2599,7 @@
       <div class="tech-detail-header"><div><div class="tech-detail-number">${source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(job.customer_name||"-")}</div></div>${workStatusBadge(job.status)}</div>
       <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
       <div class="tech-detail-actions">${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")} Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
-      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p></div>
+      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p><div class="tech-live-detail"><span>⌖</span><div><strong>Live Location Teknisi</strong><small>Lokasi Anda dibagikan kepada Admin saat status Dalam Perjalanan atau Dikerjakan. Tracking berhenti saat pekerjaan Selesai.</small></div></div></div>
       <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${details||'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}${job.invoice_id&&source==="schedule"?'<p class="schedule-linked-note">Pekerjaan ini sudah terhubung dengan nota.</p>':''}</div>`;
     $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{const next=btn.dataset.status;if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?"))return;updateTechJobStatus(source,id,next);}));
     show("detailModal");
@@ -2857,7 +3115,15 @@
       .on("postgres_changes",{event:"*",schema:"public",table:"technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"invoice_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
       .on("postgres_changes",{event:"*",schema:"public",table:"work_schedules",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
-      .on("postgres_changes",{event:"*",schema:"public",table:"schedule_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();});
+      .on("postgres_changes",{event:"*",schema:"public",table:"schedule_technicians",filter:`user_id=eq.${owner}`},async()=>{await refreshAll();})
+      .on("postgres_changes",{event:"*",schema:"public",table:"technician_live_locations",filter:`owner_user_id=eq.${owner}`},payload=>{
+        const row=payload.new&&Object.keys(payload.new).length?payload.new:payload.old;
+        if(!row?.technician_id)return;
+        if(payload.eventType==="DELETE") state.liveLocations=state.liveLocations.filter(item=>item.technician_id!==row.technician_id);
+        else upsertLocalLiveLocation(row);
+        if(!isTechnicianAccount()&&state.page==="monitoring"){renderMonitoringTechnicians();renderMonitorLivePanel();}
+        if(isTechnicianAccount())renderTechLiveLocationStatus();
+      });
     if(!isTechnicianAccount()){
       channel=channel.on("postgres_changes",{event:"INSERT",schema:"public",table:"activity_logs",filter:`owner_user_id=eq.${owner}`},async()=>{await refreshAll();});
     }

@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=80">
-  <title>LORHIL AC Online V80</title>
+  <link rel="stylesheet" href="style.css?v=81">
+  <title>LORHIL AC Online V81</title>
 </head>
-<body data-app-version="80">
+<body data-app-version="81">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
@@ -490,6 +490,25 @@
             <article class="monitor-summary-card"><span class="monitor-summary-icon green">✓</span><div><small>Selesai Hari Ini</small><strong id="monitorCompletedToday">0</strong><p>Status selesai</p></div></article>
           </div>
 
+          <div id="monitorLivePanel" class="panel monitor-live-panel">
+            <div class="panel-head monitor-live-head">
+              <div>
+                <h3><span class="section-icon">⌖</span> Live Tracking Teknisi</h3>
+                <p>Menampilkan posisi anggota teknisi saja. Lokasi pelanggan tidak ditampilkan.</p>
+              </div>
+              <span id="monitorLiveCount" class="monitor-live-count">0 lokasi aktif</span>
+            </div>
+            <div class="monitor-live-layout">
+              <div id="monitorLiveSelected" class="monitor-live-selected">
+                <div class="monitor-live-empty-copy"><strong>Belum ada teknisi dipilih</strong><span>Klik tombol <b>Lihat Posisi</b> pada kartu teknisi.</span></div>
+              </div>
+              <div class="monitor-live-map-shell">
+                <iframe id="monitorLiveMapFrame" class="monitor-live-map hidden" title="Posisi live teknisi" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div id="monitorLiveMapEmpty" class="monitor-live-map-empty"><span>⌖</span><strong>Posisi teknisi akan tampil di sini</strong><small>Tracking aktif ketika teknisi sedang menjalankan pekerjaan dan memberi izin lokasi.</small></div>
+              </div>
+            </div>
+          </div>
+
           <div class="panel monitoring-panel">
             <div class="panel-head monitoring-head">
               <div><h3>Kondisi Tim Lapangan</h3><p>Statistik pekerjaan mengikuti periode yang dipilih. Status saat ini mengikuti perubahan terbaru teknisi secara realtime.</p></div>
@@ -554,6 +573,15 @@
               <span class="tech-safety-icon"><span class="tech-safety-svg asset-mask-icon" style="--icon:url(assets/technician-icons/shield-check.svg)" aria-hidden="true"></span></span>
               <div><strong>Utamakan keselamatan kerja</strong><small>Gunakan APD dan periksa kondisi unit sebelum memulai pekerjaan.</small></div>
             </div>
+          </div>
+
+          <div id="techLiveLocationPanel" class="tech-live-location-panel">
+            <span class="tech-live-location-icon">⌖</span>
+            <div class="tech-live-location-copy">
+              <strong id="techLiveLocationTitle">Live Location</strong>
+              <small id="techLiveLocationText">Lokasi akan dibagikan kepada Admin saat pekerjaan berlangsung.</small>
+            </div>
+            <button id="techLiveLocationAction" class="btn secondary" type="button">Aktif saat Berangkat</button>
           </div>
 
           <div class="tech-summary-grid tech-summary-grid-four">
@@ -783,6 +811,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
-  <script src="app.js?v=80"></script>
+  <script src="app.js?v=81"></script>
 </body>
 </html>

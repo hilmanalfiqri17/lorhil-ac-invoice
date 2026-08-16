@@ -1505,34 +1505,61 @@
     const tech=state.technicians.find(item=>item.id===id);
     if(!tech) return;
 
-    const linkedMember=teamMemberForTechnician(id);
-    if(linkedMember){
-      alert(`Teknisi ${tech.name} sudah mempunyai akun login. Nonaktifkan akun tersebut agar riwayat dan hubungan akun tetap aman.`);
+    if(accessRole()!=="admin"){
+      alert("Hanya Admin yang dapat menghapus teknisi.");
       return;
     }
 
-    const hasHistory=state.invoiceTechnicians.some(row=>row.technician_id===id);
-    if(hasHistory){
+    const linkedMember=teamMemberForTechnician(id);
+    const hasInvoiceHistory=state.invoiceTechnicians.some(row=>row.technician_id===id);
+    const hasScheduleHistory=state.scheduleTechnicians.some(row=>row.technician_id===id);
+
+    if(hasInvoiceHistory || hasScheduleHistory){
+      const historyText=[
+        hasInvoiceHistory?"riwayat nota":null,
+        hasScheduleHistory?"riwayat jadwal":null
+      ].filter(Boolean).join(" dan ");
+
       alert(
-        `Teknisi ${tech.name} sudah tercatat pada riwayat nota, sehingga tidak dapat dihapus. `+
-        `Gunakan tombol Nonaktifkan agar riwayat pekerjaan tetap tersimpan.`
+        `Teknisi ${tech.name} sudah tercatat pada ${historyText}, sehingga tidak dapat dihapus permanen.\n\n`+
+        `Gunakan tombol Nonaktifkan agar akun login diblokir tetapi riwayat pekerjaan tetap tersimpan.`
       );
       return;
     }
 
-    if(!confirm(`Hapus teknisi ${tech.name}? Data yang dihapus tidak dapat dikembalikan.`)) return;
+    const loginInfo=linkedMember
+      ? `\n\nAkun login ${linkedMember.email||linkedMember.display_name||tech.name} juga akan dihapus permanen dari Supabase Authentication.`
+      : "";
+
+    if(!confirm(
+      `Hapus permanen teknisi ${tech.name}?${loginInfo}\n\n`+
+      `Tindakan ini tidak dapat dikembalikan.`
+    )) return;
 
     loading(true);
-    const {error}=await db.from("technicians").delete().eq("id",id);
-    loading(false);
+    try{
+      if(linkedMember){
+        const result=await manageTeamMember({
+          action:"delete",
+          member_id:linkedMember.id
+        });
+        toast(result?.message||"Teknisi dan akun login berhasil dihapus.");
+        await refreshTeamMembers();
+      }else{
+        const {error}=await db.from("technicians")
+          .delete()
+          .eq("id",id)
+          .eq("user_id",ownerUid());
+        if(error) throw error;
+        toast("Teknisi berhasil dihapus.");
+      }
 
-    if(error){
-      alert(errorMessage(error));
-      return;
+      await refreshAll();
+    }catch(error){
+      alert(error?.message||errorMessage(error));
+    }finally{
+      loading(false);
     }
-
-    await refreshAll();
-    toast("Teknisi berhasil dihapus.");
   }
 
   $("technicianForm").addEventListener("submit",async event=>{

@@ -909,3 +909,10 @@ body.technician-mode .sidebar-footer .nav-btn{min-height:48px;border:1px solid r
   .tech-history-card{grid-template-columns:70px 1fr!important;gap:8px 11px!important;padding:12px!important;min-height:0!important}.tech-history-date-block{grid-row:1/3;padding-right:9px;display:block;text-align:center}.tech-history-calendar{margin-bottom:4px}.tech-history-date-block small{font-size:7.5px}.tech-history-date-block strong{font-size:17px}.tech-history-source{grid-column:2;justify-self:start}.tech-history-status{grid-column:2}.tech-history-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.tech-history-actions .btn{width:100%;min-width:0}
   .tech-page-footer-note{align-items:flex-start;flex-direction:column;font-size:8px}.tech-footer-safety{white-space:normal}
 }
+
+
+/* ==========================================================
+   V86 - TEAM-BASED LIVE TRACKING
+   ========================================================== */
+.lorhil-live-marker{overflow:visible}
+.lorhil-live-team-count{position:absolute;z-index:4;right:1px;top:-2px;min-width:18px;height:18px;padding:0 5px;border:2px solid #fff;border-radius:999px;background:#15233d;color:#fff;display:grid;place-items:center;font-size:8px;font-weight:950;line-height:1;box-shadow:0 3px 8px rgba(15,35,65,.22)}

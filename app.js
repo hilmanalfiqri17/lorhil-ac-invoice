@@ -304,7 +304,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=84",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=86",{
             updateViaCache:"none"
           });
 
@@ -314,13 +314,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v80")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v86")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v80";
+            const reloadKey="lorhil-sw-reloaded-v86";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -1910,6 +1910,61 @@
     return monitorCurrentJob(monitorJobsForTechnician(technicianId));
   }
 
+  // ==========================================================
+  // V86 - TEAM-BASED LIVE TRACKING
+  // Satu pekerjaan/tim hanya memerlukan satu teknisi sebagai sumber GPS.
+  // Anggota lain pada pekerjaan yang sama mengikuti posisi tracker tersebut.
+  // ==========================================================
+  function liveRowMatchesJob(row,job){
+    return !!(row&&job&&row.tracking_active===true&&String(row.source||"")===String(job.source||"")&&String(row.job_id||"")===String(job.id||""));
+  }
+
+  function teamTrackerForJob(job){
+    if(!job)return null;
+    return state.liveLocations
+      .filter(row=>liveRowMatchesJob(row,job))
+      .sort((a,b)=>(Date.parse(b.updated_at||"")||0)-(Date.parse(a.updated_at||"")||0))[0]||null;
+  }
+
+  function teamMembersForJob(job){
+    if(!job)return [];
+    let ids=[];
+    if(job.source==="schedule"){
+      const schedule=state.schedules.find(item=>String(item.id)===String(job.id));
+      ids=(schedule?.schedule_technicians||[]).map(row=>row.technician_id);
+    }else if(job.source==="invoice"){
+      const invoice=state.invoices.find(item=>String(item.id)===String(job.id));
+      ids=(invoice?.invoice_technicians||[]).map(row=>row.technician_id);
+    }
+    return [...new Set(ids)].map(id=>state.technicians.find(tech=>tech.id===id)).filter(tech=>tech&&tech.is_active!==false);
+  }
+
+  function trackerTechnician(row){
+    return row?state.technicians.find(tech=>tech.id===row.technician_id)||null:null;
+  }
+
+  function teamTrackingDisplayForTechnician(technicianId){
+    const job=technicianLiveJob(technicianId);
+    const own=liveLocationForTechnician(technicianId);
+    const activeTeamJob=job&&["Dalam Perjalanan","Dikerjakan"].includes(job.status);
+    const tracker=activeTeamJob?teamTrackerForJob(job):null;
+    if(tracker){
+      return {
+        job,row:tracker,tracker,trackerTech:trackerTechnician(tracker),
+        inherited:String(tracker.technician_id)!==String(technicianId),
+        members:teamMembersForJob(job)
+      };
+    }
+    return {job,row:own,tracker:null,trackerTech:own?trackerTechnician(own):null,inherited:false,members:[]};
+  }
+
+  function teamTrackerIsUsable(row){
+    if(!row||row.tracking_active!==true)return false;
+    // Claim baru belum tentu sudah mempunyai koordinat; beri waktu agar GPS pertama masuk.
+    const hasCoords=Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude));
+    return liveLocationAgeMs(row)<=LIVE_LOCATION_FRESH_MS&&(hasCoords||liveLocationAgeMs(row)<=30000);
+  }
+
   function liveMarkerTheme(job,row){
     if(job?.status==="Dalam Perjalanan") return {cls:"onway",label:"Dalam Perjalanan"};
     if(job?.status==="Dikerjakan") return {cls:"working",label:"Dikerjakan"};
@@ -1939,12 +1994,12 @@
   }
 
   function clearMonitorLeafletMarkers(){
-    monitorLeafletMarkers.forEach(marker=>marker.remove());
+    new Set(monitorLeafletMarkers.values()).forEach(marker=>marker.remove());
     monitorLeafletMarkers.clear();
   }
 
   function focusLiveTechnicianOnMap(technicianId){
-    const row=liveLocationForTechnician(technicianId);
+    const row=teamTrackingDisplayForTechnician(technicianId).row;
     const map=ensureMonitorLeafletMap();
     if(!map||!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))) return false;
     state.selectedLiveTechnicianId=technicianId;
@@ -1960,19 +2015,23 @@
     if(!list||isTechnicianAccount())return;
     const techs=state.technicians.filter(tech=>tech.is_active!==false);
     list.innerHTML=techs.length?techs.map(tech=>{
-      const row=liveLocationForTechnician(tech.id);
+      const info=teamTrackingDisplayForTechnician(tech.id);
+      const row=info.row;
       const hasCoords=!!(row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
-      const view=liveLocationVisual(row);
-      const job=technicianLiveJob(tech.id);
+      const job=info.job;
       const theme=liveMarkerTheme(job,row);
       const accuracy=Number(row?.accuracy_m);
       const selected=state.selectedLiveTechnicianId===tech.id;
+      const trackerName=info.trackerTech?.name||"teknisi perwakilan";
+      const locationText=hasCoords
+        ?(info.inherited?`Mengikuti ${esc(trackerName)} • update ${esc(relativeLiveTime(row))}`:`Update ${esc(relativeLiveTime(row))}`)
+        :"Belum ada posisi";
       return `<article class="monitor-live-tech-card ${selected?"selected":""} ${hasCoords?"":"no-location"}" data-id="${tech.id}">
         <div class="monitor-live-card-top">
-          <div class="monitor-live-card-identity"><span class="monitor-live-card-avatar">${liveTechnicianAvatarHtml(tech)}</span><div><strong>${esc(tech.name||"Teknisi")}</strong><small>${hasCoords?`Update ${esc(relativeLiveTime(row))}`:"Belum ada posisi"}</small></div></div>
+          <div class="monitor-live-card-identity"><span class="monitor-live-card-avatar">${liveTechnicianAvatarHtml(tech)}</span><div><strong>${esc(tech.name||"Teknisi")}</strong><small>${locationText}</small></div></div>
           <span class="monitor-live-job-badge ${theme.cls}">${esc(theme.label)}</span>
         </div>
-        <div class="monitor-live-card-meta"><span>Akurasi GPS</span><strong>${hasCoords&&Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</strong></div>
+        <div class="monitor-live-card-meta"><span>${info.inherited?"Sumber GPS Tim":"Akurasi GPS"}</span><strong>${info.inherited?esc(trackerName):(hasCoords&&Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-")}</strong></div>
         <div class="monitor-live-card-actions">
           <button class="btn outline live-focus-btn" type="button" ${hasCoords?"":"disabled"}>⌖ Lihat Lokasi</button>
           ${hasCoords?`<a class="btn secondary" href="${googleMapsOpenUrl(row.latitude,row.longitude)}" target="_blank" rel="noopener">Buka Maps</a>`:`<button class="btn secondary" type="button" disabled>Buka Maps</button>`}
@@ -1998,8 +2057,25 @@
       return;
     }
     clearMonitorLeafletMarkers();
-    const rows=state.liveLocations.filter(row=>Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
-    if(!rows.length){
+
+    // V86: satu marker untuk satu pekerjaan aktif. Semua anggota tim diarahkan ke marker yang sama.
+    const groups=new Map();
+    state.technicians.filter(tech=>tech.is_active!==false).forEach(tech=>{
+      const info=teamTrackingDisplayForTechnician(tech.id);
+      const row=info.row;
+      if(!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude)))return;
+      const activeTeam=info.job&&["Dalam Perjalanan","Dikerjakan"].includes(info.job.status)&&info.tracker;
+      const key=activeTeam?`job:${info.job.source}:${info.job.id}`:`tech:${tech.id}`;
+      if(!groups.has(key))groups.set(key,{key,row,job:info.job,trackerTech:info.trackerTech,members:[]});
+      const group=groups.get(key);
+      if(!group.members.some(member=>member.id===tech.id))group.members.push(tech);
+      if(activeTeam){
+        const assigned=teamMembersForJob(info.job);
+        assigned.forEach(member=>{if(!group.members.some(item=>item.id===member.id))group.members.push(member);});
+      }
+    });
+
+    if(!groups.size){
       empty?.classList.remove("hidden");
       monitorMapDidInitialFit=false;
       monitorLastMarkerCount=0;
@@ -2007,24 +2083,27 @@
     }
     empty?.classList.add("hidden");
     const points=[];
-    rows.forEach(row=>{
-      const tech=state.technicians.find(item=>item.id===row.technician_id);
-      if(!tech||tech.is_active===false)return;
+    groups.forEach(group=>{
+      const row=group.row;
       const lat=Number(row.latitude),lng=Number(row.longitude);
-      const job=technicianLiveJob(tech.id);
-      const theme=liveMarkerTheme(job,row);
+      const representative=group.trackerTech||group.members[0]||trackerTechnician(row);
+      if(!representative)return;
+      const theme=liveMarkerTheme(group.job,row);
       const view=liveLocationVisual(row);
       const accuracy=Number(row.accuracy_m);
+      const names=group.members.map(member=>member.name||"Teknisi");
+      const teamLabel=names.length>1?names.join(" + "):names[0]||representative.name||"Teknisi";
+      const gpsLabel=group.members.length>1?`GPS oleh ${representative.name||"teknisi perwakilan"}`:view.label;
       const icon=L.divIcon({
         className:"lorhil-live-marker-wrap",
-        html:`<div class="lorhil-live-marker ${theme.cls}"><div class="lorhil-live-marker-avatar">${liveTechnicianAvatarHtml(tech)}</div><span class="lorhil-live-marker-pin"></span></div>`,
+        html:`<div class="lorhil-live-marker ${theme.cls}"><div class="lorhil-live-marker-avatar">${liveTechnicianAvatarHtml(representative)}</div>${group.members.length>1?`<b class="lorhil-live-team-count">${group.members.length}</b>`:""}<span class="lorhil-live-marker-pin"></span></div>`,
         iconSize:[52,62],iconAnchor:[26,57],popupAnchor:[0,-54]
       });
-      const marker=L.marker([lat,lng],{icon,title:tech.name||"Teknisi"}).addTo(map);
-      marker.bindTooltip(`<strong>${esc(tech.name||"Teknisi")}</strong><span>${esc(theme.label)}</span>`,{permanent:true,direction:"top",offset:[0,-50],className:`lorhil-live-tooltip ${theme.cls}`});
-      marker.bindPopup(`<div class="lorhil-map-popup"><strong>${esc(tech.name||"Teknisi")}</strong><span>${esc(theme.label)}</span><small>${esc(view.label)} • update ${esc(relativeLiveTime(row))}</small><small>Akurasi ${Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</small><a href="${googleMapsOpenUrl(lat,lng)}" target="_blank" rel="noopener">Buka di Google Maps</a></div>`);
-      marker.on("click",()=>{state.selectedLiveTechnicianId=tech.id;renderMonitorLiveTechnicianList();});
-      monitorLeafletMarkers.set(tech.id,marker);
+      const marker=L.marker([lat,lng],{icon,title:teamLabel}).addTo(map);
+      marker.bindTooltip(`<strong>${esc(teamLabel)}</strong><span>${esc(theme.label)}</span>`,{permanent:true,direction:"top",offset:[0,-50],className:`lorhil-live-tooltip ${theme.cls}`});
+      marker.bindPopup(`<div class="lorhil-map-popup"><strong>${esc(teamLabel)}</strong><span>${esc(theme.label)}</span><small>${esc(gpsLabel)} • update ${esc(relativeLiveTime(row))}</small><small>Akurasi ${Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-"}</small><a href="${googleMapsOpenUrl(lat,lng)}" target="_blank" rel="noopener">Buka di Google Maps</a></div>`);
+      marker.on("click",()=>{state.selectedLiveTechnicianId=group.members[0]?.id||representative.id;renderMonitorLiveTechnicianList();});
+      group.members.forEach(member=>monitorLeafletMarkers.set(member.id,marker));
       points.push([lat,lng]);
     });
     if(!points.length)return;
@@ -2041,16 +2120,27 @@
 
   function renderMonitorLivePanel(){
     if(isTechnicianAccount()||!$("monitorLiveTechnicianList"))return;
-    const valid=state.liveLocations.filter(row=>Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude)));
-    const fresh=valid.filter(row=>liveLocationVisual(row).fresh);
-    if($("monitorLiveCount")) $("monitorLiveCount").textContent=`${fresh.length} lokasi aktif`;
-    if(state.selectedLiveTechnicianId&&!valid.some(row=>row.technician_id===state.selectedLiveTechnicianId)) state.selectedLiveTechnicianId=null;
+    const activeKeys=new Set();
+    const validTechIds=new Set();
+    state.technicians.filter(tech=>tech.is_active!==false).forEach(tech=>{
+      const info=teamTrackingDisplayForTechnician(tech.id);
+      const row=info.row;
+      if(row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude))){
+        validTechIds.add(tech.id);
+        if(liveLocationVisual(row).fresh){
+          const key=info.job&&info.tracker?`job:${info.job.source}:${info.job.id}`:`tech:${tech.id}`;
+          activeKeys.add(key);
+        }
+      }
+    });
+    if($("monitorLiveCount")) $("monitorLiveCount").textContent=`${activeKeys.size} tracking aktif`;
+    if(state.selectedLiveTechnicianId&&!validTechIds.has(state.selectedLiveTechnicianId)) state.selectedLiveTechnicianId=null;
     renderMonitorLiveTechnicianList();
     renderMonitorLiveMap();
   }
 
   function openTechnicianLivePosition(technicianId){
-    const row=liveLocationForTechnician(technicianId);
+    const row=teamTrackingDisplayForTechnician(technicianId).row;
     if(!row||!Number.isFinite(Number(row.latitude))||!Number.isFinite(Number(row.longitude))){toast("Lokasi teknisi belum tersedia.");return;}
     state.selectedLiveTechnicianId=technicianId;
     renderMonitorLivePanel();
@@ -2253,6 +2343,33 @@
     if(state.liveTrackingHeartbeatId!==null){clearInterval(state.liveTrackingHeartbeatId);state.liveTrackingHeartbeatId=null;}
   }
 
+  async function ensureTeamLiveTrackingForJob(job,{silent=false,allowDeviceTakeover=false}={}){
+    if(!isTechnicianAccount()||!job)return false;
+    const ownTechId=state.accessContext?.technician_id;
+    const tracker=teamTrackerForJob(job);
+    if(tracker&&teamTrackerIsUsable(tracker)){
+      if(String(tracker.technician_id)===String(ownTechId)){
+        const session=currentTrackingSessionForJob(job);
+        if(session)return await startLiveTrackingForJob(job,{silent:true,claim:false});
+        // Tracking akun yang sama sedang berjalan dari perangkat lain.
+        // Perubahan status tidak boleh diam-diam merebut session perangkat tersebut.
+        if(!allowDeviceTakeover){
+          renderTechLiveLocationStatus();
+          if(!silent)toast("Tracking tim sudah aktif dari perangkat lain.");
+          return true;
+        }
+      }else{
+        renderTechLiveLocationStatus();
+        if(!silent){
+          const name=trackerTechnician(tracker)?.name||"anggota tim lain";
+          toast(`Tracking tim sudah aktif melalui ${name}.`);
+        }
+        return true;
+      }
+    }
+    return await startLiveTrackingForJob(job,{silent,claim:true});
+  }
+
   async function startLiveTrackingForJob(job,{silent=false,claim=false}={}){
     if(!isTechnicianAccount()||!job)return false;
     if(!state.liveTrackingAvailable){if(!silent)alert("Berbagi Lokasi belum siap. Admin perlu menjalankan SQL V83 terlebih dahulu.");return false;}
@@ -2274,6 +2391,16 @@
       sessionId=claim?await claimTrackingSession(job):currentTrackingSessionForJob(job);
     }catch(error){
       const message=errorMessage(error);
+      if(/TEAM_TRACKING_ALREADY_ACTIVE/i.test(message)){
+        // Ada anggota lain yang lebih dulu menjadi sumber GPS untuk pekerjaan ini.
+        try{
+          const result=await db.from("technician_live_locations").select("*");
+          if(!result.error)state.liveLocations=result.data||[];
+        }catch(_refreshError){}
+        renderTechLiveLocationStatus();
+        if(!silent)toast("Tracking tim sudah aktif melalui teknisi lain.");
+        return true;
+      }
       if(!silent)alert(`Berbagi Lokasi belum dapat diaktifkan.\n\n${message}`);
       renderTechLiveLocationStatus(message);
       return false;
@@ -2323,15 +2450,23 @@
   }
 
   async function resumeLiveTrackingIfPossible(){
-    if(!isTechnicianAccount()||state.liveTrackingWatchId!==null||!state.liveTrackingAvailable)return;
+    if(!isTechnicianAccount()||!state.liveTrackingAvailable)return;
     const activeJob=activeTrackingJobForTechnician();
     const own=liveLocationForTechnician(state.accessContext?.technician_id);
     const saved=readSavedTrackingSession();
     if(!activeJob){
+      // Status pekerjaan bersifat tim. Jika anggota lain menandai Selesai, hentikan GPS lokal juga.
+      if(state.liveTrackingWatchId!==null)stopLocalTrackingRuntime();
       if(own?.tracking_active&&saved?.sessionId&&own.tracking_session_id===saved.sessionId)await stopLiveTracking({remote:true,silent:true});
       return;
     }
-    if(!own?.tracking_active||!savedTrackingSessionMatchesJob(saved,activeJob)||own.tracking_session_id!==saved.sessionId)return;
+    const teamTracker=teamTrackerForJob(activeJob);
+    if(teamTracker&&String(teamTracker.technician_id)!==String(state.accessContext?.technician_id)&&teamTrackerIsUsable(teamTracker)){
+      if(state.liveTrackingWatchId!==null)stopLocalTrackingRuntime();
+      return;
+    }
+    if(state.liveTrackingWatchId!==null)return;
+    if(!own?.tracking_active||!savedTrackingSessionMatchesJob(saved,activeJob)||own.tracking_session_id!==saved?.sessionId)return;
     try{
       if(navigator.permissions?.query){
         const permission=await navigator.permissions.query({name:"geolocation"});
@@ -2344,33 +2479,43 @@
     if(!isTechnicianAccount()||!$("techLiveLocationPanel"))return;
     const panel=$("techLiveLocationPanel"),title=$("techLiveLocationTitle"),text=$("techLiveLocationText"),action=$("techLiveLocationAction");
     const activeJob=activeTrackingJobForTechnician();
-    const own=liveLocationForTechnician(state.accessContext?.technician_id);
+    const ownTechId=state.accessContext?.technician_id;
+    const own=liveLocationForTechnician(ownTechId);
+    const teamTracker=activeJob?teamTrackerForJob(activeJob):null;
+    const teammateTracker=teamTracker&&String(teamTracker.technician_id)!==String(ownTechId)?teamTracker:null;
+    const teammateName=trackerTechnician(teammateTracker)?.name||"anggota tim lain";
     const saved=readSavedTrackingSession();
     const localOwnsSession=!!(saved?.sessionId&&own?.tracking_session_id===saved.sessionId);
     const view=liveLocationVisual(own);
     panel.classList.remove("live","warning");
     if(!state.liveTrackingAvailable){
-      panel.classList.add("warning");title.textContent="Berbagi Lokasi belum disiapkan";text.textContent="Admin perlu menjalankan SQL V83.";action.textContent="Belum Tersedia";action.disabled=true;return;
+      panel.classList.add("warning");title.textContent="Berbagi Lokasi belum disiapkan";text.textContent="Admin perlu menjalankan SQL Team Tracking V86.";action.textContent="Belum Tersedia";action.disabled=true;return;
     }
     if(errorText){
       panel.classList.add("warning");title.textContent="Berbagi Lokasi belum aktif";text.textContent=errorText;action.textContent=activeJob?"Izinkan Lokasi":"Aktif saat Berangkat";action.disabled=!activeJob;return;
     }
+    if(activeJob&&teammateTracker&&teamTrackerIsUsable(teammateTracker)){
+      panel.classList.add("live");title.textContent="Tracking Tim Aktif";text.textContent=`GPS pekerjaan dibagikan oleh ${teammateName} • update ${relativeLiveTime(teammateTracker)}. HP ini tidak perlu mengaktifkan lokasi.`;action.textContent=`Mengikuti ${teammateName}`;action.disabled=true;return;
+    }
+    if(activeJob&&teammateTracker&&!teamTrackerIsUsable(teammateTracker)){
+      panel.classList.add("warning");title.textContent="Tracking Tim Terhenti";text.textContent=`GPS ${teammateName} sudah tidak diperbarui. Anda dapat mengambil alih tracking dari HP ini.`;action.textContent="Ambil Alih Tracking";action.disabled=false;return;
+    }
     const browserWatching=state.liveTrackingWatchId!==null;
     if(activeJob&&localOwnsSession&&(browserWatching||view.fresh)){
-      panel.classList.add("live");title.textContent="Berbagi Lokasi Aktif";text.textContent=`Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim • update ${relativeLiveTime(own)}`;action.textContent="Berbagi Aktif";action.disabled=true;
+      panel.classList.add("live");title.textContent="Anda Sumber GPS Tim";text.textContent=`Lokasi HP ini menjadi posisi bersama untuk seluruh anggota pada pekerjaan ini • update ${relativeLiveTime(own)}`;action.textContent="Tracking Tim Aktif";action.disabled=true;
     }else if(activeJob&&own?.tracking_active&&!localOwnsSession){
-      panel.classList.add("warning");title.textContent="Berbagi Lokasi";text.textContent="Berbagi lokasi aktif dari perangkat lain. Aktifkan di perangkat ini jika HP ini yang digunakan untuk pekerjaan.";action.textContent="Gunakan Perangkat Ini";action.disabled=false;
+      panel.classList.add("warning");title.textContent="Berbagi Lokasi";text.textContent="Tracking akun ini aktif dari perangkat lain. Gunakan HP ini hanya jika memang perlu mengambil alih perangkat.";action.textContent="Gunakan Perangkat Ini";action.disabled=false;
     }else if(activeJob){
-      panel.classList.add("warning");title.textContent="Aktifkan Berbagi Lokasi";text.textContent="Izinkan akses lokasi agar posisi pekerjaan dapat diperbarui selama tugas berlangsung.";action.textContent="Izinkan Lokasi";action.disabled=false;
+      panel.classList.add("warning");title.textContent="Aktifkan Tracking Tim";text.textContent="Belum ada anggota yang membagikan GPS untuk pekerjaan ini. HP pertama yang mengaktifkan lokasi akan menjadi sumber GPS tim.";action.textContent="Izinkan Lokasi";action.disabled=false;
     }else{
-      title.textContent="Berbagi Lokasi";text.textContent="Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.";action.textContent="Aktif saat Berangkat";action.disabled=true;
+      title.textContent="Tracking Tim";text.textContent="Cukup satu anggota tim yang membagikan lokasi selama pekerjaan berlangsung.";action.textContent="Aktif saat Berangkat";action.disabled=true;
     }
   }
 
   if($("techLiveLocationAction"))$("techLiveLocationAction").addEventListener("click",async()=>{
     const job=activeTrackingJobForTechnician();
     if(!job)return;
-    await startLiveTrackingForJob(job,{silent:false,claim:true});
+    await ensureTeamLiveTrackingForJob(job,{silent:false,allowDeviceTakeover:true});
   });
 
   function monitorStatusInfo(job){
@@ -2912,7 +3057,7 @@
       }
       await refreshAll();closeModal();toast(`Status pekerjaan diubah menjadi ${status}.`);
       if(["Dalam Perjalanan","Dikerjakan"].includes(status)){
-        startLiveTrackingForJob({source,id},{silent:false,claim:true}).catch(error=>console.warn("Berbagi lokasi gagal dimulai",error));
+        ensureTeamLiveTrackingForJob({source,id},{silent:false}).catch(error=>console.warn("Tracking tim gagal dimulai",error));
       }
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
@@ -3109,7 +3254,7 @@
     const support=Array.isArray(supportResult.data)?supportResult.data[0]:supportResult.data;
     return {
       app:"LORHIL AC Online",
-      version:84,
+      version:86,
       exported_at:new Date().toISOString(),
       note:"Backup dibuat dari akun Admin. Password Supabase Authentication tidak pernah diekspor. Jalankan SQL V79 agar counter nomor nota ikut tercadangkan.",
       invoices,
@@ -3459,6 +3604,10 @@
         if(!row?.technician_id)return;
         if(payload.eventType==="DELETE") state.liveLocations=state.liveLocations.filter(item=>item.technician_id!==row.technician_id);
         else upsertLocalLiveLocation(row);
+        if(isTechnicianAccount()&&String(row.technician_id)===String(state.accessContext?.technician_id)&&row.tracking_active===false&&state.liveTrackingWatchId!==null){
+          stopLocalTrackingRuntime();
+          clearSavedTrackingSession();
+        }
         if(!isTechnicianAccount()&&state.page==="monitoring"){renderMonitoringTechnicians();renderMonitorLivePanel();}
         if(isTechnicianAccount())renderTechLiveLocationStatus();
       });

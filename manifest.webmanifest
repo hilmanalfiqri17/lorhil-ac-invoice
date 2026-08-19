@@ -1,10 +1,10 @@
 {
-  "name": "LORHIL AC Online Invoice",
+  "name": "LORHIL AC — AC Service Management System",
   "short_name": "LORHIL AC",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f7f9fc",
-  "theme_color": "#071b46",
+  "background_color": "#F5F7FB",
+  "theme_color": "#07182D",
   "icons": [
     {
       "src": "assets/icon-192.png",
@@ -19,7 +19,7 @@
   ],
   "id": "./",
   "scope": "./",
-  "description": "Invoice, jadwal pekerjaan, dan monitoring teknisi LORHIL AC.",
+  "description": "Sistem manajemen operasional service AC: invoice, jadwal, pelanggan, teknisi, monitoring, dan backup.",
   "display_override": [
     "standalone",
     "minimal-ui"

@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#071b46">
-  <meta name="description" content="Invoice dan riwayat pekerjaan online LORHIL AC">
+  <meta name="theme-color" content="#07182D">
+  <meta name="description" content="LORHIL AC — sistem manajemen operasional service AC untuk pelanggan, teknisi, jadwal, invoice, monitoring, dan aktivitas lapangan.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=86">
-  <title>LORHIL AC Online V86</title>
+  <link rel="stylesheet" href="style.css?v=88">
+  <title>LORHIL AC • AC Service Management System</title>
 </head>
-<body data-app-version="86">
+<body data-app-version="88">
   <section id="setupScreen" class="center-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
-        <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
+        <span class="product-mark"><span class="asset-mask-icon" style="--icon:url(assets/icons/air-conditioner.svg)" aria-hidden="true"></span></span>
         <div>
           <strong>LORHIL AC</strong>
-          <span>Online Invoice</span>
+          <span>AC Service Management System</span>
         </div>
       </div>
       <h1>Konfigurasi Belum Selesai</h1>
@@ -28,118 +28,153 @@
     </div>
   </section>
 
-  <section id="loginScreen" class="center-screen hidden">
-    <form id="loginForm" class="auth-card login-card">
-      <div class="auth-brand">
-        <img src="assets/logo.png" class="auth-logo" alt="LORHIL AC">
-        <div>
-          <strong>LORHIL AC</strong>
-          <span>Online Invoice</span>
+  <section id="loginScreen" class="login-screen hidden">
+    <div class="login-layout">
+      <div class="login-visual" aria-hidden="true">
+        <div class="login-visual-orb orb-one"></div>
+        <div class="login-visual-orb orb-two"></div>
+        <div class="login-brand-lockup login-reveal reveal-1">
+          <span class="product-mark"><span class="asset-mask-icon" style="--icon:url(assets/icons/air-conditioner.svg)"></span></span>
+          <div><strong>LORHIL AC</strong><span>AC Service Management System</span></div>
         </div>
+        <div class="login-visual-copy login-reveal reveal-2">
+          <span class="login-eyebrow">FIELD SERVICE OPERATIONS</span>
+          <h2>Operasional service AC dalam satu workspace yang terstruktur.</h2>
+          <p>Kelola pelanggan, jadwal, teknisi, invoice, pembayaran, dan monitoring lapangan dengan alur kerja yang lebih jelas.</p>
+        </div>
+        <div class="login-product-preview login-reveal reveal-3">
+          <div class="preview-window-bar"><span></span><span></span><span></span><b>LORHIL AC / Dashboard</b></div>
+          <div class="preview-window-body">
+            <div class="preview-side"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="preview-main">
+              <div class="preview-head"><div><small>Ringkasan Operasional</small><strong>Dashboard Hari Ini</strong></div><span></span></div>
+              <div class="preview-kpis">
+                <article><i class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)"></i><div><small>Pekerjaan</small><b>12</b></div></article>
+                <article><i class="asset-mask-icon" style="--icon:url(assets/icons/payment.svg)"></i><div><small>Pendapatan</small><b>8,4 jt</b></div></article>
+                <article><i class="asset-mask-icon" style="--icon:url(assets/icons/technician.svg)"></i><div><small>Teknisi Aktif</small><b>6</b></div></article>
+              </div>
+              <div class="preview-chart"><span></span><span></span><span></span><span></span><span></span><span></span><svg viewBox="0 0 420 120" preserveAspectRatio="none"><path d="M0 95 C55 92 72 66 118 72 S177 91 215 54 278 44 314 58 370 20 420 32"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="login-float-card location-card login-reveal reveal-4"><span class="mini-icon"><i class="asset-mask-icon" style="--icon:url(assets/icons/monitoring.svg)"></i></span><div><small>Monitoring Teknisi</small><strong>Tracking aktif</strong></div><b class="live-dot"></b></div>
+        <div class="login-float-card invoice-card login-reveal reveal-5"><span class="mini-icon"><i class="asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)"></i></span><div><small>Invoice Hari Ini</small><strong>8 tersimpan</strong></div></div>
       </div>
-      <div class="auth-heading">
-        <h1>Selamat Datang</h1>
-        <p>Masuk ke sistem LORHIL AC sesuai akun dan hak akses Anda.</p>
-      </div>
-      <label>Email</label>
-      <input id="loginEmail" type="email" autocomplete="username" required placeholder="admin@contoh.com">
-      <label>Password</label>
-      <div class="password-wrap">
-        <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Masukkan password">
-        <button type="button" id="togglePassword" class="icon-btn" aria-label="Tampilkan password">👁</button>
-      </div>
-      <div id="loginError" class="error"></div>
-      <button type="submit" class="btn primary full">Masuk ke Dashboard</button>
 
-      <div class="login-install-section">
-        <div class="login-install-divider"><span>atau</span></div>
-        <button type="button" id="installAppBtn" class="btn install-app-btn full">
-          <span class="install-app-icon" aria-hidden="true">⇩</span>
-          <span id="installAppBtnText">Instal Aplikasi di HP</span>
-        </button>
-        <p id="installAppHint" class="install-app-hint">Tidak harus Chrome. Jika browser mendukung instal langsung, tombol akan membuka pemasangan aplikasi.</p>
+      <div class="login-form-pane">
+        <form id="loginForm" class="login-panel login-reveal reveal-form">
+          <div class="login-mobile-brand">
+            <span class="product-mark"><span class="asset-mask-icon" style="--icon:url(assets/icons/air-conditioner.svg)"></span></span>
+            <div><strong>LORHIL AC</strong><span>AC Service Management System</span></div>
+          </div>
+          <div class="auth-heading">
+            <span class="login-form-eyebrow">SECURE OPERATIONAL ACCESS</span>
+            <h1>Selamat Datang Kembali</h1>
+            <p>Masuk untuk mengelola pelanggan, teknisi, jadwal pekerjaan, nota, invoice, monitoring, dan aktivitas operasional dalam satu sistem.</p>
+          </div>
+          <div class="login-field-group">
+            <label for="loginEmail">Email / Username</label>
+            <div class="login-input-wrap"><span class="field-icon asset-mask-icon" style="--icon:url(assets/icons/user.svg)" aria-hidden="true"></span><input id="loginEmail" type="email" autocomplete="username" required placeholder="nama@perusahaan.com"></div>
+          </div>
+          <div class="login-field-group">
+            <label for="loginPassword">Password</label>
+            <div class="password-wrap login-input-wrap">
+              <span class="field-icon asset-mask-icon" style="--icon:url(assets/icons/security.svg)" aria-hidden="true"></span>
+              <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Masukkan password">
+              <button type="button" id="togglePassword" class="icon-btn password-toggle" aria-label="Tampilkan password"><span class="asset-mask-icon" style="--icon:url(assets/icons/eye.svg)" aria-hidden="true"></span></button>
+            </div>
+          </div>
+          <div class="login-form-row"><label class="remember-check"><input id="rememberMe" type="checkbox"><span>Ingat Saya</span></label><span class="secure-note"><i class="asset-mask-icon" style="--icon:url(assets/icons/security.svg)"></i> Akses terenkripsi</span></div>
+          <div id="loginError" class="error" role="alert"></div>
+          <button id="loginSubmitBtn" type="submit" class="btn primary full login-submit"><span class="login-submit-text">Masuk ke Dashboard</span><span class="asset-mask-icon login-submit-icon" style="--icon:url(assets/icons/chevron-right.svg)" aria-hidden="true"></span></button>
+          <div class="login-install-section">
+            <div class="login-install-divider"><span>Akses dari HP</span></div>
+            <button type="button" id="installAppBtn" class="btn install-app-btn full">
+              <span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/download.svg)" aria-hidden="true"></span>
+              <span id="installAppBtnText">Instal Aplikasi di HP</span>
+            </button>
+            <p id="installAppHint" class="install-app-hint">Jika browser mendukung pemasangan langsung, LORHIL AC dapat dipasang ke layar utama perangkat.</p>
+          </div>
+          <div class="login-footnote"><span class="asset-mask-icon" style="--icon:url(assets/icons/information.svg)" aria-hidden="true"></span><span>Gunakan akun operasional yang telah dibuat administrator.</span></div>
+        </form>
       </div>
-
-      <p class="micro">Gunakan akun yang dibuat pada Supabase Authentication.</p>
-    </form>
+    </div>
   </section>
 
   <div id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
       <div class="brand">
-        <img src="assets/logo.png" alt="Logo LORHIL AC">
+        <span class="product-mark sidebar-product-mark"><span class="asset-mask-icon" style="--icon:url(assets/icons/air-conditioner.svg)" aria-hidden="true"></span></span>
         <div>
           <strong id="brandName">LORHIL AC</strong>
-          <small id="brandSubtitle">Online Invoice</small>
+          <small id="brandSubtitle">AC Service Management System</small>
         </div>
       </div>
 
       <nav id="adminNav" class="admin-nav">
         <div class="nav-section">
-          <div class="nav-section-label">Utama</div>
-          <button class="nav-btn active" data-page="dashboard"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/layout-dashboard.svg)" aria-hidden="true"></span></span><span>Dashboard</span></button>
+          <div class="nav-section-label">UTAMA</div>
+          <button class="nav-btn active" data-page="dashboard"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/dashboard.svg)" aria-hidden="true"></span></span><span>Dashboard</span></button>
         </div>
-
         <div class="nav-section">
-          <div class="nav-section-label">Operasional</div>
-          <button class="nav-btn" data-page="invoice"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/circle-plus.svg)" aria-hidden="true"></span></span><span>Buat Nota</span></button>
-          <button class="nav-btn" data-page="history"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/file-text.svg)" aria-hidden="true"></span></span><span>Riwayat Nota</span></button>
-          <button class="nav-btn" data-page="schedules"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/calendar-days.svg)" aria-hidden="true"></span></span><span>Jadwal Pekerjaan</span></button>
+          <div class="nav-section-label">TRANSAKSI</div>
+          <button class="nav-btn" data-page="invoice"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/invoice-add.svg)" aria-hidden="true"></span></span><span>Buat Nota</span></button>
+          <button class="nav-btn" data-page="history"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)" aria-hidden="true"></span></span><span>Riwayat Nota</span></button>
         </div>
-
         <div class="nav-section">
-          <div class="nav-section-label">Pengelolaan</div>
-          <button class="nav-btn" data-page="customers"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/users.svg)" aria-hidden="true"></span></span><span>Pelanggan</span></button>
-          <button class="nav-btn" data-page="technicians"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/wrench.svg)" aria-hidden="true"></span></span><span>Teknisi</span></button>
+          <div class="nav-section-label">OPERASIONAL</div>
+          <button class="nav-btn" data-page="schedules"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)" aria-hidden="true"></span></span><span>Jadwal Pekerjaan</span></button>
+          <button class="nav-btn" data-page="customers"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/customer.svg)" aria-hidden="true"></span></span><span>Pelanggan</span></button>
+          <button class="nav-btn" data-page="technicians"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/technician.svg)" aria-hidden="true"></span></span><span>Teknisi</span></button>
         </div>
-
-        <details id="systemNavGroup" class="nav-system-group">
-          <summary>
-            <span>Sistem</span>
-            <span class="nav-group-chevron" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="nav-system-body">
-            <button class="nav-btn" data-page="monitoring"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/map-pin.svg)" aria-hidden="true"></span></span><span>Monitoring Teknisi</span></button>
-            <button class="nav-btn" data-page="activity"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/activity.svg)" aria-hidden="true"></span></span><span>Aktivitas Tim</span></button>
-            <button class="nav-btn" data-page="settings"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/settings.svg)" aria-hidden="true"></span></span><span>Pengaturan</span></button>
-            <button class="nav-btn" data-page="backup"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/sidebar-icons/download.svg)" aria-hidden="true"></span></span><span>Backup</span></button>
-          </div>
-        </details>
+        <div class="nav-section">
+          <div class="nav-section-label">MONITORING</div>
+          <button class="nav-btn" data-page="monitoring"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/monitoring.svg)" aria-hidden="true"></span></span><span>Monitoring Teknisi</span></button>
+          <button class="nav-btn" data-page="activity"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/activity.svg)" aria-hidden="true"></span></span><span>Aktivitas Teknisi</span></button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">SISTEM</div>
+          <button class="nav-btn" data-page="backup"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/backup.svg)" aria-hidden="true"></span></span><span>Backup</span></button>
+          <button class="nav-btn" data-page="settings"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/settings.svg)" aria-hidden="true"></span></span><span>Pengaturan</span></button>
+        </div>
       </nav>
 
       <nav id="technicianNav" class="hidden technician-sidebar-nav">
-        <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/house.svg)" aria-hidden="true"></span></span><span>Dashboard</span></button>
-        <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/clipboard-list.svg)" aria-hidden="true"></span></span><span>Pekerjaan</span></button>
-        <button class="nav-btn" data-page="tech-history"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/rotate-ccw-clock.svg)" aria-hidden="true"></span></span><span>Riwayat</span></button>
-        <button class="nav-btn" data-page="tech-profile"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/user-round.svg)" aria-hidden="true"></span></span><span>Profil</span></button>
+        <button class="nav-btn active" data-page="tech-dashboard"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/dashboard.svg)" aria-hidden="true"></span></span><span>Dashboard</span></button>
+        <button class="nav-btn" data-page="tech-jobs"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)" aria-hidden="true"></span></span><span>Pekerjaan</span></button>
+        <button class="nav-btn" data-page="tech-history"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/restore.svg)" aria-hidden="true"></span></span><span>Riwayat</span></button>
+        <button class="nav-btn" data-page="tech-profile"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/user.svg)" aria-hidden="true"></span></span><span>Profil</span></button>
       </nav>
 
       <div class="sidebar-footer">
-        <button id="logoutBtn" class="nav-btn logout"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/log-out.svg)" aria-hidden="true"></span></span><span>Keluar</span></button>
+        <div class="sidebar-user-card"><span class="sidebar-avatar" id="sidebarAvatarText">AD</span><div><strong id="sidebarUserName">Administrator</strong><small>Administrator</small></div></div>
+        <button id="logoutBtn" class="nav-btn logout"><span class="nav-icon"><span class="nav-svg-icon asset-mask-icon" style="--icon:url(assets/icons/logout.svg)" aria-hidden="true"></span></span><span>Keluar</span></button>
       </div>
     </aside>
 
     <main class="main-shell">
       <header class="topbar">
         <div class="topbar-title-wrap">
-          <button id="menuBtn" class="topbar-menu" type="button" aria-label="Buka menu">☰</button>
+          <button id="menuBtn" class="topbar-menu icon-btn" type="button" aria-label="Buka menu"><span class="asset-mask-icon" style="--icon:url(assets/icons/menu.svg)" aria-hidden="true"></span></button>
           <div>
             <h1 id="pageTitle">Dashboard</h1>
-            <p id="todayText"></p>
+            <p id="pageSubtitle">Ringkasan operasional hari ini</p>
           </div>
         </div>
-
         <div class="topbar-tools">
           <label id="globalSearchWrap" class="global-search-wrap" for="globalSearch">
-            <span>⌕</span>
-            <input id="globalSearch" type="search" placeholder="Cari pelanggan, nota, atau nomor..." autocomplete="off">
+            <span class="asset-mask-icon" style="--icon:url(assets/icons/search.svg)" aria-hidden="true"></span>
+            <input id="globalSearch" type="search" placeholder="Cari pelanggan, nota, jadwal..." autocomplete="off">
+            <kbd>⌘ K</kbd>
           </label>
-          <button id="refreshBtn" class="btn secondary refresh-btn" type="button"><span class="button-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/refresh-cw.svg)" aria-hidden="true"></span><span>Segarkan</span></button>
-          <button id="newInvoiceTopBtn" class="btn primary go-invoice" type="button">＋ <span>Nota Baru</span></button>
-          <div class="profile-pill" title="LORHIL AC">
-            <span id="userAvatarText">LA</span>
-            <i></i>
-          </div>
+          <button id="notificationBtn" class="header-icon-btn" type="button" aria-label="Notifikasi"><span class="asset-mask-icon" style="--icon:url(assets/icons/notification.svg)" aria-hidden="true"></span><i></i></button>
+          <div class="date-pill"><span class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)" aria-hidden="true"></span><span id="todayText"></span></div>
+          <button id="refreshBtn" class="header-icon-btn refresh-btn" type="button" aria-label="Segarkan data"><span class="asset-mask-icon" style="--icon:url(assets/icons/refresh.svg)" aria-hidden="true"></span></button>
+          <button id="newInvoiceTopBtn" class="btn primary go-invoice" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/invoice-add.svg)" aria-hidden="true"></span><span>Nota Baru</span></button>
+          <details class="profile-menu">
+            <summary class="profile-pill" title="Profil"><span id="userAvatarText">AD</span><i></i><span class="profile-chevron asset-mask-icon" style="--icon:url(assets/icons/chevron-down.svg)" aria-hidden="true"></span></summary>
+            <div class="profile-dropdown"><strong id="profileDisplayName">Administrator</strong><small>LORHIL AC</small><button id="profileLogoutTopBtn" type="button"><span class="asset-mask-icon" style="--icon:url(assets/icons/logout.svg)" aria-hidden="true"></span>Keluar</button></div>
+          </details>
         </div>
       </header>
 
@@ -148,33 +183,35 @@
           <input id="dashboardSearch" type="hidden" value="">
           <select id="dashboardStatus" class="hidden" aria-hidden="true"><option value="all">Semua</option></select>
 
-          <div class="stats dashboard-stats">
-            <article class="stat-card blue">
-              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
-              <div class="stat-copy"><span>Pekerjaan Hari Ini</span><strong id="statToday">0</strong><small>Total pekerjaan</small></div>
-              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C14 31 20 18 30 22 S47 30 56 18 70 6 80 19 91 31 98 10"/></svg>
-            </article>
-            <article class="stat-card green">
-              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg></div>
-              <div class="stat-copy"><span>Pekerjaan Kemarin</span><strong id="statYesterday">0</strong><small>Total pekerjaan</small></div>
-              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C12 30 20 21 29 25 S43 34 53 23 65 13 76 20 90 7 98 15"/></svg>
-            </article>
-            <article class="stat-card violet">
-              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11h3.75a2 2 0 0 1 1.6.8l.45.6a4 4 0 0 0 6.4 0l.45-.6a2 2 0 0 1 1.6-.8H21"/><path d="M3 7h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
-              <div class="stat-copy"><span>Pembayaran Hari Ini</span><strong id="statRevenue">Rp0</strong><small>Total penerimaan</small></div>
-              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 35 C14 28 20 31 31 22 S45 27 56 18 70 24 80 12 92 8 98 17"/></svg>
-            </article>
-            <article class="stat-card orange">
-              <div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-              <div class="stat-copy"><span>Belum Lunas / DP</span><strong id="statUnpaid">0</strong><small>Nota tertunda</small></div>
-              <svg class="stat-spark" viewBox="0 0 100 42" aria-hidden="true"><path d="M2 34 C16 20 24 15 35 20 S53 31 63 18 75 5 85 17 92 27 98 10"/></svg>
-            </article>
+<div class="dashboard-welcome">
+            <div><span class="dashboard-eyebrow">OPERATIONAL OVERVIEW</span><h2>Selamat Datang Kembali</h2><p>Berikut ringkasan operasional service AC hari ini.</p></div>
+            <div class="dashboard-health"><span class="health-dot"></span><div><small>Status Sistem</small><strong>Operasional Normal</strong></div></div>
           </div>
+
+          <div class="stats dashboard-stats">
+            <article class="stat-card blue"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/customer.svg)"></span></div><div class="stat-copy"><span>Total Pelanggan</span><strong id="statCustomers">0</strong><small>Database pelanggan</small></div><span class="stat-trend neutral">Aktif</span></article>
+            <article class="stat-card cyan"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)"></span></div><div class="stat-copy"><span>Pekerjaan Hari Ini</span><strong id="statToday">0</strong><small>Jadwal & invoice hari ini</small></div><span class="stat-trend neutral">Hari ini</span></article>
+            <article class="stat-card green"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/technician.svg)"></span></div><div class="stat-copy"><span>Teknisi Aktif</span><strong id="statActiveTechs">0</strong><small>Siap operasional</small></div><span class="stat-trend positive">Online</span></article>
+            <article class="stat-card violet"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)"></span></div><div class="stat-copy"><span>Nota Bulan Ini</span><strong id="statMonthNotes">0</strong><small>Total transaksi bulan ini</small></div><span class="stat-trend neutral">Bulanan</span></article>
+            <article class="stat-card navy"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/payment.svg)"></span></div><div class="stat-copy"><span>Pendapatan Bulan Ini</span><strong id="statMonthRevenue">Rp0</strong><small>Pembayaran diterima</small></div><span class="stat-trend positive">Revenue</span></article>
+            <article class="stat-card orange"><div class="stat-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)"></span></div><div class="stat-copy"><span>Pekerjaan Selesai</span><strong id="statCompleted">0</strong><small>Selesai bulan ini</small></div><span class="stat-trend neutral">Selesai</span></article>
+          </div>
+
+          <article class="panel quick-actions-panel">
+            <div class="panel-head"><div><span class="panel-eyebrow">AKSES CEPAT</span><h3>Akses Cepat</h3><p>Jalankan aktivitas operasional utama tanpa berpindah banyak menu.</p></div></div>
+            <div class="quick-actions-grid">
+              <button class="quick-action go-invoice" type="button"><span><i class="asset-mask-icon" style="--icon:url(assets/icons/invoice-add.svg)"></i></span><div><strong>Buat Nota Baru</strong><small>Buat transaksi service</small></div><i class="asset-mask-icon quick-chevron" style="--icon:url(assets/icons/chevron-right.svg)"></i></button>
+              <button class="quick-action dashboard-jump" data-page="schedules" type="button"><span><i class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)"></i></span><div><strong>Buat Jadwal</strong><small>Atur pekerjaan teknisi</small></div><i class="asset-mask-icon quick-chevron" style="--icon:url(assets/icons/chevron-right.svg)"></i></button>
+              <button class="quick-action dashboard-jump" data-page="customers" type="button"><span><i class="asset-mask-icon" style="--icon:url(assets/icons/customer.svg)"></i></span><div><strong>Pelanggan</strong><small>Kelola data pelanggan</small></div><i class="asset-mask-icon quick-chevron" style="--icon:url(assets/icons/chevron-right.svg)"></i></button>
+              <button class="quick-action dashboard-jump" data-page="technicians" type="button"><span><i class="asset-mask-icon" style="--icon:url(assets/icons/technician.svg)"></i></span><div><strong>Teknisi</strong><small>Kelola tim lapangan</small></div><i class="asset-mask-icon quick-chevron" style="--icon:url(assets/icons/chevron-right.svg)"></i></button>
+              <button class="quick-action dashboard-jump" data-page="monitoring" type="button"><span><i class="asset-mask-icon" style="--icon:url(assets/icons/monitoring.svg)"></i></span><div><strong>Monitoring</strong><small>Lihat posisi teknisi</small></div><i class="asset-mask-icon quick-chevron" style="--icon:url(assets/icons/chevron-right.svg)"></i></button>
+            </div>
+          </article>
 
           <article class="panel dashboard-schedule-panel">
             <div class="panel-head schedule-dashboard-head">
               <div>
-                <h3><span class="section-icon">◷</span> Jadwal Pekerjaan Besok</h3>
+                <h3><span class="section-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)" aria-hidden="true"></span></span> Jadwal Pekerjaan Besok</h3>
                 <p id="dashboardTomorrowLabel">Persiapkan pekerjaan untuk hari berikutnya.</p>
               </div>
               <div class="schedule-dashboard-actions">
@@ -239,7 +276,7 @@
 
           <article class="panel dashboard-history-panel">
             <div class="panel-head history-panel-head">
-              <div><h3><span class="section-icon">▤</span> Riwayat Nota</h3><p>Daftar nota terbaru dan status pembayaran.</p></div>
+              <div><h3><span class="section-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)" aria-hidden="true"></span></span> Riwayat Nota</h3><p>Daftar nota terbaru dan status pembayaran.</p></div>
               <button id="dashboardSeeAll" class="btn outline" type="button">Lihat Semua&nbsp; →</button>
             </div>
             <div class="table-wrap dashboard-table-wrap">
@@ -256,8 +293,8 @@
           <div class="page-head">
             <div><h2>Jadwal Pekerjaan</h2><p>Siapkan pekerjaan hari ini, besok, atau tanggal berikutnya dan tugaskan teknisi.</p></div>
             <div class="schedule-page-actions">
-              <button id="newScheduleTodayBtn" class="btn primary" type="button">＋ Jadwal Hari Ini</button>
-              <button id="newScheduleTomorrowBtn" class="btn secondary" type="button">＋ Jadwal Besok</button>
+              <button id="newScheduleTodayBtn" class="btn primary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/plus.svg)" aria-hidden="true"></span> Jadwal Hari Ini</button>
+              <button id="newScheduleTomorrowBtn" class="btn secondary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/plus.svg)" aria-hidden="true"></span> Jadwal Besok</button>
             </div>
           </div>
 
@@ -306,7 +343,7 @@
 
         <section id="page-invoice" class="page">
           <div class="page-head">
-            <div><h2 id="invoiceHeading">Buat Nota Baru</h2><p>Lengkapi data pekerjaan dan simpan invoice secara online.</p></div>
+            <div><h2 id="invoiceHeading">Buat Nota</h2><p>Buat nota service, simpan transaksi, cetak invoice, dan kirim invoice kepada pelanggan melalui WhatsApp.</p></div>
           </div>
           <form id="invoiceForm">
             <input id="invoiceId" type="hidden">
@@ -339,7 +376,7 @@
             <div class="panel form-panel">
               <div class="panel-head">
                 <div><h3>Rincian Pekerjaan</h3><p>Isi pekerjaan, jumlah unit, dan harga jasa.</p></div>
-                <button type="button" id="addItemBtn" class="btn outline">＋ Tambah Baris</button>
+                <button type="button" id="addItemBtn" class="btn outline"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/plus.svg)" aria-hidden="true"></span> Tambah Item</button>
               </div>
               <div class="table-wrap">
                 <table class="item-table">
@@ -360,10 +397,10 @@
               <div class="actions invoice-actions">
                 <button type="button" id="resetInvoiceBtn" class="btn ghost invoice-reset-action">Kosongkan Form</button>
                 <div class="invoice-actions-main">
-                  <button type="submit" class="btn primary invoice-primary-action">Simpan Nota</button>
-                  <button type="button" id="saveWhatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
+                  <button type="submit" class="btn primary invoice-primary-action"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/save.svg)" aria-hidden="true"></span>Simpan Nota</button>
+                  <button type="button" id="saveWhatsappBtn" class="btn success"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/whatsapp.svg)" aria-hidden="true"></span>Kirim Invoice</button>
                   <details id="invoiceActionMenu" class="invoice-action-menu">
-                    <summary class="btn secondary">Opsi PDF ▾</summary>
+                    <summary class="btn secondary"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/print.svg)" aria-hidden="true"></span>Cetak / PDF <span class="asset-mask-icon tiny-chevron" style="--icon:url(assets/icons/chevron-down.svg)"></span></summary>
                     <div class="invoice-action-menu-list">
                       <button type="button" id="savePrintBtn">Simpan & Cetak<small>Simpan nota lalu buka dialog cetak.</small></button>
                       <button type="button" id="saveDownloadBtn">Download PDF<small>Simpan nota lalu unduh file PDF.</small></button>
@@ -376,13 +413,13 @@
         </section>
 
         <section id="page-history" class="page">
-          <div class="page-head"><div><h2>Riwayat Nota</h2><p>Semua perangkat membaca data yang sama.</p></div><button class="btn primary go-invoice">＋ Nota Baru</button></div>
+          <div class="page-head"><div><h2>Riwayat Nota</h2><p>Semua perangkat membaca data yang sama.</p></div><button class="btn primary go-invoice"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/invoice-add.svg)" aria-hidden="true"></span> Nota Baru</button></div>
           <div class="panel">
             <div class="filters">
               <select id="historyPeriod"><option value="all">Semua Tanggal</option><option value="today">Hari Ini</option><option value="yesterday">Kemarin</option><option value="7days">7 Hari</option></select>
               <input id="historyDate" type="date">
               <select id="historyStatus"><option value="all">Semua Status</option><option value="paid">Sudah Dibayar</option><option value="unpaid">Belum Dibayar / DP</option></select>
-              <label class="table-search"><span>⌕</span><input id="historySearch" class="search" placeholder="Cari pelanggan, nomor, atau keterangan"></label>
+              <label class="table-search"><span><span class="asset-mask-icon" style="--icon:url(assets/icons/search.svg)" aria-hidden="true"></span><input id="historySearch" class="search" placeholder="Cari pelanggan, nomor, atau keterangan"></label>
             </div>
             <div class="table-wrap">
               <table>
@@ -396,7 +433,7 @@
         <section id="page-customers" class="page">
           <div class="page-head"><div><h2>Data Pelanggan</h2><p>Disusun otomatis dari riwayat nota online.</p></div></div>
           <div class="panel">
-            <div class="filters"><label class="table-search wide"><span>⌕</span><input id="customerSearch" class="search" placeholder="Cari nama, WhatsApp, atau alamat"></label></div>
+            <div class="filters"><label class="table-search wide"><span class="asset-mask-icon" style="--icon:url(assets/icons/search.svg)" aria-hidden="true"></span><input id="customerSearch" class="search" placeholder="Cari nama, WhatsApp, atau alamat"></label></div>
             <div class="table-wrap"><table><thead><tr><th>Nama</th><th>WhatsApp</th><th>Alamat Terakhir</th><th>Pekerjaan</th><th>Terakhir</th><th>Total Transaksi</th></tr></thead><tbody id="customersBody"></tbody></table></div>
           </div>
         </section>
@@ -425,7 +462,7 @@
                 <h3>Akun Akses Tim</h3>
                 <p>Buat akun teknisi atau supervisor. Akun yang dinonaktifkan tidak dapat masuk, tetapi riwayat pekerjaannya tetap tersimpan.</p>
               </div>
-              <span class="team-security-badge">🔒 Akses aman</span>
+              <span class="team-security-badge"><span class="asset-mask-icon" style="--icon:url(assets/icons/security.svg)" aria-hidden="true"></span> Akses aman</span>
             </div>
 
             <form id="teamAccountForm" class="team-account-form">
@@ -459,14 +496,14 @@
                 <span><strong>Boleh kirim invoice via bot</strong><small>Teknisi hanya dapat mengirim invoice dari pekerjaan yang ditugaskan kepadanya.</small></span>
               </label>
               <div class="team-account-submit">
-                <button class="btn primary" type="submit">＋ Buat Akun Anggota</button>
+                <button class="btn primary" type="submit"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/plus.svg)" aria-hidden="true"></span>Buat Akun Anggota</button>
               </div>
             </form>
 
             <div class="team-account-divider"></div>
             <div class="team-account-list-head">
               <div><strong>Akun Terdaftar</strong><small id="teamMemberCount">0 akun</small></div>
-              <button id="refreshTeamMembersBtn" class="btn secondary" type="button">↻ Segarkan Akun</button>
+              <button id="refreshTeamMembersBtn" class="btn secondary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/refresh.svg)" aria-hidden="true"></span>Segarkan Akun</button>
             </div>
             <div class="table-wrap team-member-table-wrap">
               <table class="team-member-table">
@@ -481,24 +518,24 @@
         <section id="page-monitoring" class="page">
           <div class="page-head monitoring-page-head">
             <div><h2>Monitoring Teknisi</h2><p>Pantau beban kerja dan status tim lapangan dari jadwal yang tersinkron.</p></div>
-            <button id="monitorOpenSchedulesBtn" class="btn primary" type="button">＋ Atur Jadwal</button>
+            <button id="monitorOpenSchedulesBtn" class="btn primary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/plus.svg)" aria-hidden="true"></span>Atur Jadwal</button>
           </div>
 
           <div class="monitor-summary-grid">
-            <article class="monitor-summary-card"><span class="monitor-summary-icon blue">●</span><div><small>Teknisi Aktif</small><strong id="monitorActiveTech">0</strong><p>Anggota aktif</p></div></article>
-            <article class="monitor-summary-card"><span class="monitor-summary-icon orange">➜</span><div><small>Dalam Perjalanan</small><strong id="monitorOnWay">0</strong><p>Saat ini</p></div></article>
-            <article class="monitor-summary-card"><span class="monitor-summary-icon purple">◆</span><div><small>Sedang Dikerjakan</small><strong id="monitorWorking">0</strong><p>Saat ini</p></div></article>
-            <article class="monitor-summary-card"><span class="monitor-summary-icon green">✓</span><div><small>Selesai Hari Ini</small><strong id="monitorCompletedToday">0</strong><p>Status selesai</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon blue"><span class="asset-mask-icon" style="--icon:url(assets/icons/technician.svg)" aria-hidden="true"></span></span><div><small>Teknisi Aktif</small><strong id="monitorActiveTech">0</strong><p>Anggota aktif</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon orange"><span class="asset-mask-icon" style="--icon:url(assets/icons/route.svg)" aria-hidden="true"></span></span><div><small>Dalam Perjalanan</small><strong id="monitorOnWay">0</strong><p>Saat ini</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon purple"><span class="asset-mask-icon" style="--icon:url(assets/icons/activity.svg)" aria-hidden="true"></span></span><div><small>Sedang Dikerjakan</small><strong id="monitorWorking">0</strong><p>Saat ini</p></div></article>
+            <article class="monitor-summary-card"><span class="monitor-summary-icon green"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)" aria-hidden="true"></span></span><div><small>Selesai Hari Ini</small><strong id="monitorCompletedToday">0</strong><p>Status selesai</p></div></article>
           </div>
 
           <div id="monitorLivePanel" class="panel monitor-live-panel monitor-live-v82">
             <div class="monitor-live-notice">
-              <span class="monitor-live-notice-dot">●</span>
+              <span class="monitor-live-notice-dot" aria-hidden="true"></span>
               <div><strong>Tracking berbasis tim.</strong> Cukup satu teknisi pada setiap pekerjaan yang membagikan GPS. Anggota lain pada pekerjaan yang sama otomatis mengikuti posisi tim.</div>
             </div>
             <div class="panel-head monitor-live-head">
               <div>
-                <h3><span class="section-icon">⌖</span> Live Tracking Teknisi</h3>
+                <h3><span class="section-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/monitoring.svg)" aria-hidden="true"></span></span> Live Tracking Teknisi</h3>
                 <p>Satu peta untuk melihat posisi tim lapangan. Penanda tim menunjukkan siapa saja yang berjalan bersama dan siapa sumber GPS-nya.</p>
               </div>
               <span id="monitorLiveCount" class="monitor-live-count">0 tracking aktif</span>
@@ -510,7 +547,7 @@
               </div>
               <div class="monitor-live-map-shell">
                 <div id="monitorLiveMap" class="monitor-live-map" aria-label="Peta live tim teknisi"></div>
-                <div id="monitorLiveMapEmpty" class="monitor-live-map-empty"><span>⌖</span><strong>Belum ada posisi tim</strong><small>Posisi akan tampil setelah salah satu teknisi menekan Berangkat dan mengaktifkan lokasi.</small></div>
+                <div id="monitorLiveMapEmpty" class="monitor-live-map-empty"><span><span class="asset-mask-icon" style="--icon:url(assets/icons/map-pin.svg)" aria-hidden="true"></span></span><strong>Belum ada posisi tim</strong><small>Posisi akan tampil setelah salah satu teknisi menekan Berangkat dan mengaktifkan lokasi.</small></div>
                 <div class="monitor-live-map-legend" aria-label="Keterangan status"><span><i class="legend-onway"></i>Dalam Perjalanan</span><span><i class="legend-working"></i>Dikerjakan</span><span><i class="legend-last"></i>Lokasi Terakhir</span></div>
               </div>
             </div>
@@ -526,7 +563,7 @@
               </div>
             </div>
             <div class="monitor-toolbar">
-              <label class="table-search wide"><span>⌕</span><input id="monitorSearch" class="search" placeholder="Cari nama teknisi"></label>
+              <label class="table-search wide"><span class="asset-mask-icon" style="--icon:url(assets/icons/search.svg)" aria-hidden="true"></span><input id="monitorSearch" class="search" placeholder="Cari nama teknisi"></label>
               <select id="monitorAccountStatus"><option value="all">Semua Teknisi</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select>
             </div>
             <div id="monitorTechnicianCards" class="monitor-technician-list"></div>
@@ -535,15 +572,15 @@
 
         <section id="page-activity" class="page">
           <div class="page-head activity-page-head">
-            <div><h2>Aktivitas Tim</h2><p>Riwayat perubahan jadwal dan nota yang dilakukan Admin maupun teknisi.</p></div>
-            <button id="activityRefreshBtn" class="btn secondary" type="button">↻ Segarkan</button>
+            <div><h2>Aktivitas Teknisi</h2><p>Riwayat perubahan jadwal dan nota yang dilakukan Admin maupun teknisi.</p></div>
+            <button id="activityRefreshBtn" class="btn secondary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/refresh.svg)" aria-hidden="true"></span>Segarkan</button>
           </div>
 
           <div class="activity-summary-grid">
-            <article class="activity-summary-card"><span class="activity-summary-icon blue">≡</span><div><small>Aktivitas Hari Ini</small><strong id="activityTodayCount">0</strong><p>Semua aktivitas</p></div></article>
-            <article class="activity-summary-card"><span class="activity-summary-icon orange">◷</span><div><small>Aktivitas Jadwal</small><strong id="activityScheduleCount">0</strong><p>Periode dipilih</p></div></article>
-            <article class="activity-summary-card"><span class="activity-summary-icon purple">↻</span><div><small>Perubahan Status</small><strong id="activityStatusCount">0</strong><p>Periode dipilih</p></div></article>
-            <article class="activity-summary-card"><span class="activity-summary-icon green">▤</span><div><small>Aktivitas Nota</small><strong id="activityInvoiceCount">0</strong><p>Periode dipilih</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon blue"><span class="asset-mask-icon" style="--icon:url(assets/icons/activity.svg)" aria-hidden="true"></span></span><div><small>Aktivitas Hari Ini</small><strong id="activityTodayCount">0</strong><p>Semua aktivitas</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon orange"><span class="asset-mask-icon" style="--icon:url(assets/icons/calendar.svg)" aria-hidden="true"></span></span><div><small>Aktivitas Jadwal</small><strong id="activityScheduleCount">0</strong><p>Periode dipilih</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon purple"><span class="asset-mask-icon" style="--icon:url(assets/icons/refresh.svg)" aria-hidden="true"></span></span><div><small>Perubahan Status</small><strong id="activityStatusCount">0</strong><p>Periode dipilih</p></div></article>
+            <article class="activity-summary-card"><span class="activity-summary-icon green"><span class="asset-mask-icon" style="--icon:url(assets/icons/invoice-history.svg)" aria-hidden="true"></span></span><div><small>Aktivitas Nota</small><strong id="activityInvoiceCount">0</strong><p>Periode dipilih</p></div></article>
           </div>
 
           <div class="panel activity-panel">
@@ -551,7 +588,7 @@
               <div><h3>Riwayat Aktivitas</h3><p>Log baru mulai tercatat setelah SQL Activity Log V59 dijalankan.</p></div>
             </div>
             <div class="activity-toolbar">
-              <label class="table-search wide"><span>⌕</span><input id="activitySearch" class="search" placeholder="Cari nama anggota, pelanggan, atau aktivitas"></label>
+              <label class="table-search wide"><span class="asset-mask-icon" style="--icon:url(assets/icons/search.svg)" aria-hidden="true"></span><input id="activitySearch" class="search" placeholder="Cari nama anggota, pelanggan, atau aktivitas"></label>
               <select id="activityPeriod">
                 <option value="today">Hari Ini</option>
                 <option value="7days" selected>7 Hari Terakhir</option>
@@ -572,7 +609,7 @@
           <div class="tech-welcome-card tech-welcome-pro">
             <div class="tech-welcome-copy">
               <span class="tech-eyebrow">TEKNISI LAPANGAN</span>
-              <h2>Halo, <span id="techWelcomeName">Teknisi</span>! 👋</h2>
+              <h2>Halo, <span id="techWelcomeName">Teknisi</span>!</h2>
               <p id="techWelcomeText">Semangat hari ini! Selesaikan setiap pekerjaan dengan terbaik.</p>
             </div>
             <div class="tech-hero-illustration"><img src="assets/technician/teknisi.png" alt="Ilustrasi teknisi LORHIL AC" loading="eager"></div>
@@ -583,7 +620,7 @@
           </div>
 
           <div id="techLiveLocationPanel" class="tech-live-location-panel">
-            <span class="tech-live-location-icon">⌖</span>
+            <span class="tech-live-location-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/location.svg)" aria-hidden="true"></span></span>
             <div class="tech-live-location-copy">
               <strong id="techLiveLocationTitle">Tracking Tim</strong>
               <small id="techLiveLocationText">Cukup satu anggota tim yang membagikan lokasi selama pekerjaan berlangsung.</small>
@@ -606,7 +643,7 @@
 
           <div class="tech-page-footer-note">
             <div class="tech-footer-message"><span class="tech-footer-info">i</span><span>Pastikan lokasi & jadwal tepat waktu dan konfirmasi setelah pekerjaan selesai.</span></div>
-            <div class="tech-footer-safety"><span class="tech-footer-shield">✓</span><span>Utamakan keselamatan kerja</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)" aria-hidden="true"></span></span><span>Utamakan keselamatan kerja</span></div>
           </div>
         </section>
 
@@ -638,7 +675,7 @@
 
           <div class="tech-page-footer-note">
             <div class="tech-footer-message"><span class="tech-footer-info">i</span><span>Pastikan selalu memeriksa detail pekerjaan dan lokasi sebelum berangkat ke lokasi.</span></div>
-            <div class="tech-footer-safety"><span class="tech-footer-shield">✓</span><span>Utamakan keselamatan kerja</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)" aria-hidden="true"></span></span><span>Utamakan keselamatan kerja</span></div>
           </div>
         </section>
 
@@ -646,13 +683,13 @@
           <div class="tech-history-info-banner">
             <span class="tech-history-info-icon">i</span>
             <span>Halaman ini menampilkan riwayat pekerjaan yang sudah selesai atau telah dikerjakan di masa lalu.</span>
-            <span class="tech-history-watermark" aria-hidden="true">✓</span>
+            <span class="tech-history-watermark" aria-hidden="true"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)"></span></span>
           </div>
           <div id="techHistoryList" class="tech-job-list tech-history-list"></div>
 
           <div class="tech-page-footer-note">
-            <div class="tech-footer-message"><span class="tech-footer-shield">✓</span><span>Pastikan selalu memperbarui status pekerjaan dan berbagi lokasi saat berangkat untuk memudahkan koordinasi tim.</span></div>
-            <div class="tech-footer-safety"><span class="tech-footer-shield outline">✓</span><span>Utamakan keselamatan kerja</span></div>
+            <div class="tech-footer-message"><span class="tech-footer-shield"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)" aria-hidden="true"></span></span><span>Pastikan selalu memperbarui status pekerjaan dan berbagi lokasi saat berangkat untuk memudahkan koordinasi tim.</span></div>
+            <div class="tech-footer-safety"><span class="tech-footer-shield outline"><span class="asset-mask-icon" style="--icon:url(assets/icons/check.svg)" aria-hidden="true"></span></span><span>Utamakan keselamatan kerja</span></div>
           </div>
         </section>
 
@@ -666,7 +703,7 @@
               <div><span>Akses Invoice Bot</span><strong id="techInvoicePermission">Belum diaktifkan</strong></div>
               <div><span>Status Akun</span><strong class="text-success">Aktif</strong></div>
             </div>
-            <button id="techProfileLogoutBtn" class="btn danger full" type="button"><span class="button-svg-icon asset-mask-icon" style="--icon:url(assets/technician-icons/log-out.svg)" aria-hidden="true"></span>Keluar dari Akun</button>
+            <button id="techProfileLogoutBtn" class="btn danger full" type="button"><span class="button-svg-icon asset-mask-icon" style="--icon:url(assets/icons/logout.svg)" aria-hidden="true"></span>Keluar dari Akun</button>
           </div>
         </section>
 
@@ -684,7 +721,7 @@
                 <h3>Penggunaan Database Supabase</h3>
                 <p>Pantau kapasitas database PostgreSQL yang digunakan aplikasi LORHIL AC.</p>
               </div>
-              <button id="refreshDatabaseUsageBtn" class="btn secondary" type="button">↻ Cek Sekarang</button>
+              <button id="refreshDatabaseUsageBtn" class="btn secondary" type="button"><span class="asset-mask-icon button-svg-icon" style="--icon:url(assets/icons/refresh.svg)" aria-hidden="true"></span>Cek Sekarang</button>
             </div>
 
             <div class="database-usage-summary">
@@ -782,7 +819,7 @@
         <section id="page-backup" class="page">
           <div class="page-head"><div><h2>Backup Data</h2><p>Cadangkan seluruh data operasional ke JSON atau Excel.</p></div></div>
           <div class="panel backup-panel backup-page-card">
-            <div class="backup-icon">⇩</div>
+            <div class="backup-icon"><span class="asset-mask-icon" style="--icon:url(assets/icons/download.svg)" aria-hidden="true"></span></div>
             <div><h3>Backup Lengkap JSON</h3><p>Untuk arsip dan kebutuhan pemulihan data aplikasi.</p></div>
             <button id="downloadBackupBtn" class="btn primary" type="button">Download Backup JSON</button>
           </div>
@@ -806,7 +843,7 @@
 
   <div id="detailModal" class="modal hidden">
     <div class="modal-card">
-      <div class="modal-head"><h3>Detail Pekerjaan</h3><button id="closeModalBtn" class="icon-btn" type="button">×</button></div>
+      <div class="modal-head"><h3>Detail Pekerjaan</h3><button id="closeModalBtn" class="icon-btn" type="button" aria-label="Tutup detail"><span class="asset-mask-icon" style="--icon:url(assets/icons/close.svg)" aria-hidden="true"></span></button></div>
       <div id="detailContent" class="modal-body"></div>
     </div>
   </div>
@@ -815,7 +852,7 @@
 
   <div id="locationShareModal" class="location-share-modal hidden" role="dialog" aria-modal="true" aria-labelledby="locationShareTitle">
     <div class="location-share-card">
-      <div class="location-share-icon" aria-hidden="true">⌖</div>
+      <div class="location-share-icon" aria-hidden="true"><span class="asset-mask-icon" style="--icon:url(assets/icons/location.svg)"></span></div>
       <div class="location-share-copy">
         <span class="location-share-eyebrow">LORHIL AC</span>
         <h3 id="locationShareTitle">Aktifkan Berbagi Lokasi</h3>
@@ -835,7 +872,7 @@
           <span class="install-guide-eyebrow">LORHIL AC</span>
           <h3 id="installGuideTitle">Instal Aplikasi</h3>
         </div>
-        <button id="installGuideCloseBtn" class="icon-btn" type="button" aria-label="Tutup panduan instalasi">×</button>
+        <button id="installGuideCloseBtn" class="icon-btn" type="button" aria-label="Tutup panduan instalasi"><span class="asset-mask-icon" style="--icon:url(assets/icons/close.svg)" aria-hidden="true"></span></button>
       </div>
       <div class="install-guide-app">
         <img src="assets/icon-192.png" alt="Ikon LORHIL AC">
@@ -847,13 +884,21 @@
     </div>
   </div>
 
-  <div id="loading" class="loading hidden"><div class="spinner"></div><span>Memproses...</span></div>
+  <div id="confirmModal" class="modal confirm-modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-card confirm-card">
+      <div class="confirm-icon-wrap"><span id="confirmModalIcon" class="asset-mask-icon" style="--icon:url(assets/icons/warning.svg)" aria-hidden="true"></span></div>
+      <div class="confirm-copy"><span class="confirm-eyebrow">KONFIRMASI</span><h3 id="confirmModalTitle">Konfirmasi tindakan</h3><p id="confirmModalMessage">Pastikan tindakan ini sudah benar.</p></div>
+      <div class="confirm-actions"><button id="confirmModalCancel" class="btn secondary" type="button">Batal</button><button id="confirmModalAccept" class="btn danger" type="button">Lanjutkan</button></div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading hidden" aria-live="polite"><div class="loading-line"></div><span>Memproses...</span></div>
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="invoice-engine.js?v=42"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=86"></script>
+  <script src="app.js?v=88"></script>
 </body>
 </html>

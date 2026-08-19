@@ -2,15 +2,26 @@
   "use strict";
 
   const TECH_ICON_PATHS = {
-    file:"assets/technician-icons/file-text.svg",
-    whatsapp:"assets/technician-icons/whatsapp.svg",
-    pin:"assets/technician-icons/map-pin.svg",
-    navigation:"assets/technician-icons/navigation.svg",
-    play:"assets/technician-icons/play.svg",
-    check:"assets/technician-icons/circle-check-big.svg",
-    wrench:"assets/technician-icons/wrench.svg",
-    car:"assets/technician-icons/car-front.svg",
-    calendarClock:"assets/technician-icons/calendar-clock.svg"
+    file:"assets/icons/invoice-history.svg",
+    whatsapp:"assets/icons/whatsapp.svg",
+    pin:"assets/icons/map-pin.svg",
+    navigation:"assets/icons/route.svg",
+    play:"assets/icons/send.svg",
+    check:"assets/icons/check.svg",
+    wrench:"assets/icons/technician.svg",
+    car:"assets/icons/route.svg",
+    calendarClock:"assets/icons/clock.svg"
+  };
+  const UI_ICON_PATHS = {
+    refresh:"assets/icons/refresh.svg", assignment:"assets/icons/technician.svg", close:"assets/icons/close.svg",
+    schedule:"assets/icons/calendar.svg", invoice:"assets/icons/invoice-history.svg", other:"assets/icons/activity.svg",
+    location:"assets/icons/location.svg", monitoring:"assets/icons/monitoring.svg", warning:"assets/icons/warning.svg",
+    more:"assets/icons/more.svg", chevronDown:"assets/icons/chevron-down.svg", edit:"assets/icons/edit.svg", delete:"assets/icons/delete.svg", download:"assets/icons/download.svg", print:"assets/icons/print.svg", whatsapp:"assets/icons/whatsapp.svg"
+  };
+  const uiIcon = (name, extraClass="") => {
+    const path=UI_ICON_PATHS[name];
+    if(!path) return "";
+    return `<span class="ui-inline-svg asset-mask-icon ${extraClass}" style="--icon:url(${path})" aria-hidden="true"></span>`;
   };
   const techIcon = (name, extraClass="") => {
     const path = TECH_ICON_PATHS[name];
@@ -126,7 +137,7 @@
     if($("newInvoiceTopBtn")) $("newInvoiceTopBtn").classList.toggle("hidden",tech);
     if($("databaseUsagePanel")) $("databaseUsagePanel").classList.toggle("hidden",accessRole()!=="admin");
     if($("backupExportPanel")) $("backupExportPanel").classList.toggle("hidden",accessRole()!=="admin");
-    if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Teknisi Lapangan":"Online Invoice";
+    if($("brandSubtitle")) $("brandSubtitle").textContent=tech?"Technician Workspace":"AC Service Management System";
     if($("userAvatarText")){
       const label=tech?state.accessContext?.display_name:(state.settings?.store_name||"LORHIL AC");
       $("userAvatarText").textContent=initialsFromName(label||"LA");
@@ -304,7 +315,7 @@
     if("serviceWorker" in navigator){
       window.addEventListener("load",async()=>{
         try{
-          const registration=await navigator.serviceWorker.register("service-worker.js?v=86",{
+          const registration=await navigator.serviceWorker.register("service-worker.js?v=88",{
             updateViaCache:"none"
           });
 
@@ -314,13 +325,13 @@
             const keys=await caches.keys();
             await Promise.all(
               keys
-                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v86")
+                .filter(key=>key.startsWith("lorhil-ac-online-") && key!=="lorhil-ac-online-v88")
                 .map(key=>caches.delete(key))
             );
           }
 
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
-            const reloadKey="lorhil-sw-reloaded-v86";
+            const reloadKey="lorhil-sw-reloaded-v88";
             if(sessionStorage.getItem(reloadKey)) return;
             sessionStorage.setItem(reloadKey,"1");
             window.location.reload();
@@ -402,14 +413,56 @@
     }
   }
 
+  function restoreRememberedLogin(){
+    try{
+      const saved=localStorage.getItem("lorhil-remember-email")||"";
+      if(saved && $("loginEmail")){ $("loginEmail").value=saved; if($("rememberMe")) $("rememberMe").checked=true; }
+    }catch(_error){}
+  }
+  restoreRememberedLogin();
+
+  let confirmDialogResolver=null;
+  function confirmAction(message,options={}){
+    const modal=$("confirmModal");
+    if(!modal) return Promise.resolve(true);
+    if(confirmDialogResolver) confirmDialogResolver(false);
+    $("confirmModalTitle").textContent=options.title||"Konfirmasi tindakan";
+    $("confirmModalMessage").textContent=String(message||"Pastikan tindakan ini sudah benar.");
+    $("confirmModalAccept").textContent=options.confirmLabel||"Lanjutkan";
+    $("confirmModalAccept").className=`btn ${options.danger===false?"primary":"danger"}`;
+    show("confirmModal");
+    return new Promise(resolve=>{ confirmDialogResolver=resolve; });
+  }
+  function resolveConfirmAction(value){
+    hide("confirmModal");
+    const resolve=confirmDialogResolver; confirmDialogResolver=null;
+    if(resolve) resolve(value);
+  }
+  if($("confirmModalCancel")) $("confirmModalCancel").addEventListener("click",()=>resolveConfirmAction(false));
+  if($("confirmModalAccept")) $("confirmModalAccept").addEventListener("click",()=>resolveConfirmAction(true));
+  if($("confirmModal")) $("confirmModal").addEventListener("click",event=>{ if(event.target===$("confirmModal")) resolveConfirmAction(false); });
+  document.addEventListener("keydown",event=>{ if(event.key==="Escape" && confirmDialogResolver) resolveConfirmAction(false); });
+
   $("loginForm").addEventListener("submit",async e=>{
-    e.preventDefault(); $("loginError").textContent=""; loading(true);
-    const { error } = await db.auth.signInWithPassword({
-      email:$("loginEmail").value.trim(),
-      password:$("loginPassword").value
-    });
-    loading(false);
-    if(error) $("loginError").textContent="Email atau password salah.";
+    e.preventDefault();
+    $("loginError").textContent="";
+    const submit=$("loginSubmitBtn"), label=submit?.querySelector(".login-submit-text");
+    if(submit) submit.disabled=true;
+    if(label) label.textContent="Memverifikasi...";
+    loading(true);
+    try{
+      const email=$("loginEmail").value.trim();
+      const { error } = await db.auth.signInWithPassword({ email, password:$("loginPassword").value });
+      if(error){ $("loginError").textContent="Email atau password salah."; return; }
+      try{
+        if($("rememberMe")?.checked) localStorage.setItem("lorhil-remember-email",email);
+        else localStorage.removeItem("lorhil-remember-email");
+      }catch(_error){}
+    }finally{
+      loading(false);
+      if(submit) submit.disabled=false;
+      if(label) label.textContent="Masuk ke Dashboard";
+    }
   });
   if($("installAppBtn")) $("installAppBtn").addEventListener("click",requestAppInstall);
   if($("installGuideCloseBtn")) $("installGuideCloseBtn").addEventListener("click",()=>hide("installGuideModal"));
@@ -420,20 +473,31 @@
   updateInstallButton();
 
   $("togglePassword").addEventListener("click",()=>{
-    $("loginPassword").type=$("loginPassword").type==="password"?"text":"password";
+    const input=$("loginPassword");
+    const show=input.type==="password";
+    input.type=show?"text":"password";
+    const icon=$("togglePassword")?.querySelector(".asset-mask-icon");
+    if(icon) icon.style.setProperty("--icon",`url(assets/icons/${show?"eye-off":"eye"}.svg)`);
+    $("togglePassword").setAttribute("aria-label",show?"Sembunyikan password":"Tampilkan password");
   });
   $("logoutBtn").addEventListener("click",async()=>{ loading(true); if(isTechnicianAccount()) await stopLiveTracking({remote:true,silent:true}); await db.auth.signOut(); loading(false); });
+  if($("profileLogoutTopBtn")) $("profileLogoutTopBtn").addEventListener("click",async()=>{ loading(true); if(isTechnicianAccount()) await stopLiveTracking({remote:true,silent:true}); await db.auth.signOut(); loading(false); });
   if($("techProfileLogoutBtn")) $("techProfileLogoutBtn").addEventListener("click",async()=>{ loading(true); await stopLiveTracking({remote:true,silent:true}); await db.auth.signOut(); loading(false); });
   $("menuBtn").addEventListener("click",()=> $("sidebar").classList.toggle("open"));
   $("refreshBtn").addEventListener("click",async()=>{ await refreshAll(); toast("Data berhasil disegarkan."); });
 
   const titles={
-    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",activity:"Aktivitas Tim",settings:"Pengaturan",backup:"Backup",
+    dashboard:"Dashboard",invoice:"Buat Nota",history:"Riwayat Nota",schedules:"Jadwal Pekerjaan",customers:"Pelanggan",technicians:"Teknisi",monitoring:"Monitoring Teknisi",activity:"Aktivitas Teknisi",settings:"Pengaturan",backup:"Backup Data",
     "tech-dashboard":"Dashboard Teknisi","tech-jobs":"Pekerjaan Saya","tech-history":"Riwayat Pekerjaan","tech-profile":"Profil Teknisi"
+  };
+  const pageSubtitles={
+    dashboard:"Ringkasan operasional hari ini",invoice:"Buat dan kelola transaksi service",history:"Riwayat invoice dan status pembayaran",schedules:"Atur jadwal dan penugasan teknisi",customers:"Data pelanggan dan riwayat layanan",technicians:"Kelola teknisi dan akun operasional",monitoring:"Pantau teknisi selama pekerjaan aktif",activity:"Timeline aktivitas operasional teknisi",settings:"Konfigurasi bisnis dan aplikasi",backup:"Cadangkan seluruh data operasional",
+    "tech-dashboard":"Ringkasan pekerjaan hari ini","tech-jobs":"Daftar pekerjaan yang ditugaskan","tech-history":"Riwayat pekerjaan yang telah ditangani","tech-profile":"Informasi akun dan status teknisi"
   };
   document.querySelectorAll(".nav-btn[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
   document.querySelectorAll(".go-invoice").forEach(btn=>btn.addEventListener("click",()=>{if(isTechnicianAccount())return;resetInvoice();showPage("invoice");}));
   document.querySelectorAll(".tech-see-all[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
+  document.querySelectorAll(".dashboard-jump[data-page]").forEach(btn=>btn.addEventListener("click",()=>showPage(btn.dataset.page)));
 
   function showPage(page){
     page=normalizePageForRole(page);
@@ -447,6 +511,7 @@
     const systemNavGroup=$("systemNavGroup");
     if(systemNavGroup && ["monitoring","activity","settings","backup"].includes(page)) systemNavGroup.open=true;
     $("pageTitle").textContent=titles[page]||"LORHIL AC";
+    if($("pageSubtitle")) $("pageSubtitle").textContent=pageSubtitles[page]||"AC Service Management System";
     $("sidebar").classList.remove("open");
     if(page==="dashboard") renderDashboard();
     if(page==="history") renderHistory();
@@ -580,12 +645,14 @@
 
   function applyBrand(){
     const storeName=state.settings?.store_name||"LORHIL AC";
-    $("brandName").textContent=storeName;
-    document.title=`${storeName} Online`;
-    if($("userAvatarText")){
-      const avatarLabel=isTechnicianAccount()?state.accessContext?.display_name:storeName;
-      $("userAvatarText").textContent=initialsFromName(avatarLabel||"LA");
-    }
+    if($("brandName")) $("brandName").textContent="LORHIL AC";
+    if($("brandSubtitle")) $("brandSubtitle").textContent=isTechnicianAccount()?"Technician Workspace":"AC Service Management System";
+    document.title="LORHIL AC • AC Service Management System";
+    const displayName=isTechnicianAccount()?(state.accessContext?.display_name||"Teknisi"):(state.accessContext?.display_name||"Administrator");
+    if($("userAvatarText")) $("userAvatarText").textContent=initialsFromName(displayName||storeName||"AD");
+    if($("sidebarAvatarText")) $("sidebarAvatarText").textContent=initialsFromName(displayName||"AD");
+    if($("sidebarUserName")) $("sidebarUserName").textContent=displayName;
+    if($("profileDisplayName")) $("profileDisplayName").textContent=displayName;
   }
 
   function invoiceText(inv){
@@ -927,12 +994,41 @@
     renderTechnicianRanking();
   }
 
+  function setDashboardMetric(id,value,formatter=value=>String(value)){
+    const el=$(id); if(!el) return;
+    if(el.dataset.metricAnimated==="1" || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches){ el.textContent=formatter(value); el.dataset.metricAnimated="1"; return; }
+    const duration=520,start=performance.now(),end=Math.max(0,Number(value)||0);
+    const tick=now=>{
+      const progress=Math.min(1,(now-start)/duration);
+      const eased=1-Math.pow(1-progress,3);
+      el.textContent=formatter(Math.round(end*eased));
+      if(progress<1) requestAnimationFrame(tick); else el.dataset.metricAnimated="1";
+    };
+    requestAnimationFrame(tick);
+  }
+
   function renderDashboard(){
-    const todayData=state.invoices.filter(x=>x.work_date===localDate());
-    if($("statToday")) $("statToday").textContent=todayData.length;
-    if($("statYesterday")) $("statYesterday").textContent=state.invoices.filter(x=>x.work_date===yesterday()).length;
-    if($("statRevenue")) $("statRevenue").textContent=money(todayData.reduce((s,x)=>s+safeNumber(x.paid),0));
-    if($("statUnpaid")) $("statUnpaid").textContent=state.invoices.filter(x=>x.status!=="Lunas").length;
+    const today=localDate();
+    const month=today.slice(0,7);
+    const todayInvoices=state.invoices.filter(x=>x.work_date===today);
+    const todaySchedules=state.schedules.filter(x=>x.work_date===today && x.status!=="cancelled");
+    const customerKeys=new Set();
+    [...state.invoices,...state.schedules].forEach(row=>{
+      const phone=String(row.customer_phone||"").replace(/\D/g,"");
+      const name=String(row.customer_name||"").trim().toLowerCase();
+      if(phone||name) customerKeys.add(phone||name);
+    });
+    const monthInvoices=state.invoices.filter(x=>String(x.work_date||"").startsWith(month));
+    const monthSchedules=state.schedules.filter(x=>String(x.work_date||"").startsWith(month));
+    const monthRevenue=monthInvoices.reduce((sum,x)=>sum+safeNumber(x.paid),0);
+    const monthCompleted=monthSchedules.filter(x=>x.status==="completed").length;
+
+    setDashboardMetric("statCustomers",customerKeys.size);
+    setDashboardMetric("statToday",new Set([...todaySchedules.map(x=>`s:${x.id}`),...todayInvoices.map(x=>`i:${x.id}`)]).size);
+    setDashboardMetric("statActiveTechs",state.technicians.filter(x=>x.is_active!==false).length);
+    setDashboardMetric("statMonthNotes",monthInvoices.length);
+    setDashboardMetric("statMonthRevenue",monthRevenue,value=>money(value));
+    setDashboardMetric("statCompleted",monthCompleted);
 
     const query=$("dashboardSearch")?.value||"";
     const filtered=filterSearch(state.invoices,query);
@@ -1082,7 +1178,7 @@
       : `<div class="empty compact">Belum ada teknisi. Tambahkan melalui menu Teknisi.</div>`;
   }
 
-  function confirmResetInvoice(){
+  async function confirmResetInvoice(){
     const hasInput=
       $("customerName").value.trim() ||
       $("customerPhone").value.trim() ||
@@ -1093,7 +1189,7 @@
       [...$("itemsBody").querySelectorAll(".desc")].some(input=>input.value.trim()) ||
       [...$("itemsBody").querySelectorAll(".price")].some(input=>Number(input.value) > 0);
 
-    if(hasInput && !window.confirm("Kosongkan seluruh data nota yang sedang diisi?")) return;
+    if(hasInput && !(await confirmAction("Kosongkan seluruh data nota yang sedang diisi?",{title:"Kosongkan formulir?",confirmLabel:"Kosongkan"}))) return;
     resetInvoice();
   }
 
@@ -1338,14 +1434,14 @@
         <div class="actions" style="justify-content:flex-end"><button id="savePaymentBtn" class="btn outline">Simpan Pembayaran</button></div>
       </div>
       <div class="actions" style="justify-content:flex-end;align-items:flex-start">
-        <button id="printBtn" class="btn primary">Cetak Nota</button>
-        <button id="whatsappBtn" class="btn success">Kirim Invoice Otomatis</button>
+        <button id="printBtn" class="btn primary">${uiIcon("print")}<span>Cetak Nota</span></button>
+        <button id="whatsappBtn" class="btn success">${uiIcon("whatsapp")}<span>Kirim Invoice</span></button>
         <details id="moreActions" style="position:relative">
-          <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none">Lainnya ▾</summary>
+          <summary class="btn secondary" style="list-style:none;cursor:pointer;user-select:none"><span>Lainnya</span>${uiIcon("chevronDown")}</summary>
           <div style="position:absolute;right:0;bottom:calc(100% + 8px);z-index:30;min-width:190px;padding:10px;background:#fff;border:1px solid #d8e3e8;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.15);display:grid;gap:8px">
-            <button id="editBtn" class="btn secondary" style="width:100%">Edit Nota</button>
-            <button id="downloadBtn" class="btn outline" style="width:100%">Download PDF</button>
-            <button id="deleteBtn" class="btn danger" style="width:100%">Hapus Nota</button>
+            <button id="editBtn" class="btn secondary" style="width:100%">${uiIcon("edit")}<span>Edit Nota</span></button>
+            <button id="downloadBtn" class="btn outline" style="width:100%">${uiIcon("download")}<span>Download PDF</span></button>
+            <button id="deleteBtn" class="btn danger" style="width:100%">${uiIcon("delete")}<span>Hapus Nota</span></button>
           </div>
         </details>
       </div>`;
@@ -1380,7 +1476,7 @@
     }catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
   async function deleteInvoice(id,number){
-    if(!confirm(`Hapus nota ${number}?`)) return;
+    if(!(await confirmAction(`Hapus nota ${number}?`,{title:"Hapus nota?",confirmLabel:"Hapus"}))) return;
 
     loading(true);
     const {error}=await db.from("invoices").delete().eq("id",id);
@@ -1447,7 +1543,7 @@
     if(member && accessRole()==="admin"){
       const activating=!member.is_active;
       const verb=activating?"aktifkan kembali":"nonaktifkan";
-      if(!confirm(`${verb.charAt(0).toUpperCase()+verb.slice(1)} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice lama tetap tersimpan.`)) return;
+      if(!(await confirmAction(`${verb.charAt(0).toUpperCase()+verb.slice(1)} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice lama tetap tersimpan.`,{title:"Ubah status akun?",confirmLabel:activating?"Aktifkan":"Nonaktifkan",danger:!activating}))) return;
       loading(true);
       try{
         const result=await manageTeamMember({action:activating?"reactivate":"deactivate",member_id:member.id});
@@ -1531,10 +1627,10 @@
       ? `\n\nAkun login ${linkedMember.email||linkedMember.display_name||tech.name} juga akan dihapus permanen dari Supabase Authentication.`
       : "";
 
-    if(!confirm(
-      `Hapus permanen teknisi ${tech.name}?${loginInfo}\n\n`+
-      `Tindakan ini tidak dapat dikembalikan.`
-    )) return;
+    if(!(await confirmAction(
+      `Hapus permanen teknisi ${tech.name}?${loginInfo}\n\nTindakan ini tidak dapat dikembalikan.`,
+      {title:"Hapus teknisi permanen?",confirmLabel:"Hapus Permanen"}
+    ))) return;
 
     loading(true);
     try{
@@ -1666,7 +1762,7 @@
     const member=state.teamMembers.find(item=>item.id===memberId);if(!member)return;
     const activating=!member.is_active;
     const action=activating?"reactivate":"deactivate";
-    if(!confirm(`${activating?"Aktifkan kembali":"Nonaktifkan"} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice tetap tersimpan.`)) return;
+    if(!(await confirmAction(`${activating?"Aktifkan kembali":"Nonaktifkan"} akun ${member.display_name}?\n\nRiwayat pekerjaan dan invoice tetap tersimpan.`,{title:"Ubah status akun?",confirmLabel:activating?"Aktifkan":"Nonaktifkan",danger:!activating}))) return;
     loading(true);
     try{
       const result=await manageTeamMember({action,member_id:member.id});
@@ -1679,7 +1775,7 @@
   async function toggleTeamInvoicePermission(memberId){
     const member=state.teamMembers.find(item=>item.id===memberId);if(!member)return;
     const next=!member.can_send_invoice;
-    if(!confirm(`${next?"Izinkan":"Cabut izin"} ${member.display_name} untuk mengirim invoice melalui bot WhatsApp?`)) return;
+    if(!(await confirmAction(`${next?"Izinkan":"Cabut izin"} ${member.display_name} untuk mengirim invoice melalui bot WhatsApp?`,{title:"Ubah izin WhatsApp?",confirmLabel:next?"Izinkan":"Cabut Izin",danger:!next}))) return;
     loading(true);
     try{
       const result=await manageTeamMember({action:"update_permissions",member_id:member.id,role:member.role,can_send_invoice:next});
@@ -1726,7 +1822,7 @@
       can_send_invoice:$("teamCanSendInvoice").checked
     };
     if(role==="technician"&&!technicianId){alert("Pilih data teknisi yang akan dihubungkan dengan akun ini.");return;}
-    if(!confirm(`Buat akun ${payload.display_name} sebagai ${roleLabel(role)}?`)) return;
+    if(!(await confirmAction(`Buat akun ${payload.display_name} sebagai ${roleLabel(role)}?`,{title:"Buat akun anggota?",confirmLabel:"Buat Akun",danger:false}))) return;
     loading(true);
     try{
       const result=await manageTeamMember(payload);
@@ -2033,7 +2129,7 @@
         </div>
         <div class="monitor-live-card-meta"><span>${info.inherited?"Sumber GPS Tim":"Akurasi GPS"}</span><strong>${info.inherited?esc(trackerName):(hasCoords&&Number.isFinite(accuracy)?`±${Math.round(accuracy)} m`:"-")}</strong></div>
         <div class="monitor-live-card-actions">
-          <button class="btn outline live-focus-btn" type="button" ${hasCoords?"":"disabled"}>⌖ Lihat Lokasi</button>
+          <button class="btn outline live-focus-btn" type="button" ${hasCoords?"":"disabled"}>${uiIcon("location")} Lihat Lokasi</button>
           ${hasCoords?`<a class="btn secondary" href="${googleMapsOpenUrl(row.latitude,row.longitude)}" target="_blank" rel="noopener">Buka Maps</a>`:`<button class="btn secondary" type="button" disabled>Buka Maps</button>`}
         </div>
       </article>`;
@@ -2253,9 +2349,10 @@
     if(locationShareNoticeAccepted())return Promise.resolve(true);
     const modal=$("locationShareModal");
     if(!modal){
-      const accepted=confirm("Aktifkan Berbagi Lokasi?\n\nLokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.");
-      if(accepted){try{localStorage.setItem(locationShareNoticeStorageKey(),"yes");}catch(_error){}}
-      return Promise.resolve(accepted);
+      return confirmAction("Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim.",{title:"Aktifkan Berbagi Lokasi?",confirmLabel:"Izinkan Lokasi",danger:false}).then(accepted=>{
+        if(accepted){try{localStorage.setItem(locationShareNoticeStorageKey(),"yes");}catch(_error){}}
+        return accepted;
+      });
     }
     show("locationShareModal");
     return new Promise(resolve=>{locationShareNoticeResolver=resolve;});
@@ -2588,7 +2685,7 @@
           <div class="monitor-next"><small>Jadwal Berikutnya</small>${next?`<strong>${formatDate(next.work_date)} • ${esc((next.work_time||"-").slice(0,5))}</strong><p>${esc(next.customer_name)} — ${esc(next.description)}</p>`:`<strong>Belum ada jadwal</strong><p>Tidak ada tugas berikutnya.</p>`}</div>
         </div>
         <div class="monitor-progress"><div><span>Penyelesaian ${esc(monitorDateRange().label)}</span><strong>${completion}%</strong></div><div class="monitor-progress-track"><i style="width:${completion}%"></i></div></div>
-        <div class="monitor-tech-actions"><button class="btn outline monitor-location-btn" data-id="${tech.id}" type="button" ${hasCoords?"":"disabled"}>⌖ Lihat Posisi</button><button class="btn outline monitor-schedule-btn" data-id="${tech.id}" type="button">Lihat Jadwal</button><button class="btn secondary monitor-history-btn" data-id="${tech.id}" type="button">Riwayat</button></div>
+        <div class="monitor-tech-actions"><button class="btn outline monitor-location-btn" data-id="${tech.id}" type="button" ${hasCoords?"":"disabled"}>${uiIcon("location")} Lihat Posisi</button><button class="btn outline monitor-schedule-btn" data-id="${tech.id}" type="button">Lihat Jadwal</button><button class="btn secondary monitor-history-btn" data-id="${tech.id}" type="button">Riwayat</button></div>
       </article>`;
     }).join(""):`<div class="empty monitor-empty">Tidak ada teknisi yang sesuai filter.</div>`;
 
@@ -2761,7 +2858,7 @@
 
   async function deleteSchedule(id){
     const item=state.schedules.find(schedule=>schedule.id===id);if(!item)return;
-    if(!confirm(`Hapus jadwal ${item.customer_name} pada ${formatDate(item.work_date)}?\n\nInvoice yang sudah dibuat tidak akan terhapus.`)) return;
+    if(!(await confirmAction(`Hapus jadwal ${item.customer_name} pada ${formatDate(item.work_date)}?\n\nInvoice yang sudah dibuat tidak akan terhapus.`,{title:"Hapus jadwal?",confirmLabel:"Hapus"}))) return;
     try{loading(true);const {error}=await db.from("work_schedules").delete().eq("id",id);if(error)throw error;await refreshAll();toast("Jadwal dihapus.");}catch(error){alert(errorMessage(error));}finally{loading(false);}
   }
 
@@ -2937,10 +3034,10 @@
     });
 
     container.querySelectorAll(".tech-quick-status").forEach(btn=>{
-      btn.addEventListener("click",()=>{
+      btn.addEventListener("click",async()=>{
         const next=btn.dataset.next;
         if(!next) return;
-        if(next==="Selesai" && !confirm("Tandai pekerjaan ini sebagai selesai?")) return;
+        if(next==="Selesai" && !(await confirmAction("Tandai pekerjaan ini sebagai selesai?",{title:"Selesaikan pekerjaan?",confirmLabel:"Tandai Selesai",danger:false}))) return;
         updateTechJobStatus(btn.dataset.source,btn.dataset.id,next);
       });
     });
@@ -3078,9 +3175,9 @@
       <div class="tech-detail-header"><div><div class="tech-detail-number">${source==="schedule"?"Jadwal Pekerjaan":esc(job.raw.invoice_number||"Pekerjaan")}</div><div class="tech-detail-customer">${esc(job.customer_name||"-")}</div></div>${workStatusBadge(job.status)}</div>
       <div class="detail-box"><div class="detail-row"><span>Waktu</span><strong>${formatDate(job.work_date)} • ${esc((job.work_time||"-").slice(0,5))}</strong></div><div class="detail-row"><span>Pekerjaan</span><strong>${esc(job.description||"-")}</strong></div><div class="detail-row"><span>Lokasi</span><strong>${esc(job.customer_address||"-")}</strong></div><div class="detail-row"><span>Catatan</span><strong>${esc(job.notes||"-")}</strong></div></div>
       <div class="tech-detail-actions">${mapsUrl?`<a class="btn outline tech-contact-btn" href="${mapsUrl}" target="_blank" rel="noopener">${techIcon("pin")} Buka Maps</a>`:`<button class="btn secondary" disabled>Alamat belum tersedia</button>`}</div>
-      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p><div class="tech-live-detail"><span>⌖</span><div><strong>Berbagi Lokasi</strong><small>Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim. Berbagi lokasi selesai saat pekerjaan ditandai Selesai.</small></div></div></div>
+      <div class="tech-status-panel"><h4>Status Pekerjaan</h4><div class="tech-status-buttons"><button class="btn secondary tech-set-status" data-status="Dalam Perjalanan" type="button">Dalam Perjalanan</button><button class="btn secondary tech-set-status" data-status="Dikerjakan" type="button">Mulai Dikerjakan</button><button class="btn success tech-set-status" data-status="Selesai" type="button">Tandai Selesai</button></div><p class="tech-status-note">Perubahan status langsung tersinkron ke Dashboard Admin.</p><div class="tech-live-detail"><span>${uiIcon("location")}</span><div><strong>Berbagi Lokasi</strong><small>Lokasi digunakan selama pekerjaan berlangsung untuk membantu koordinasi tim. Berbagi lokasi selesai saat pekerjaan ditandai Selesai.</small></div></div></div>
       <div class="detail-box" style="margin-top:14px"><h4>Rincian Pekerjaan</h4>${details||'<div class="tech-job-empty">Belum ada rincian pekerjaan.</div>'}${job.invoice_id&&source==="schedule"?'<p class="schedule-linked-note">Pekerjaan ini sudah terhubung dengan nota.</p>':''}</div>`;
-    $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",()=>{const next=btn.dataset.status;if(next==="Selesai"&&!confirm("Tandai pekerjaan ini sebagai selesai?"))return;updateTechJobStatus(source,id,next);}));
+    $("detailContent").querySelectorAll(".tech-set-status").forEach(btn=>btn.addEventListener("click",async()=>{const next=btn.dataset.status;if(next==="Selesai"&&!(await confirmAction("Tandai pekerjaan ini sebagai selesai?",{title:"Selesaikan pekerjaan?",confirmLabel:"Tandai Selesai",danger:false})))return;updateTechJobStatus(source,id,next);}));
     show("detailModal");
   }
 
@@ -3495,12 +3592,12 @@
 
   function activityVisual(row){
     const action=String(row?.action||"");
-    if(action==="schedule_status_changed") return {cls:"status",icon:"↻"};
-    if(action==="technician_assigned"||action==="technician_unassigned") return {cls:"assignment",icon:"♙"};
-    if(action.includes("deleted")) return {cls:"delete",icon:"×"};
-    if(row?.entity_type==="schedule") return {cls:"schedule",icon:"◷"};
-    if(row?.entity_type==="invoice") return {cls:"invoice",icon:"▤"};
-    return {cls:"other",icon:"•"};
+    if(action==="schedule_status_changed") return {cls:"status",icon:uiIcon("refresh")};
+    if(action==="technician_assigned"||action==="technician_unassigned") return {cls:"assignment",icon:uiIcon("assignment")};
+    if(action.includes("deleted")) return {cls:"delete",icon:uiIcon("close")};
+    if(row?.entity_type==="schedule") return {cls:"schedule",icon:uiIcon("schedule")};
+    if(row?.entity_type==="invoice") return {cls:"invoice",icon:uiIcon("invoice")};
+    return {cls:"other",icon:uiIcon("other")};
   }
 
   function activityWithinPeriod(row,period){
